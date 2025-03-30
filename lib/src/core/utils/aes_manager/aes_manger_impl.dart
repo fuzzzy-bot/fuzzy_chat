@@ -4,7 +4,6 @@ class _AESManagerImpl {
   static const int _nonceByteLength = 12;
   static const int _keyByteLength = 32;
   static const int _macSize = 128;
-  static const int _aesBlockSize = 16;
 
   static Uint8List generateKey() {
     return generateRandomSecureBytes(_keyByteLength);
@@ -18,6 +17,7 @@ class _AESManagerImpl {
       ephemeralKey: ephemeralKey,
       nonce: nonce,
     );
+
     final encryptedBytes = encryptCipher.process(bytes);
     return Uint8List.fromList(nonce + encryptedBytes);
   }
@@ -35,6 +35,7 @@ class _AESManagerImpl {
       ephemeralKey: ephemeralKey,
       nonce: nonce,
     );
+
     return decryptCipher.process(ciphertext);
   }
 
@@ -189,19 +190,19 @@ class _AESManagerImpl {
       if (isEncryption) {
         // For encryption, write the nonce first.
         outputSink.add(nonce);
+        print('print nonce: ${nonce.length}');
         adjustedTotalSize = totalInputFileSize;
         inputStream = inputFile.openRead();
       } else {
+        print('print _nonceByteLength: $_nonceByteLength');
         // For decryption, skip the nonce.
         adjustedTotalSize = totalInputFileSize - _nonceByteLength;
         inputStream = inputFile.openRead(_nonceByteLength);
       }
 
-      await _processChunks(
-        isEncryption: isEncryption,
-        inputStream: inputStream,
-        adjustedTotalSize: adjustedTotalSize,
+      await _processAesGcmChunks(
         cipher: cipher,
+        inputStream: inputStream,
         outputSink: outputSink,
         isPaused: isPaused,
         isCancelled: isCancelled,
@@ -225,58 +226,53 @@ class _AESManagerImpl {
         totalInputFileSize: totalInputFileSize ?? 0,
       );
     } finally {
-      await outputSink?.close();
-      await controller.close();
+      // await outputSink?.close();
+      // await controller.close();
     }
   }
 
-  static Future<void> _processChunks({
-    required bool isEncryption,
-    required Stream<List<int>> inputStream,
-    required int adjustedTotalSize,
+  static Future<void> _processAesGcmChunks({
     required GCMBlockCipher cipher,
+    required Stream<List<int>> inputStream,
     required IOSink outputSink,
     required bool Function() isPaused,
     required bool Function() isCancelled,
     required void Function(int processedChunkLength) onChunkProcessed,
   }) async {
-    int processedInputSize = 0;
-
     await for (final chunk in inputStream) {
       if (isCancelled()) break;
+
       while (isPaused()) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
 
       final chunkBytes = Uint8List.fromList(chunk);
-      final int outputLength;
 
-      // Using getOutputSize for encryption to account for overhead; decryption requires exact input size.
-      if (isEncryption) {
-        outputLength = cipher.getOutputSize(chunkBytes.length);
-      } else {
-        final isLastChunk = (processedInputSize + chunkBytes.length) == adjustedTotalSize;
-        outputLength = chunkBytes.length + (isLastChunk ? _aesBlockSize : 0);
-      }
+      // Use a safe upper bound for partial updates: chunk length + 16 bytes.
+      // This ensures GCM won't overflow the buffer if it produces more than expected.
+      final outputBuffer = Uint8List(chunkBytes.length + 16);
 
-      final outputBuffer = Uint8List(outputLength);
-      final processedLength = cipher.processBytes(
+      final bytesProcessed = cipher.processBytes(
         chunkBytes,
         0,
         chunkBytes.length,
         outputBuffer,
         0,
       );
-      outputSink.add(outputBuffer.sublist(0, processedLength));
-      onChunkProcessed(chunk.length);
-      processedInputSize += chunkBytes.length;
+
+      if (bytesProcessed > 0) {
+        outputSink.add(outputBuffer.sublist(0, bytesProcessed));
+      }
+
+      onChunkProcessed(chunkBytes.length);
     }
 
-    final finalChunk = Uint8List(cipher.getOutputSize(0) + _aesBlockSize);
-    final finalLength = cipher.doFinal(finalChunk, 0);
+    final finalSize = cipher.getOutputSize(0);
+    final finalBuffer = Uint8List(finalSize);
+    final finalLength = cipher.doFinal(finalBuffer, 0);
+
     if (finalLength > 0) {
-      outputSink.add(finalChunk.sublist(0, finalLength));
-      onChunkProcessed(finalLength);
+      outputSink.add(finalBuffer.sublist(0, finalLength));
     }
   }
 
@@ -303,7 +299,7 @@ class _AESManagerImpl {
       ),
     );
 
-    //Attempting to delete the output file if an error occurs, in the future in continuation of encrytion is introduced, maybe do not delete the generated file
+    // Attempt to delete the partially written output file on error
     if (outputFile != null && (await outputFile.exists())) {
       await outputFile.delete();
     }
