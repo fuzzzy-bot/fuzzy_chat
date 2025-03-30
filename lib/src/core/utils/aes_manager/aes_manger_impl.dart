@@ -66,8 +66,10 @@ class _AESManagerImpl {
     required Uint8List key,
   }) async {
     final inputFile = File(inputPath);
-    final randomAccessFile = await inputFile.open();
+    print('printfff 1');
 
+    final randomAccessFile = await inputFile.open();
+    print('printfff 2');
     final nonce = await _readNonce(randomAccessFile);
     await randomAccessFile.close();
 
@@ -178,24 +180,34 @@ class _AESManagerImpl {
     final outputFile = File(outputPath);
     int? totalInputFileSize;
 
+    print('printfff 3');
+
     try {
       totalInputFileSize = await inputFile.length();
 
       outputSink = outputFile.openWrite();
 
+      print('printfff 5');
+
       final int adjustedTotalSize;
       final Stream<List<int>> inputStream;
 
       if (isEncryption) {
+        print('printfff 6');
+
         // For encryption, write the nonce first.
         outputSink.add(nonce);
         adjustedTotalSize = totalInputFileSize;
         inputStream = inputFile.openRead();
+        print('printfff 6.1');
       } else {
         // For decryption, skip the nonce.
         adjustedTotalSize = totalInputFileSize - _nonceByteLength;
         inputStream = inputFile.openRead(_nonceByteLength);
+        print('printfff 7.1');
       }
+
+      print('printfff 7.2');
 
       await _processChunks(
         isEncryption: isEncryption,
@@ -206,15 +218,19 @@ class _AESManagerImpl {
         isPaused: isPaused,
         isCancelled: isCancelled,
         onChunkProcessed: (processedChunkLength) {
+          print('printfff 6,.23234');
+
           processedSize += processedChunkLength;
           final progress = (processedSize / adjustedTotalSize).clamp(0.0, 1.0);
           controller.add(FileProcessingProgress(progress: progress));
-
+          print('printfff 7.234');
           if (progress == 1) {
             controller.add(FileProcessingProgress.completed());
+            print('printfff 7.454');
           }
         },
       );
+      print('printfff 7.5');
     } catch (e) {
       logger.e('ERROR: while processing file $e');
       await _handleError(
@@ -242,11 +258,21 @@ class _AESManagerImpl {
   }) async {
     int processedInputSize = 0;
 
+    print('printfff 12 $inputStream');
+
     await for (final chunk in inputStream) {
+      print('printfff 132323');
+
       if (isCancelled()) break;
+      print('printfff 1323222222222');
+
       while (isPaused()) {
+        print('printfff 132322232412342e222222');
+
         await Future.delayed(const Duration(milliseconds: 100));
       }
+
+      print('printfff 13');
 
       final chunkBytes = Uint8List.fromList(chunk);
       final int outputLength;
@@ -259,6 +285,8 @@ class _AESManagerImpl {
         outputLength = chunkBytes.length + (isLastChunk ? _aesBlockSize : 0);
       }
 
+      print('printfff 14');
+
       final outputBuffer = Uint8List(outputLength);
       final processedLength = cipher.processBytes(
         chunkBytes,
@@ -268,16 +296,26 @@ class _AESManagerImpl {
         0,
       );
       outputSink.add(outputBuffer.sublist(0, processedLength));
+      print('printfff 15');
+
       onChunkProcessed(chunk.length);
       processedInputSize += chunkBytes.length;
+      print('printfff 16');
     }
+
+    print('printfff 172222');
 
     final finalChunk = Uint8List(cipher.getOutputSize(0) + _aesBlockSize);
     final finalLength = cipher.doFinal(finalChunk, 0);
+    print('printfff 17');
+
     if (finalLength > 0) {
+      print('printfff 18');
+
       outputSink.add(finalChunk.sublist(0, finalLength));
       onChunkProcessed(finalLength);
     }
+    print('printfff 19');
   }
 
   static Future<Uint8List> _readNonce(RandomAccessFile raf) async {
