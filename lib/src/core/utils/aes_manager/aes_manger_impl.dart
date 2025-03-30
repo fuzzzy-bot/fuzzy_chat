@@ -198,13 +198,9 @@ class _AESManagerImpl {
       }
 
       await _processChunks(
-        isEncryption: isEncryption,
         inputStream: inputStream,
-        adjustedTotalSize: adjustedTotalSize,
         cipher: cipher,
         outputSink: outputSink,
-        isPaused: isPaused,
-        isCancelled: isCancelled,
         onChunkProcessed: (processedChunkLength) {
           processedSize += processedChunkLength;
           final progress = (processedSize / adjustedTotalSize).clamp(0.0, 1.0);
@@ -225,59 +221,51 @@ class _AESManagerImpl {
         totalInputFileSize: totalInputFileSize ?? 0,
       );
     } finally {
-      await outputSink?.close();
-      await controller.close();
+      // outputSink?.flush();
+      // await outputSink?.close();
+      // await controller.close();
     }
   }
 
   static Future<void> _processChunks({
-    required bool isEncryption,
     required Stream<List<int>> inputStream,
-    required int adjustedTotalSize,
     required GCMBlockCipher cipher,
     required IOSink outputSink,
-    required bool Function() isPaused,
-    required bool Function() isCancelled,
     required void Function(int processedChunkLength) onChunkProcessed,
   }) async {
-    int processedInputSize = 0;
-
+    // Process each incoming chunk.
     await for (final chunk in inputStream) {
-      if (isCancelled()) break;
-      while (isPaused()) {
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-
-      final chunkBytes = Uint8List.fromList(chunk);
-      final int outputLength;
-
-      // Using getOutputSize for encryption to account for overhead; decryption requires exact input size.
-      if (isEncryption) {
-        outputLength = cipher.getOutputSize(chunkBytes.length);
-      } else {
-        final isLastChunk = (processedInputSize + chunkBytes.length) == adjustedTotalSize;
-        outputLength = chunkBytes.length + (isLastChunk ? _aesBlockSize : 0);
-      }
-
-      final outputBuffer = Uint8List(outputLength);
-      final processedLength = cipher.processBytes(
-        chunkBytes,
-        0,
-        chunkBytes.length,
-        outputBuffer,
-        0,
-      );
+      // Convert List<int> to Uint8List.
+      final inputData = Uint8List.fromList(chunk);
+      // Allocate an output buffer sized for the processed bytes.
+      final outputBuffer = Uint8List(cipher.getOutputSize(inputData.length));
+      cipher.remainingInput;
+      // Process the input chunk.
+      final processedLength = cipher.processBytes(inputData, 0, inputData.length, outputBuffer, 0);
+      // Write the processed bytes to the output sink.
       outputSink.add(outputBuffer.sublist(0, processedLength));
-      onChunkProcessed(chunk.length);
-      processedInputSize += chunkBytes.length;
+      // Callback to signal that a chunk has been processed.
+      onChunkProcessed(processedLength);
     }
 
-    final finalChunk = Uint8List(cipher.getOutputSize(0) + _aesBlockSize);
-    final finalLength = cipher.doFinal(finalChunk, 0);
-    if (finalLength > 0) {
-      outputSink.add(finalChunk.sublist(0, finalLength));
-      onChunkProcessed(finalLength);
-    }
+    print('print 1');
+
+    // Finalize processing to handle any remaining data and (for encryption) write the authentication tag.
+    final finalOutputBuffer = Uint8List(cipher.getOutputSize(0) + 16);
+    print('print 2');
+
+    final finalLength = cipher.process(Uint8List(0));
+
+    print('print 3');
+
+    outputSink.add(finalOutputBuffer.sublist(0, finalLength.length));
+
+    print('print 4');
+
+    onChunkProcessed(finalLength.length);
+
+    await outputSink.flush();
+    await outputSink.close();
   }
 
   static Future<Uint8List> _readNonce(RandomAccessFile raf) async {
