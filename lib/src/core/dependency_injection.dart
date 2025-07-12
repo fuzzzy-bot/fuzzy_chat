@@ -32,6 +32,8 @@ class DependencyInjection {
         StoredChatPreferencesSchema,
         StoredChatSecurityDataSchema,
         StoredMessageDataSchema,
+        StoredMessageDataSchema,
+        StoredAuthDataSchema,
       ],
       directory: supportDirectory.path,
     );
