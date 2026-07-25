@@ -15,7 +15,7 @@ extension GetStoredVaultGroupCollection on Isar {
 
 const StoredVaultGroupSchema = CollectionSchema(
   name: r'StoredVaultGroup',
-  id: -8088799374113410393,
+  id: -8088799374113410,
   properties: {
     r'colorIndex': PropertySchema(
       id: 0,
@@ -65,7 +65,7 @@ const StoredVaultGroupSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'groupId': IndexSchema(
-      id: -8523216633229774932,
+      id: -8523216633229774,
       name: r'groupId',
       unique: true,
       replace: false,

@@ -132,7 +132,7 @@ class _SettingsLinkTile extends StatelessWidget {
           color: uiColors.backgroundSecondaryColor,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: uiColors.focusColor.withOpacity(0.2),
+            color: uiColors.focusColor.withValues(alpha: 0.2),
           ),
         ),
         child: Row(
@@ -204,11 +204,11 @@ class _SecurityLevelTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isSelected
-              ? color.withOpacity(0.12)
+              ? color.withValues(alpha: 0.12)
               : uiColors.backgroundSecondaryColor,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? color : uiColors.focusColor.withOpacity(0.2),
+            color: isSelected ? color : uiColors.focusColor.withValues(alpha: 0.2),
             width: isSelected ? 1.5 : 1,
           ),
         ),

@@ -15,7 +15,7 @@ extension GetStoredMessageDataCollection on Isar {
 
 const StoredMessageDataSchema = CollectionSchema(
   name: r'StoredMessageData',
-  id: 61036243108229442,
+  id: 6103624310822944,
   properties: {
     r'chatId': PropertySchema(
       id: 0,
@@ -50,7 +50,7 @@ const StoredMessageDataSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'chatId': IndexSchema(
-      id: 1909629659142158609,
+      id: 1909629659142158,
       name: r'chatId',
       unique: false,
       replace: false,

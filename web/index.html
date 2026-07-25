@@ -41,7 +41,7 @@
        application. For more information, see:
        https://developers.google.com/web/fundamentals/primers/service-workers -->
     <script>
-      var serviceWorkerVersion = null;
+      const serviceWorkerVersion = "2800770138" /* Flutter's service worker is deprecated and will be removed in a future Flutter release. */;
       var scriptLoaded = false;
       function loadMainDartJs() {
         if (scriptLoaded) {
@@ -51,6 +51,12 @@
         var scriptTag = document.createElement("script");
         scriptTag.src = "main.dart.js";
         scriptTag.type = "application/javascript";
+        scriptTag.onload = function() {
+          console.log("main.dart.js loaded successfully");
+        };
+        scriptTag.onerror = function(e) {
+          console.error("Failed to load main.dart.js:", e);
+        };
         document.body.append(scriptTag);
       }
 
@@ -86,10 +92,13 @@
               console.log("Loading app from service worker.");
               loadMainDartJs();
             }
+          }).catch((err) => {
+            console.error("Service worker registration failed:", err);
+            loadMainDartJs();
           });
 
           // If service worker doesn't succeed in a reasonable amount of time,
-          // fallback to plaint <script> tag.
+          // fallback to plain <script> tag.
           setTimeout(() => {
             if (!scriptLoaded) {
               console.warn(

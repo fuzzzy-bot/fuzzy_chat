@@ -1,7 +1,10 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:fuzzy_chat/lib.dart';
+
+import 'package:fuzzy_chat/src/core/web_stubs/web_stubs.dart';
 
 class ChatAuthRepository {
   ChatAuthRepository({
@@ -10,6 +13,7 @@ class ChatAuthRepository {
 
   final UserAuthPreferencesRepository _userAuthPreferencesRepository;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final WebSecureStorage _webSecureStorage = WebSecureStorage();
 
   static const _saltKey = 'chat_auth_salt';
   static const _verificationTokenKey = 'chat_auth_verification_token';
@@ -17,6 +21,13 @@ class ChatAuthRepository {
   Future<bool> isChatAuthEnabled() async {
     final prefs = await _userAuthPreferencesRepository.getUserAuthPreferences();
     if (prefs == null || !prefs.isAuthenticationOnceEnabled) return false;
+
+    if (kIsWeb) {
+      await _webSecureStorage.init();
+      final salt = await _webSecureStorage.read(key: _saltKey);
+      final token = await _webSecureStorage.read(key: _verificationTokenKey);
+      return salt != null && token != null;
+    }
 
     final salt = await _secureStorage.read(key: _saltKey);
     final token = await _secureStorage.read(key: _verificationTokenKey);
@@ -32,11 +43,20 @@ class ChatAuthRepository {
     final encryptedToken =
         await AESService.encrypt(verificationTokenBytes, masterKey);
 
-    await _secureStorage.write(key: _saltKey, value: base64Encode(salt));
-    await _secureStorage.write(
-      key: _verificationTokenKey,
-      value: base64Encode(encryptedToken),
-    );
+    if (kIsWeb) {
+      await _webSecureStorage.init();
+      await _webSecureStorage.write(key: _saltKey, value: base64Encode(salt));
+      await _webSecureStorage.write(
+        key: _verificationTokenKey,
+        value: base64Encode(encryptedToken),
+      );
+    } else {
+      await _secureStorage.write(key: _saltKey, value: base64Encode(salt));
+      await _secureStorage.write(
+        key: _verificationTokenKey,
+        value: base64Encode(encryptedToken),
+      );
+    }
 
     await _userAuthPreferencesRepository.updateUserAuthPreferences(
       UserAuthPreferences(isAuthenticationOnceEnabled: true),
@@ -44,8 +64,17 @@ class ChatAuthRepository {
   }
 
   Future<bool> verifyPassword(String password) async {
-    final saltBase64 = await _secureStorage.read(key: _saltKey);
-    final tokenBase64 = await _secureStorage.read(key: _verificationTokenKey);
+    String? saltBase64;
+    String? tokenBase64;
+
+    if (kIsWeb) {
+      await _webSecureStorage.init();
+      saltBase64 = await _webSecureStorage.read(key: _saltKey);
+      tokenBase64 = await _webSecureStorage.read(key: _verificationTokenKey);
+    } else {
+      saltBase64 = await _secureStorage.read(key: _saltKey);
+      tokenBase64 = await _secureStorage.read(key: _verificationTokenKey);
+    }
 
     if (saltBase64 == null || tokenBase64 == null) return false;
 
@@ -63,8 +92,14 @@ class ChatAuthRepository {
   }
 
   Future<void> disableAuth() async {
-    await _secureStorage.delete(key: _saltKey);
-    await _secureStorage.delete(key: _verificationTokenKey);
+    if (kIsWeb) {
+      await _webSecureStorage.init();
+      await _webSecureStorage.delete(key: _saltKey);
+      await _webSecureStorage.delete(key: _verificationTokenKey);
+    } else {
+      await _secureStorage.delete(key: _saltKey);
+      await _secureStorage.delete(key: _verificationTokenKey);
+    }
 
     await _userAuthPreferencesRepository.updateUserAuthPreferences(
       UserAuthPreferences(isAuthenticationOnceEnabled: false),

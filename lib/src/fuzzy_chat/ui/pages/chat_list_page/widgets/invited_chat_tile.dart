@@ -26,7 +26,7 @@ class InvitedChatTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       clipBehavior: Clip.antiAlias,
-      color: uiColors.backgroundSecondaryColor.withOpacity(0.4),
+      color: uiColors.backgroundSecondaryColor.withValues(alpha: 0.4),
       margin: const EdgeInsets.symmetric(
         horizontal: 16,
         vertical: 8,

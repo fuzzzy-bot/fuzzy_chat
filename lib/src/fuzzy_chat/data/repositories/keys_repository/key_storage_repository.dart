@@ -1,12 +1,40 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:fuzzy_chat/lib.dart';
+import 'package:fuzzy_chat/src/core/web_stubs/web_stubs.dart';
 import 'package:pointycastle/export.dart';
 
 class KeyStorageRepository {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final WebSecureStorage _webSecureStorage = WebSecureStorage();
+
+  Future<String?> _read(String key) async {
+    if (kIsWeb) {
+      await _webSecureStorage.init();
+      return await _webSecureStorage.read(key: key);
+    }
+    return await _secureStorage.read(key: key);
+  }
+
+  Future<void> _write(String key, String value) async {
+    if (kIsWeb) {
+      await _webSecureStorage.init();
+      await _webSecureStorage.write(key: key, value: value);
+      return;
+    }
+    await _secureStorage.write(key: key, value: value);
+  }
+
+  Future<void> _delete(String key) async {
+    if (kIsWeb) {
+      await _webSecureStorage.init();
+      await _webSecureStorage.delete(key: key);
+      return;
+    }
+    await _secureStorage.delete(key: key);
+  }
 
   Future<void> savePrivateKey(String chatId, RSAPrivateKey privateKey) async {
     final password = sl.get<FuzzyAuthStore>().state.authData.password;
@@ -18,19 +46,17 @@ class KeyStorageRepository {
         await PasswordBasedEncryptionSevice.encrypt(privateKeyBytes, password);
     final encryptedPrivateKeyBase64 = base64Encode(encryptedPrivateKey);
 
-    await _secureStorage.write(
-        key: 'privateKey_$chatId', value: encryptedPrivateKeyBase64,);
+    await _write('privateKey_$chatId', encryptedPrivateKeyBase64);
   }
 
   Future<void> savePublicKey(String chatId, RSAPublicKey publicKey) async {
     final publicKeyMap = RSAService.transformRSAPublicKeyToMap(publicKey);
-    await _secureStorage.write(
-        key: 'publicKey_$chatId', value: jsonEncode(publicKeyMap),);
+    await _write('publicKey_$chatId', jsonEncode(publicKeyMap));
   }
 
   Future<RSAPrivateKey?> getPrivateKey(String chatId) async {
     final password = sl.get<FuzzyAuthStore>().state.authData.password;
-    final privateKeyData = await _secureStorage.read(key: 'privateKey_$chatId');
+    final privateKeyData = await _read('privateKey_$chatId');
 
     if (privateKeyData != null) {
       if (privateKeyData.startsWith('{')) {
@@ -40,7 +66,9 @@ class KeyStorageRepository {
       } else {
         final encryptedPrivateKey = base64Decode(privateKeyData);
         final decryptedBytes = await PasswordBasedEncryptionSevice.decrypt(
-            encryptedPrivateKey, password,);
+          encryptedPrivateKey,
+          password,
+        );
         final privateKeyJson = utf8.decode(decryptedBytes);
 
         return RSAService.transformMapToRSAPrivateKey(
@@ -52,7 +80,7 @@ class KeyStorageRepository {
   }
 
   Future<RSAPublicKey?> getPublicKey(String chatId) async {
-    final publicKeyJson = await _secureStorage.read(key: 'publicKey_$chatId');
+    final publicKeyJson = await _read('publicKey_$chatId');
 
     if (publicKeyJson != null) {
       return RSAService.transformMapToRSAPublicKey(
@@ -69,19 +97,20 @@ class KeyStorageRepository {
         await PasswordBasedEncryptionSevice.encrypt(symmetricKey, password);
     final encryptedSymmetricKeyBase64 = base64Encode(encryptedSymmetricKey);
 
-    await _secureStorage.write(
-        key: 'symmetricKey_$chatId', value: encryptedSymmetricKeyBase64,);
+    await _write('symmetricKey_$chatId', encryptedSymmetricKeyBase64);
   }
 
   Future<Uint8List?> getSymmetricKey(String chatId) async {
     final password = sl.get<FuzzyAuthStore>().state.authData.password;
 
     final encryptedSymmetricKeyBase64 =
-        await _secureStorage.read(key: 'symmetricKey_$chatId');
+        await _read('symmetricKey_$chatId');
     if (encryptedSymmetricKeyBase64 != null) {
       final encryptedSymmetricKey = base64Decode(encryptedSymmetricKeyBase64);
       final symmetricKey = await PasswordBasedEncryptionSevice.decrypt(
-          encryptedSymmetricKey, password,);
+        encryptedSymmetricKey,
+        password,
+      );
 
       return symmetricKey;
     }
@@ -90,15 +119,16 @@ class KeyStorageRepository {
   }
 
   Future<void> saveOtherPartyPublicKey(
-      String chatId, RSAPublicKey publicKey,) async {
+    String chatId,
+    RSAPublicKey publicKey,
+  ) async {
     final publicKeyMap = RSAService.transformRSAPublicKeyToMap(publicKey);
-    await _secureStorage.write(
-        key: 'otherPartyPublicKey_$chatId', value: jsonEncode(publicKeyMap),);
+    await _write('otherPartyPublicKey_$chatId', jsonEncode(publicKeyMap));
   }
 
   Future<RSAPublicKey?> getOtherPartyPublicKey(String chatId) async {
     final publicKeyJson =
-        await _secureStorage.read(key: 'otherPartyPublicKey_$chatId');
+        await _read('otherPartyPublicKey_$chatId');
     if (publicKeyJson != null) {
       return RSAService.transformMapToRSAPublicKey(
         (jsonDecode(publicKeyJson) as Map<String, dynamic>).cast(),
@@ -117,10 +147,7 @@ class KeyStorageRepository {
     required String oldPassword,
     required String newPassword,
   }) async {
-    await _secureStorage.write(
-      key: _migrationChatIdsKey,
-      value: chatIds.join(','),
-    );
+    await _write(_migrationChatIdsKey, chatIds.join(','));
 
     for (final chatId in chatIds) {
       await _stageReencryptedKey(
@@ -138,7 +165,7 @@ class KeyStorageRepository {
       );
     }
 
-    await _secureStorage.write(key: _migrationStatusKey, value: _staged);
+    await _write(_migrationStatusKey, _staged);
     await _commitStagedKeys(chatIds);
     await _cleanupStagedKeys(chatIds);
   }
@@ -150,7 +177,7 @@ class KeyStorageRepository {
     required String newPassword,
     bool allowLegacyPlainJson = false,
   }) async {
-    final raw = await _secureStorage.read(key: '${storageKeyPrefix}_$chatId');
+    final raw = await _read('${storageKeyPrefix}_$chatId');
     if (raw == null) return;
 
     final Uint8List plaintext;
@@ -158,24 +185,26 @@ class KeyStorageRepository {
       plaintext = Uint8List.fromList(utf8.encode(raw));
     } else {
       plaintext = await PasswordBasedEncryptionSevice.decrypt(
-          base64Decode(raw), oldPassword,);
+        base64Decode(raw),
+        oldPassword,
+      );
     }
 
     final reencrypted =
         await PasswordBasedEncryptionSevice.encrypt(plaintext, newPassword);
-    await _secureStorage.write(
-      key: 'staged_${storageKeyPrefix}_$chatId',
-      value: base64Encode(reencrypted),
+    await _write(
+      'staged_${storageKeyPrefix}_$chatId',
+      base64Encode(reencrypted),
     );
   }
 
   Future<void> recoverStagedMigration() async {
-    final status = await _secureStorage.read(key: _migrationStatusKey);
+    final status = await _read(_migrationStatusKey);
     if (status == null) return;
 
-    final chatIdsRaw = await _secureStorage.read(key: _migrationChatIdsKey);
+    final chatIdsRaw = await _read(_migrationChatIdsKey);
     if (chatIdsRaw == null || chatIdsRaw.isEmpty) {
-      await _secureStorage.delete(key: _migrationStatusKey);
+      await _delete(_migrationStatusKey);
       return;
     }
     final chatIds = chatIdsRaw.split(',');
@@ -191,36 +220,34 @@ class KeyStorageRepository {
   Future<void> _commitStagedKeys(List<String> chatIds) async {
     for (final chatId in chatIds) {
       final stagedPrivate =
-          await _secureStorage.read(key: 'staged_privateKey_$chatId');
+          await _read('staged_privateKey_$chatId');
       if (stagedPrivate != null) {
-        await _secureStorage.write(
-            key: 'privateKey_$chatId', value: stagedPrivate,);
+        await _write('privateKey_$chatId', stagedPrivate);
       }
 
       final stagedSymmetric =
-          await _secureStorage.read(key: 'staged_symmetricKey_$chatId');
+          await _read('staged_symmetricKey_$chatId');
       if (stagedSymmetric != null) {
-        await _secureStorage.write(
-            key: 'symmetricKey_$chatId', value: stagedSymmetric,);
+        await _write('symmetricKey_$chatId', stagedSymmetric);
       }
     }
 
-    await _secureStorage.write(key: _migrationStatusKey, value: _committed);
+    await _write(_migrationStatusKey, _committed);
   }
 
   Future<void> _cleanupStagedKeys(List<String> chatIds) async {
     for (final chatId in chatIds) {
-      await _secureStorage.delete(key: 'staged_privateKey_$chatId');
-      await _secureStorage.delete(key: 'staged_symmetricKey_$chatId');
+      await _delete('staged_privateKey_$chatId');
+      await _delete('staged_symmetricKey_$chatId');
     }
-    await _secureStorage.delete(key: _migrationStatusKey);
-    await _secureStorage.delete(key: _migrationChatIdsKey);
+    await _delete(_migrationStatusKey);
+    await _delete(_migrationChatIdsKey);
   }
 
   Future<void> clearAllKeysForChat(String chatId) async {
-    await _secureStorage.delete(key: 'privateKey_$chatId');
-    await _secureStorage.delete(key: 'publicKey_$chatId');
-    await _secureStorage.delete(key: 'symmetricKey_$chatId');
-    await _secureStorage.delete(key: 'otherPartyPublicKey_$chatId');
+    await _delete('privateKey_$chatId');
+    await _delete('publicKey_$chatId');
+    await _delete('symmetricKey_$chatId');
+    await _delete('otherPartyPublicKey_$chatId');
   }
 }

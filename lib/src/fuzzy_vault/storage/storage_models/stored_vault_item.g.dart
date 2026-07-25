@@ -15,7 +15,7 @@ extension GetStoredVaultItemCollection on Isar {
 
 const StoredVaultItemSchema = CollectionSchema(
   name: r'StoredVaultItem',
-  id: 7385104444149679957,
+  id: 7385104444149679,
   properties: {
     r'contentVersion': PropertySchema(
       id: 0,
@@ -76,7 +76,7 @@ const StoredVaultItemSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'itemId': IndexSchema(
-      id: -5342806140158601489,
+      id: -5342806140158601,
       name: r'itemId',
       unique: true,
       replace: false,
@@ -89,7 +89,7 @@ const StoredVaultItemSchema = CollectionSchema(
       ],
     ),
     r'title': IndexSchema(
-      id: -7636685945352118059,
+      id: -7636685945352118,
       name: r'title',
       unique: false,
       replace: false,
@@ -102,7 +102,7 @@ const StoredVaultItemSchema = CollectionSchema(
       ],
     ),
     r'groupId': IndexSchema(
-      id: -8523216633229774932,
+      id: -8523216633229774,
       name: r'groupId',
       unique: false,
       replace: false,

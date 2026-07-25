@@ -11,12 +11,22 @@ export 'components/components.dart';
 part 'aes_service_impl.dart';
 
 class AESService {
-  static Future<Uint8List> encrypt(Uint8List bytes, Uint8List key) async =>
-      Isolate.run(() => _AESServiceImpl.syncEncrypt(bytes, key));
+  static Future<Uint8List> encrypt(Uint8List bytes, Uint8List key) async {
+    if (kIsWeb) {
+      await Future.delayed(Duration.zero);
+      return _AESServiceImpl.syncEncrypt(bytes, key);
+    }
+    return Isolate.run(() => _AESServiceImpl.syncEncrypt(bytes, key));
+  }
 
   static Future<Uint8List> decrypt(
-          Uint8List encryptedBytes, Uint8List key,) async =>
-      Isolate.run(() => _AESServiceImpl.syncDecrypt(encryptedBytes, key));
+          Uint8List encryptedBytes, Uint8List key,) async {
+    if (kIsWeb) {
+      await Future.delayed(Duration.zero);
+      return _AESServiceImpl.syncDecrypt(encryptedBytes, key);
+    }
+    return Isolate.run(() => _AESServiceImpl.syncDecrypt(encryptedBytes, key));
+  }
 
   static Future<String> encryptText(String text, Uint8List key) async {
     final decryptedTextBytes = utf8.encode(text);
@@ -31,8 +41,13 @@ class AESService {
     return utf8.decode(decryptedTextBytes);
   }
 
-  static Future<Uint8List> generateKey() async =>
-      Isolate.run(_AESServiceImpl.generateKey);
+  static Future<Uint8List> generateKey() async {
+    if (kIsWeb) {
+      await Future.delayed(Duration.zero);
+      return _AESServiceImpl.generateKey();
+    }
+    return Isolate.run(_AESServiceImpl.generateKey);
+  }
 
   static Future<FileProcessingHandler> encryptFile({
     required String inputPath,

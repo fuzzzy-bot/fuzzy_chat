@@ -253,7 +253,7 @@ class _FuzzyUserAuthPageContentState extends State<_FuzzyUserAuthPageContent> {
                               onEnableAuth: _onEnableAuth,
                             ),
                           const SizedBox(height: 32),
-                          Divider(color: uiColors.focusColor.withOpacity(0.2)),
+                          Divider(color: uiColors.focusColor.withValues(alpha: 0.2)),
                           const SizedBox(height: 16),
                           Text(
                             localizations.vaultAuthentication,
@@ -701,9 +701,9 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [

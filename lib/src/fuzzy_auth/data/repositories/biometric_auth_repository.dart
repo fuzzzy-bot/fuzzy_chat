@@ -1,8 +1,11 @@
 // ignore_for_file: avoid_redundant_argument_values
 
-import 'package:biometric_storage/biometric_storage.dart';
+import 'package:biometric_storage/biometric_storage.dart'
+    if (dart.library.html) 'package:fuzzy_chat/src/core/web_stubs/biometric_storage_stub.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:fuzzy_chat/lib.dart';
+import 'package:fuzzy_chat/src/core/web_stubs/web_stubs.dart';
 
 enum BiometricScope { chat, vault }
 
@@ -33,19 +36,27 @@ class BiometricAuthRepository {
   BiometricAuthRepository();
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final WebSecureStorage _webSecureStorage = WebSecureStorage();
 
   Future<bool> canUseBiometrics() async {
+    if (kIsWeb) return false;
     final response = await BiometricStorage().canAuthenticate();
     logger.i('BiometricStorage.canAuthenticate -> $response');
     return response == CanAuthenticateResponse.success;
   }
 
   Future<bool> isEnabled(BiometricScope scope) async {
+    if (kIsWeb) {
+      await _webSecureStorage.init();
+      final value = await _webSecureStorage.read(key: scope._flagKey);
+      return value == 'true';
+    }
     final value = await _secureStorage.read(key: scope._flagKey);
     return value == 'true';
   }
 
   Future<void> enable(BiometricScope scope, String password) async {
+    if (kIsWeb) return;
     logger.i('Biometric enable: scope=$scope');
     final storage = await _openStorage(scope);
     await storage.write(password);
@@ -54,6 +65,7 @@ class BiometricAuthRepository {
   }
 
   Future<String?> retrievePassword(BiometricScope scope) async {
+    if (kIsWeb) return null;
     logger.i('Biometric retrieve: scope=$scope');
     final storage = await _openStorage(scope);
     final value = await storage.read();
@@ -62,6 +74,11 @@ class BiometricAuthRepository {
   }
 
   Future<void> disable(BiometricScope scope) async {
+    if (kIsWeb) {
+      await _webSecureStorage.init();
+      await _webSecureStorage.delete(key: scope._flagKey);
+      return;
+    }
     await _secureStorage.delete(key: scope._flagKey);
     try {
       final storage = await _openStorage(scope);

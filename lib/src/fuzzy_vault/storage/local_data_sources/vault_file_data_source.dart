@@ -1,9 +1,22 @@
+import 'dart:convert';
 import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class VaultFileDataSource {
-  const VaultFileDataSource({required this.vaultDirectoryPath});
+  VaultFileDataSource({required this.vaultDirectoryPath});
   final String vaultDirectoryPath;
+
+  // Web storage using SharedPreferences for file content
+  SharedPreferences? _webPrefs;
+  static const String _webMetaKey = 'vault_meta';
+  static const String _webItemsPrefix = 'vault_item_';
+
+  Future<void> _initWeb() async {
+    _webPrefs ??= await SharedPreferences.getInstance();
+  }
 
   Directory get _vaultDir => Directory(vaultDirectoryPath);
   Directory get _itemsDir => Directory(path.join(vaultDirectoryPath, 'items'));
@@ -19,12 +32,18 @@ class VaultFileDataSource {
       File(path.join(_stagingDir.path, '.committed'));
 
   Future<void> initDirectories() async {
+    if (kIsWeb) return;
     if (!await _vaultDir.exists()) await _vaultDir.create(recursive: true);
     if (!await _itemsDir.exists()) await _itemsDir.create(recursive: true);
     if (!await _tmpDir.exists()) await _tmpDir.create(recursive: true);
   }
 
   Future<void> writeMetaAtomic(List<int> bytes) async {
+    if (kIsWeb) {
+      await _initWeb();
+      await _webPrefs!.setString(_webMetaKey, base64Encode(bytes));
+      return;
+    }
     await initDirectories();
     final tmpFile = File(path.join(_tmpDir.path, 'vault.meta.tmp'));
     await tmpFile.writeAsBytes(bytes, flush: true);
@@ -32,11 +51,22 @@ class VaultFileDataSource {
   }
 
   Future<List<int>?> readMeta() async {
+    if (kIsWeb) {
+      await _initWeb();
+      final base64String = _webPrefs!.getString(_webMetaKey);
+      if (base64String == null || base64String.isEmpty) return null;
+      return base64Decode(base64String);
+    }
     if (!await _metaFile.exists()) return null;
     return await _metaFile.readAsBytes();
   }
 
   Future<void> writeItemAtomic(String itemId, List<int> bytes) async {
+    if (kIsWeb) {
+      await _initWeb();
+      await _webPrefs!.setString('$_webItemsPrefix$itemId', base64Encode(bytes));
+      return;
+    }
     await initDirectories();
     final tmpFile = File(path.join(_tmpDir.path, '$itemId.vault.tmp'));
     await tmpFile.writeAsBytes(bytes, flush: true);
@@ -45,12 +75,23 @@ class VaultFileDataSource {
   }
 
   Future<List<int>?> readItem(String itemId) async {
+    if (kIsWeb) {
+      await _initWeb();
+      final base64String = _webPrefs!.getString('$_webItemsPrefix$itemId');
+      if (base64String == null || base64String.isEmpty) return null;
+      return base64Decode(base64String);
+    }
     final itemFile = File(path.join(_itemsDir.path, '$itemId.vault'));
     if (!await itemFile.exists()) return null;
     return await itemFile.readAsBytes();
   }
 
   Future<void> deleteItem(String itemId) async {
+    if (kIsWeb) {
+      await _initWeb();
+      await _webPrefs!.remove('$_webItemsPrefix$itemId');
+      return;
+    }
     final itemFile = File(path.join(_itemsDir.path, '$itemId.vault'));
     if (await itemFile.exists()) {
       await itemFile.delete();
@@ -58,6 +99,15 @@ class VaultFileDataSource {
   }
 
   Future<void> clearAll() async {
+    if (kIsWeb) {
+      await _initWeb();
+      await _webPrefs!.remove(_webMetaKey);
+      final keys = _webPrefs!.getKeys().where((k) => k.startsWith(_webItemsPrefix));
+      for (final key in keys) {
+        await _webPrefs!.remove(key);
+      }
+      return;
+    }
     if (await _vaultDir.exists()) {
       await _vaultDir.delete(recursive: true);
     }
@@ -77,6 +127,7 @@ class VaultFileDataSource {
   // ---------------------------------------------------------------------------
 
   Future<void> _initStagingDirectories() async {
+    if (kIsWeb) return;
     if (!await _stagingDir.exists()) await _stagingDir.create(recursive: true);
     if (!await _stagingItemsDir.exists()) {
       await _stagingItemsDir.create(recursive: true);
@@ -84,21 +135,25 @@ class VaultFileDataSource {
   }
 
   Future<void> writeItemToStaging(String itemId, List<int> bytes) async {
+    if (kIsWeb) return;
     await _initStagingDirectories();
     final file = File(path.join(_stagingItemsDir.path, '$itemId.vault'));
     await file.writeAsBytes(bytes, flush: true);
   }
 
   Future<void> writeMetaToStaging(List<int> bytes) async {
+    if (kIsWeb) return;
     await _initStagingDirectories();
     await _stagingMetaFile.writeAsBytes(bytes, flush: true);
   }
 
   Future<void> markStagingCommitted() async {
+    if (kIsWeb) return;
     await _stagingCommitMarker.writeAsString('committed', flush: true);
   }
 
   Future<void> commitStagedPasswordChange() async {
+    if (kIsWeb) return;
     if (await _stagingItemsDir.exists()) {
       final stagedFiles = _stagingItemsDir.listSync().whereType<File>();
       for (final file in stagedFiles) {
@@ -115,6 +170,7 @@ class VaultFileDataSource {
   }
 
   Future<void> cleanupStaging() async {
+    if (kIsWeb) return;
     if (await _stagingDir.exists()) {
       await _stagingDir.delete(recursive: true);
     }
@@ -127,6 +183,7 @@ class VaultFileDataSource {
   /// - If staging exists but no marker → data was still being prepared,
   ///   safe to discard (old items/metadata are still intact).
   Future<void> recoverStagedChangesIfNeeded() async {
+    if (kIsWeb) return;
     if (!await _stagingDir.exists()) return;
 
     if (await _stagingCommitMarker.exists()) {

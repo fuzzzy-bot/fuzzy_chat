@@ -79,7 +79,7 @@ class _SnackBarContentState extends State<FuzzySnackBarContent> {
                     width: widget.snackbarData.width ?? 200,
                     decoration: BoxDecoration(
                       color: widget.snackbarData.backgroundColor ??
-                          uiColors.secondaryColor.withOpacity(0.7),
+                          uiColors.secondaryColor.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(_borderRadius),
                     ),
                     child: Padding(

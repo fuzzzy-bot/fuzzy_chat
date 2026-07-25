@@ -42,7 +42,7 @@ class FuzzyButton extends StatelessWidget {
           color: backgroundColor ??
               (isEnabled
                   ? uiColors.focusColor
-                  : uiColors.focusColor.withOpacity(0.4)),
+                  : uiColors.focusColor.withValues(alpha: 0.4)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Center(

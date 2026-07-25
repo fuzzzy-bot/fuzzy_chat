@@ -16,7 +16,7 @@ extension GetStoredChatGeneralDataCollection on Isar {
 
 const StoredChatGeneralDataSchema = CollectionSchema(
   name: r'StoredChatGeneralData',
-  id: 1591319642795052830,
+  id: 1591319642795052,
   properties: {
     r'chatId': PropertySchema(
       id: 0,
@@ -52,7 +52,7 @@ const StoredChatGeneralDataSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'chatId': IndexSchema(
-      id: 1909629659142158609,
+      id: 1909629659142158,
       name: r'chatId',
       unique: true,
       replace: false,

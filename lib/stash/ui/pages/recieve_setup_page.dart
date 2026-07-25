@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -62,7 +61,7 @@ class _ReceiveSetupPageState extends State<ReceiveSetupPage> {
 
     FuzzySnackbar.show(label: 'Generating New Keys');
 
-    final newKeyPair = await Isolate.run(RSAService.generateRSAKeyPair);
+    final newKeyPair = await RSAService.generateRSAKeyPair();
 
     setState(() {
       _keyPair = newKeyPair;
@@ -375,7 +374,7 @@ class _ReceiveSetupPageState extends State<ReceiveSetupPage> {
             ),
           if (_highlighted)
             ColoredBox(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha: 0.5),
               child: const Center(
                 child: Text(
                   'Drop the file here to import key',
