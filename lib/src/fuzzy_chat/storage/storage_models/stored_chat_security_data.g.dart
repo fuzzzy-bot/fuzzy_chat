@@ -16,7 +16,7 @@ extension GetStoredChatSecurityDataCollection on Isar {
 
 const StoredChatSecurityDataSchema = CollectionSchema(
   name: r'StoredChatSecurityData',
-  id: -6166183162976581,
+  id: -616618316297658101,
   properties: {
     r'acceptanceFilePath': PropertySchema(
       id: 0,
@@ -51,7 +51,7 @@ const StoredChatSecurityDataSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'chatId': IndexSchema(
-      id: 1909629659142158,
+      id: 1909629659142158609,
       name: r'chatId',
       unique: true,
       replace: false,

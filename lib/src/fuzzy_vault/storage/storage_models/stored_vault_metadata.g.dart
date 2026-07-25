@@ -16,7 +16,7 @@ extension GetStoredVaultMetadataCollection on Isar {
 
 const StoredVaultMetadataSchema = CollectionSchema(
   name: r'StoredVaultMetadata',
-  id: 8614133422869781,
+  id: 8614133422869781340,
   properties: {
     r'autoLockMinutes': PropertySchema(
       id: 0,

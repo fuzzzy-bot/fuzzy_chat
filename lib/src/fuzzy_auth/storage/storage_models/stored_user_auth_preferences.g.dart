@@ -16,7 +16,7 @@ extension GetStoredUserAuthPreferencesCollection on Isar {
 
 const StoredUserAuthPreferencesSchema = CollectionSchema(
   name: r'StoredUserAuthPreferences',
-  id: 3568594510929258,
+  id: 356859451092925861,
   properties: {
     r'isAuthenticationOnceEnabled': PropertySchema(
       id: 0,

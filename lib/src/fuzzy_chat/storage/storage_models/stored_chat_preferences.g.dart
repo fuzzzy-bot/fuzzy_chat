@@ -16,7 +16,7 @@ extension GetStoredChatPreferencesCollection on Isar {
 
 const StoredChatPreferencesSchema = CollectionSchema(
   name: r'StoredChatPreferences',
-  id: -7061712216966606,
+  id: -7061712216966606075,
   properties: {
     r'lastUpdated': PropertySchema(
       id: 0,
