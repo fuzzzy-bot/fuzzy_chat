@@ -7,6 +7,8 @@ Think of it like a invisible ink pen and decoder ring, but for your digital stuf
 
 Once you link up with someone, within the app 'fuzz' (encrypt) messages and files to send out via any channel, then 'unfuzz' (decrypt) any coded replies you get back. (And don't worry about linking up: the Invitation and Acceptance can be shared openly. Just make super sure the _Acceptance code you get back_ is from the person you actually intended to link with!)
 
+In plain engineering terms: **100% offline, end-to-end encrypted, no servers by design** — no HTTP, no remote APIs, nothing to subpoena. Encryption is RSA + AES (via the vendored `pointycastle`), and every key is generated on your device and never leaves it.
+
 <!-- [TODO: add GIF here showing the basic flows] -->
 
 ## 🚀 Get Fuzzy Chat!
@@ -21,6 +23,24 @@ Ready to start fuzzing? Grab the latest version here:
 - **Linux (AppImage) (TO BE ADDED SOON):** [Download Fuzzy Chat vX.Y.Z AppImage](https://github.com/fuzzzer/fuzzy_chat/releases/tag/v1.0.0)
 
 Or visit the [**Latest Releases Page**](https://github.com/fuzzzer/fuzzy_chat/releases) for all releases.
+
+### Building the APK yourself (dev)
+
+Debug APKs for all three flavors already exist under `build/app/outputs/apk/<flavor>/debug/`
+(`development` / `staging` / `production`, ~153 MB each, built 2026-07-25/26). To rebuild:
+
+```bash
+fvm flutter build apk --debug --flavor development -t lib/main_development.dart
+fvm flutter build apk --debug --flavor staging     -t lib/main_staging.dart
+fvm flutter build apk --debug --flavor production  -t lib/main_production.dart
+```
+
+A **release** build additionally needs the signing keystore (`android/keystore.jks` +
+`android/key.properties` — present on the build machine, gitignored, never committed):
+
+```bash
+fvm flutter build apk --release --flavor production -t lib/main_production.dart
+```
 
 ## What's the Big Idea?
 
@@ -109,6 +129,16 @@ Repeat as many times as your secret-sharing heart desires!
 - **Fuzzy is Your Friend (Plain Text is Not!):** The only thing that can "expose" you is sharing something that _isn't_ fuzzed!
   - The scrambled "fuzz" (encrypted content) from Fuzzy Chat? Totally safe to splash all over the internet. It's designed to be unreadable nonsense to anyone but your linked secret sharer.
   - Plain text messages or unencrypted files you _meant_ to fuzz but forgot? Well, that's like shouting your secret password in a crowded library. Fuzzy Chat can't help you if you don't use it first! So, always fuzz before you fuss (with sending).
+
+## Where the Project Stands (Dev Status)
+
+- **Fully functional offline encryption app** — the flows above all work today.
+- **UI kit:** the app still carries an inline, app-local `lib/src/ui_kit/` (colors, text
+  styles, themes, widgets). The **Phase-M migration onto the shared `fuzzzy_ui_kit`
+  package is outstanding** — in flight on branch `feat/phase-m-fuzzzy-ui-kit`.
+- **QA instrumentation:** the Marionette binding that makes the app drivable for automated
+  QA is committed on the local `feat/phase-m-fuzzzy-ui-kit` branch (entrypoint
+  `lib/main_development.dart`), not yet merged to `main`.
 
 ## Want to Dive Deeper into the Rabbit Hole?
 
