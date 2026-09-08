@@ -18,5 +18,13 @@ class StandardBase64Codec extends BinaryTextCodec {
   String encode(Uint8List bytes) => base64Encode(bytes);
 
   @override
-  Uint8List decode(String encoded) => base64Decode(base64.normalize(encoded));
+  Uint8List decode(String encoded) {
+    try {
+      return base64Decode(encoded);
+    } on FormatException {
+      // Normalizing costs a second pass, so it is kept for the rare payload
+      // that arrives unpadded or in the url flavoured alphabet.
+      return base64Decode(base64.normalize(encoded));
+    }
+  }
 }

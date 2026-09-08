@@ -29,8 +29,10 @@ class Base91Codec extends BinaryTextCodec {
 
   @override
   String encode(Uint8List bytes) {
-    final buffer = StringBuffer();
+    // Two symbols per 13 bit group at worst, plus the trailing pair.
+    final symbols = Uint8List(bytes.length * 16 ~/ 13 + 4);
 
+    var symbolCount = 0;
     var queue = 0;
     var queuedBits = 0;
 
@@ -51,25 +53,27 @@ class Base91Codec extends BinaryTextCodec {
         queuedBits -= 14;
       }
 
-      buffer.writeCharCode(alphabet.codeUnitFor(group % _radix));
-      buffer.writeCharCode(alphabet.codeUnitFor(group ~/ _radix));
+      symbols[symbolCount++] = alphabet.codeUnitFor(group % _radix);
+      symbols[symbolCount++] = alphabet.codeUnitFor(group ~/ _radix);
     }
 
     if (queuedBits > 0) {
-      buffer.writeCharCode(alphabet.codeUnitFor(queue % _radix));
+      symbols[symbolCount++] = alphabet.codeUnitFor(queue % _radix);
 
       if (queuedBits > 7 || queue > _radix - 1) {
-        buffer.writeCharCode(alphabet.codeUnitFor(queue ~/ _radix));
+        symbols[symbolCount++] = alphabet.codeUnitFor(queue ~/ _radix);
       }
     }
 
-    return buffer.toString();
+    return String.fromCharCodes(symbols, 0, symbolCount);
   }
 
   @override
   Uint8List decode(String encoded) {
-    final decoded = <int>[];
+    // A symbol pair carries 14 bits at most, so 7 bits per symbol bounds it.
+    final decoded = Uint8List(encoded.length * 7 ~/ 8 + 2);
 
+    var decodedLength = 0;
     var group = -1;
     var queue = 0;
     var queuedBits = 0;
@@ -95,7 +99,7 @@ class Base91Codec extends BinaryTextCodec {
       queuedBits += (group & _shortGroupMask) > _shortGroupThreshold ? 13 : 14;
 
       do {
-        decoded.add(queue & 0xFF);
+        decoded[decodedLength++] = queue & 0xFF;
         queue >>= 8;
         queuedBits -= 8;
       } while (queuedBits > 7);
@@ -104,9 +108,9 @@ class Base91Codec extends BinaryTextCodec {
     }
 
     if (group >= 0) {
-      decoded.add((queue | (group << queuedBits)) & 0xFF);
+      decoded[decodedLength++] = (queue | (group << queuedBits)) & 0xFF;
     }
 
-    return Uint8List.fromList(decoded);
+    return Uint8List.view(decoded.buffer, 0, decodedLength);
   }
 }

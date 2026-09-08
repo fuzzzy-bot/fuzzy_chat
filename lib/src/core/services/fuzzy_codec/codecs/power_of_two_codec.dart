@@ -28,8 +28,11 @@ class PowerOfTwoCodec extends BinaryTextCodec {
     if (bytes.isEmpty) return '';
 
     final symbolMask = (1 << bitsPerSymbol) - 1;
-    final buffer = StringBuffer();
+    final symbols = Uint8List(
+      (bytes.length * 8 + bitsPerSymbol - 1) ~/ bitsPerSymbol,
+    );
 
+    var symbolCount = 0;
     var queue = 0;
     var queuedBits = 0;
 
@@ -39,23 +42,20 @@ class PowerOfTwoCodec extends BinaryTextCodec {
 
       while (queuedBits >= bitsPerSymbol) {
         queuedBits -= bitsPerSymbol;
-        buffer.writeCharCode(
-          alphabet.codeUnitFor((queue >> queuedBits) & symbolMask),
-        );
+        symbols[symbolCount++] =
+            alphabet.codeUnitFor((queue >> queuedBits) & symbolMask);
       }
 
       queue &= (1 << queuedBits) - 1;
     }
 
     if (queuedBits > 0) {
-      buffer.writeCharCode(
-        alphabet.codeUnitFor(
-          (queue << (bitsPerSymbol - queuedBits)) & symbolMask,
-        ),
+      symbols[symbolCount++] = alphabet.codeUnitFor(
+        (queue << (bitsPerSymbol - queuedBits)) & symbolMask,
       );
     }
 
-    return buffer.toString();
+    return String.fromCharCodes(symbols, 0, symbolCount);
   }
 
   @override
