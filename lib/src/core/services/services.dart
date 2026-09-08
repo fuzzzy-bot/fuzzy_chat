@@ -1,6 +1,7 @@
 export '../utils/debouncer.dart';
 export '../utils/logger.dart';
 export 'directory_assets/directory_assets.dart';
+export 'fuzzy_codec/fuzzy_codec.dart';
 export 'fuzzy_hub/fuzzy_hub.dart';
 export 'fuzzy_link/fuzzy_link.dart';
 export 'password_strength_service/password_strength_service.dart';

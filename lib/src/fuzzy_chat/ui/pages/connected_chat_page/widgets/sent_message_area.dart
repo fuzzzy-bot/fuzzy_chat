@@ -26,8 +26,11 @@ class _SentMessageAreaState extends State<SentMessageArea> {
   bool isExpandable = false;
   bool showEncrypted = true;
 
-  String _prepareEncrypredMessage(String encryptedMessage) =>
-      '$fuzzIdentificator$encryptedMessage';
+  // Messages encoded before base 91 became the default are re-encoded here, so
+  // sharing an old one costs a few symbol lookups instead of a re-encryption.
+  String _prepareEncrypredMessage(String encryptedMessage) => isEncryptedFile
+      ? '$fuzzIdentificator$encryptedMessage'
+      : '$fuzzIdentificator${FuzzyCodecService.shrink(encryptedMessage)}';
 
   @override
   void initState() {
