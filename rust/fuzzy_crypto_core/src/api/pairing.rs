@@ -517,6 +517,170 @@ mod tests {
         a.core.complete_handshake(CHAT_X.into(), from_b).unwrap();
     }
 
+    /// A dishonest inner header inside an otherwise honest, honestly-signed Olm
+    /// acceptance must be rejected `Corrupt` **after** the Olm decrypt but
+    /// **before** the save — so the one-time key is never consumed and A's state
+    /// file is untouched. The committed acceptance tests all carry an honest
+    /// header, so without this a dropped header check would still pass
+    /// `cargo test` (F2-3 review nit 1 — the reviewer's 11-variant harness).
+    #[test]
+    fn wrong_inner_header_is_corrupt_and_keeps_the_otk() {
+        use vodozemac::olm::{Account, SessionConfig};
+        use vodozemac::Curve25519PublicKey;
+
+        use crate::formats::{Acceptance, ContentType, Direction, SIGNATURE_LEN};
+
+        let mut a = Device::new();
+        let invitation_text = a.core.create_invitation(CHAT_X.into()).unwrap();
+        let invitation =
+            pairing::verify_invitation(CHAT_X, &decode_text(&invitation_text).unwrap()).unwrap();
+
+        // Build an acceptance whose Olm session is honest (A's real one-time key)
+        // but whose inner-header plaintext is produced by `corrupt`, signed under
+        // the B account that produced it.
+        let forge = |corrupt: &dyn Fn(InnerHeader) -> Vec<u8>| -> String {
+            let b = Account::new();
+            let honest = InnerHeader {
+                chat_id: CHAT_X.to_string(),
+                sender_ed25519: *b.ed25519_key().as_bytes(),
+                recipient_ed25519: invitation.a_ed25519,
+                direction: Direction::BToA,
+                counter: 0,
+                content_type: ContentType::Handshake,
+                body: Vec::new(),
+            };
+            let plaintext = corrupt(honest);
+            let mut session = b
+                .create_outbound_session(
+                    SessionConfig::version_1(),
+                    Curve25519PublicKey::from_bytes(invitation.a_curve25519),
+                    Curve25519PublicKey::from_bytes(invitation.a_one_time_key),
+                )
+                .unwrap();
+            let prekey_msg = match session.encrypt(plaintext).unwrap() {
+                OlmMessage::PreKey(message) => message.to_bytes(),
+                OlmMessage::Normal(_) => panic!("the first message is always a pre-key"),
+            };
+            let mut acceptance = Acceptance {
+                chat_id: CHAT_X.to_string(),
+                b_curve25519: b.curve25519_key().to_bytes(),
+                b_ed25519: *b.ed25519_key().as_bytes(),
+                prekey_msg,
+                signature: [0; SIGNATURE_LEN],
+            };
+            acceptance.signature = b.sign(acceptance.to_be_signed().unwrap()).to_bytes();
+            encode_text(&acceptance.encode().unwrap())
+        };
+
+        type Corrupt = Box<dyn Fn(InnerHeader) -> Vec<u8>>;
+        let variants: Vec<(&str, Corrupt)> = vec![
+            (
+                "wrong chat id",
+                Box::new(|mut h: InnerHeader| {
+                    h.chat_id = CHAT_Y.to_string();
+                    h.encode().unwrap()
+                }),
+            ),
+            (
+                "wrong sender key",
+                Box::new(|mut h: InnerHeader| {
+                    h.sender_ed25519 = [0xEE; 32];
+                    h.encode().unwrap()
+                }),
+            ),
+            (
+                "wrong recipient key",
+                Box::new(|mut h: InnerHeader| {
+                    h.recipient_ed25519 = [0xEE; 32];
+                    h.encode().unwrap()
+                }),
+            ),
+            (
+                "direction A->B",
+                Box::new(|mut h: InnerHeader| {
+                    h.direction = Direction::AToB;
+                    h.encode().unwrap()
+                }),
+            ),
+            (
+                "counter 1",
+                Box::new(|mut h: InnerHeader| {
+                    h.counter = 1;
+                    h.encode().unwrap()
+                }),
+            ),
+            (
+                "content type text",
+                Box::new(|mut h: InnerHeader| {
+                    h.content_type = ContentType::Text;
+                    h.encode().unwrap()
+                }),
+            ),
+            (
+                "inner version 2",
+                Box::new(|h: InnerHeader| {
+                    let mut bytes = h.encode().unwrap();
+                    bytes[0] = 2;
+                    bytes
+                }),
+            ),
+            ("empty", Box::new(|_h: InnerHeader| Vec::new())),
+            (
+                "garbage",
+                Box::new(|_h: InnerHeader| b"not an inner header".to_vec()),
+            ),
+            (
+                "truncated",
+                Box::new(|h: InnerHeader| {
+                    let mut bytes = h.encode().unwrap();
+                    bytes.pop();
+                    bytes
+                }),
+            ),
+            (
+                "trailing byte",
+                Box::new(|h: InnerHeader| {
+                    let mut bytes = h.encode().unwrap();
+                    bytes.push(0);
+                    bytes
+                }),
+            ),
+        ];
+
+        for (name, corrupt) in &variants {
+            let acceptance = forge(corrupt);
+            let before = a.state_bytes(CHAT_X);
+            assert_eq!(
+                a.core
+                    .complete_handshake(CHAT_X.into(), acceptance)
+                    .unwrap_err(),
+                CoreError::Corrupt,
+                "{name}"
+            );
+            assert_eq!(a.state_bytes(CHAT_X), before, "{name}: state untouched");
+            assert_eq!(
+                a.state(CHAT_X)
+                    .account()
+                    .unwrap()
+                    .stored_one_time_key_count(),
+                1,
+                "{name}: one-time key not consumed"
+            );
+        }
+
+        // An honest acceptance still completes afterwards.
+        let mut b = Device::new();
+        let honest = b
+            .core
+            .accept_invitation(CHAT_X.into(), invitation_text)
+            .unwrap();
+        a.core.complete_handshake(CHAT_X.into(), honest).unwrap();
+        assert_eq!(
+            a.core.chat_status(CHAT_X.into()).unwrap(),
+            ChatStatus::Connected
+        );
+    }
+
     #[test]
     fn regenerate_invalidates_old() {
         let mut a = Device::new();

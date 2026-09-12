@@ -20,7 +20,7 @@ use zeroize::{ZeroizeOnDrop, Zeroizing};
 
 use crate::error::CoreError;
 use crate::formats::{Argon2Params, LocalSeal, WrappedStoreKey, WRAPPED_STORE_KEY_CT_LEN};
-use crate::state::{ChatState, STATE_FORMAT_VERSION};
+use crate::state::{serialize_exact, ChatState, STATE_FORMAT_VERSION};
 
 /// Directory under the app's support dir that holds every `<chat_id>.state`.
 pub const STORE_SUBDIR: &str = "fuzzy_crypto_store";
@@ -30,13 +30,14 @@ pub const ARGON2_PARAMS: Argon2Params = Argon2Params {
     t_cost: 4,
     p_cost: 1,
 };
-/// Largest memory cost (KiB) accepted from a blob header — 1 GiB; beyond that a
-/// tampered header is a denial of service, not a slower unlock.
-const MAX_ARGON2_M_COST: u32 = 1 << 20;
-/// Largest pass count accepted from a blob header.
-const MAX_ARGON2_T_COST: u32 = 64;
-/// Bytes a serialised state body is expected to fit in without reallocating (pitfall §F.11).
-const STATE_BODY_CAPACITY: usize = 16 * 1024;
+/// Largest memory cost (KiB) accepted from a blob header — 256 MiB. Headers are
+/// attacker-controlled (a pasted 0x05 password blob, a tampered 0x10 wrapped
+/// key), so a tampered `m` must not OOM-kill a phone; our own `ARGON2_PARAMS`
+/// sits far below this at 64 MiB (F2-2 review R2).
+const MAX_ARGON2_M_COST: u32 = 256 * 1024;
+/// Largest pass count accepted from a blob header — a tampered `t` must not hang
+/// the app for minutes (F2-2 review R2). Our own `ARGON2_PARAMS` uses 4.
+const MAX_ARGON2_T_COST: u32 = 16;
 
 const STORE_KEY_AAD: &[u8] = b"store-key";
 const STATE_AAD_PREFIX: &[u8] = b"chat-state";
@@ -92,13 +93,19 @@ fn derive_kek(password: &[u8], salt: &[u8; 16], params: Argon2Params) -> Result<
         Some(32),
     )
     .map_err(|_| CoreError::Corrupt)?;
+    let block_count = params.block_count();
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     let mut kek = Zeroizing::new([0u8; 32]);
+    // `argon2 0.6.0` never wipes its block buffer on drop (`Blocks::drop` only
+    // deallocates), so the KEK stays recoverable from the freed 64 MiB until the
+    // allocator reuses it (F2-2 review R2, pitfall §F.11). Own the memory in a
+    // `Zeroizing` buffer and wipe it ourselves.
+    let mut blocks = Zeroizing::new(vec![argon2::Block::new(); block_count]);
     let _serialised = ARGON_LOCK
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     argon2
-        .hash_password_into(password, salt, kek.as_mut())
+        .hash_password_into_with_memory(password, salt, kek.as_mut(), blocks.as_mut_slice())
         .map_err(|_| CoreError::Corrupt)?;
     Ok(kek)
 }
@@ -211,8 +218,11 @@ fn state_aad(chat_id: &str) -> Vec<u8> {
 }
 
 fn seal_state(store_key: &[u8; 32], state: &ChatState) -> Result<Vec<u8>, CoreError> {
-    let mut body = Zeroizing::new(Vec::with_capacity(STATE_BODY_CAPACITY));
-    serde_json::to_writer(&mut *body, state).map_err(|_| CoreError::Internal)?;
+    // Exactly-sized, residue-free serialisation — a fixed pre-size is not a
+    // bound: a receiving side with 5 chains of 40 skipped keys reaches > 30 KiB
+    // and any `Vec` growth leaks an unwiped copy of the Olm state (pitfall §F.11,
+    // F2-2 review R1).
+    let body = serialize_exact(state)?;
     let nonce: [u8; 24] = random_array()?;
     let ciphertext = seal(store_key, &nonce, &state_aad(&state.chat_id), &body)?;
     Ok(LocalSeal { nonce, ciphertext }.encode())
@@ -236,16 +246,38 @@ fn open_state(store_key: &[u8; 32], chat_id: &str, file: &[u8]) -> Result<ChatSt
     Ok(state)
 }
 
-/// `<file>.tmp` → write → fsync → rename over `path` (pitfall §F.14). A failed
-/// attempt leaves no temp file behind and never touches the previous `path`.
+/// Creates the temp file, `0o600` on unix so the sealed state is never group- or
+/// world-readable (F2-2 review nit).
+fn create_tmp(path: &Path) -> io::Result<File> {
+    let mut options = fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    options.open(path)
+}
+
+/// `<file>.tmp` → write → fsync → rename over `path` → fsync the directory
+/// (pitfall §F.14, F2-2 review nit). The directory fsync makes the rename durable
+/// across a power loss, so a counter is never reused after one. A failed attempt
+/// leaves no temp file behind and never touches the previous `path`.
 fn write_atomically(path: &Path, bytes: &[u8]) -> Result<(), CoreError> {
     let tmp = path.with_extension(STATE_TMP_EXTENSION);
     let written = (|| -> io::Result<()> {
-        let mut file = File::create(&tmp)?;
+        let mut file = create_tmp(&tmp)?;
         file.write_all(bytes)?;
         file.sync_all()?;
         drop(file);
-        fs::rename(&tmp, path)
+        fs::rename(&tmp, path)?;
+        // On POSIX the rename is durable only once the directory entry is synced;
+        // a directory handle cannot be opened this way on Windows.
+        #[cfg(unix)]
+        if let Some(parent) = path.parent() {
+            File::open(parent)?.sync_all()?;
+        }
+        Ok(())
     })();
     if written.is_err() {
         let _ = fs::remove_file(&tmp);
@@ -344,6 +376,9 @@ impl OpenStore {
     pub fn delete_chat(&mut self, chat_id: &str) -> Result<(), CoreError> {
         let path = self.state_path(chat_id)?;
         self.cache.remove(chat_id);
+        // Sweep a `.state.tmp` left by a crash between write and rename (F2-2
+        // review nit) — harmless ciphertext, but "delete" should leave nothing.
+        let _ = fs::remove_file(path.with_extension(STATE_TMP_EXTENSION));
         let existing = match fs::metadata(&path) {
             Ok(metadata) => metadata,
             Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
@@ -536,6 +571,37 @@ mod tests {
             zero_lanes[30] = 0;
             assert_eq!(
                 unwrap_store_key(&zero_lanes, PASSWORD).unwrap_err(),
+                CoreError::Corrupt
+            );
+        }
+
+        #[test]
+        fn tightened_header_caps_reject_oversized_argon2_params() {
+            use crate::formats::{Argon2Params, WrappedStoreKey, WRAPPED_STORE_KEY_CT_LEN};
+
+            let make = |m_cost: u32, t_cost: u32| {
+                WrappedStoreKey {
+                    salt: [0x11; 16],
+                    params: Argon2Params {
+                        m_cost,
+                        t_cost,
+                        p_cost: 1,
+                    },
+                    nonce: [0x22; 24],
+                    ciphertext: [0; WRAPPED_STORE_KEY_CT_LEN],
+                }
+                .encode()
+            };
+
+            // 256 MiB and 16 passes are the ceilings for an attacker-controlled
+            // header (F2-2 review R2); one past either is `Corrupt`, refused
+            // before a single Argon2 block is allocated.
+            assert_eq!(
+                unwrap_store_key(&make((256 * 1024) + 1, 1), PASSWORD).unwrap_err(),
+                CoreError::Corrupt
+            );
+            assert_eq!(
+                unwrap_store_key(&make(1024, 17), PASSWORD).unwrap_err(),
                 CoreError::Corrupt
             );
         }
@@ -799,6 +865,67 @@ mod tests {
             assert!(state_files(&store).is_empty());
             assert_eq!(err_of(store.load_state(CHAT_ID)), CoreError::UnknownChat);
             store.delete_chat(CHAT_ID).unwrap();
+            let _ = fs::remove_dir_all(dir);
+        }
+
+        #[test]
+        fn state_body_is_exactly_sized_with_full_skipped_key_stores() {
+            use vodozemac::olm::{Account, OlmMessage, SessionConfig};
+
+            // Build B's session carrying vodozemac's maximum retained state:
+            // MAX_RECEIVING_CHAINS (5) chains each holding MAX_MESSAGE_KEYS (40)
+            // skipped keys — the worst case for the serialised body (pitfall §F.11).
+            let a = Account::new();
+            let mut b = Account::new();
+            let b_otk = b.generate_one_time_keys(1).created[0];
+            b.mark_keys_as_published();
+
+            let mut a_session = a
+                .create_outbound_session(SessionConfig::version_1(), b.curve25519_key(), b_otk)
+                .unwrap();
+            let establish = match a_session.encrypt(b"establish".as_slice()).unwrap() {
+                OlmMessage::PreKey(message) => message,
+                OlmMessage::Normal(_) => panic!("the first message is always a pre-key"),
+            };
+            let mut b_session = b
+                .create_inbound_session(SessionConfig::version_1(), a.curve25519_key(), &establish)
+                .unwrap()
+                .session;
+
+            // Five rounds: A sends 41 on its current chain, B decrypts only the
+            // last (40 skipped keys cached), then B replies so A ratchets and the
+            // next round opens a fresh receiving chain on B.
+            for _ in 0..5 {
+                let mut last = None;
+                for index in 0..41u32 {
+                    last = Some(a_session.encrypt(index.to_be_bytes().as_slice()).unwrap());
+                }
+                b_session.decrypt(&last.unwrap()).unwrap();
+                let reply = b_session.encrypt(b"reply".as_slice()).unwrap();
+                a_session.decrypt(&reply).unwrap();
+            }
+
+            let mut state = fresh_state(CHAT_ID);
+            state.account = b.pickle();
+            state.session = Some(b_session.pickle());
+
+            let body = serialize_exact(&state).unwrap();
+            assert!(
+                body.len() > 30_000,
+                "5x40 skipped keys is a large body: {} B",
+                body.len()
+            );
+            assert_eq!(
+                body.capacity(),
+                body.len(),
+                "the buffer is sized exactly and never reallocates"
+            );
+
+            // It still seals and reloads.
+            let dir = temp_dir();
+            let mut store = open_store(&dir, STORE_KEY);
+            store.put_state(state).unwrap();
+            assert!(store.load_state(CHAT_ID).is_ok());
             let _ = fs::remove_dir_all(dir);
         }
     }
