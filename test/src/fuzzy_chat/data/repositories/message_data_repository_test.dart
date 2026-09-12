@@ -148,8 +148,8 @@ void main() {
     });
 
     test(
-        'a seal from another store, a flipped byte and a missing seal read '
-        'as empty and are never thrown', () async {
+        'a seal from another store, a flipped byte, a missing seal and a '
+        'non-base64 seal read as empty and are never thrown', () async {
       await repository.addMessage(_text('hello', isSent: true));
       final row = dataSource.rows.single;
 
@@ -185,6 +185,13 @@ void main() {
       );
 
       row.sealedPlaintext = null;
+      expect(
+        (await repository.getMessagesForChat(_chatId)).single.decryptedMessage,
+        '',
+      );
+
+      // Not base64 at all: base64Decode would throw a FormatException.
+      row.sealedPlaintext = 'not base64 at all!';
       expect(
         (await repository.getMessagesForChat(_chatId)).single.decryptedMessage,
         '',

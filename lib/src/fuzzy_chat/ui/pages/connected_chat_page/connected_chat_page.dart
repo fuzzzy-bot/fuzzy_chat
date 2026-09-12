@@ -16,12 +16,22 @@ class ConnectedChatPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<ConnectedChatCubit>(
-      create: (context) => ConnectedChatCubit(
-        chatId: payload.chatGeneralData.chatId,
-        messageDataRepository: sl.get<MessageDataRepository>(),
-        cryptoCoreService: sl.get<CryptoCoreService>(),
-      )..loadInitialMessages(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<ConnectedChatCubit>(
+          create: (context) => ConnectedChatCubit(
+            chatId: payload.chatGeneralData.chatId,
+            messageDataRepository: sl.get<MessageDataRepository>(),
+            cryptoCoreService: sl.get<CryptoCoreService>(),
+          )..loadInitialMessages(),
+        ),
+        BlocProvider<SafetyNumberCubit>(
+          create: (context) => SafetyNumberCubit(
+            chatId: payload.chatGeneralData.chatId,
+            cryptoCoreService: sl.get<CryptoCoreService>(),
+          )..load(),
+        ),
+      ],
       child: ProvidedConnectedChatPage(payload: payload),
     );
   }
@@ -38,6 +48,16 @@ class ProvidedConnectedChatPage extends StatefulWidget {
   @override
   State<ProvidedConnectedChatPage> createState() =>
       _ProvidedConnectedChatPageState();
+}
+
+/// A failure toasts once, on the transition into `failed`: `actionStatus` is
+/// sticky across later page loads, so any other transition must stay silent.
+@visibleForTesting
+bool shouldToastFailure(
+    ConnectedChatState previous, ConnectedChatState current) {
+  return (previous.status != current.status && current.status.isFailed) ||
+      (previous.actionStatus != current.actionStatus &&
+          current.actionStatus.isFailed);
 }
 
 class _ProvidedConnectedChatPageState extends State<ProvidedConnectedChatPage> {
@@ -190,9 +210,7 @@ class _ProvidedConnectedChatPageState extends State<ProvidedConnectedChatPage> {
     return FuzzyScaffold(
       hasAutomaticBackButton: false,
       body: BlocConsumer<ConnectedChatCubit, ConnectedChatState>(
-        listenWhen: (previous, current) =>
-            previous.status != current.status ||
-            previous.actionStatus != current.actionStatus,
+        listenWhen: shouldToastFailure,
         listener: (context, state) {
           if (state.status.isFailed) {
             if (state.failure?.message?.isEmpty ?? true) return;

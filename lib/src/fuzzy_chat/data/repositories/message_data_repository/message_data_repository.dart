@@ -111,9 +111,15 @@ class MessageDataRepository {
       return '';
     }
 
-    final openRes = await cryptoCoreService.openLocal(
-      base64Decode(sealedPlaintext),
-    );
+    final Uint8List sealed;
+    try {
+      sealed = base64Decode(sealedPlaintext);
+    } on FormatException {
+      logger.w('Message ${stored.id} has a malformed sealed plaintext');
+      return '';
+    }
+
+    final openRes = await cryptoCoreService.openLocal(sealed);
 
     if (openRes is CryptoCoreFailure<Uint8List>) {
       logger.w('Failed to open message ${stored.id}: ${openRes.type}');
