@@ -1,21 +1,14 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
-import 'package:crypto/crypto.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fuzzy_chat/lib.dart';
 
 part 'basic_encryption_state.dart';
 
 class BasicEncryptionCubit extends Cubit<BasicEncryptionState> {
-  BasicEncryptionCubit()
-      : super(const BasicEncryptionState(status: StateStatus.initial));
+  final CryptoCoreService cryptoCoreService;
 
-  Uint8List _createKeyFromString(String textKey) {
-    final keyBytes = utf8.encode(textKey);
-    final digest = sha256.convert(keyBytes);
-    return Uint8List.fromList(digest.bytes);
-  }
+  BasicEncryptionCubit({
+    required this.cryptoCoreService,
+  }) : super(const BasicEncryptionState(status: StateStatus.initial));
 
   Future<void> encryptText({required String text, required String key}) async {
     if (text.isEmpty || key.isEmpty) {
@@ -28,23 +21,28 @@ class BasicEncryptionCubit extends Cubit<BasicEncryptionState> {
       return;
     }
     emit(state.copyWith(status: StateStatus.loading));
-    try {
-      final symmetricKey = _createKeyFromString(key);
-      final encryptedText = await AESService.encryptText(text, symmetricKey);
-      emit(
-        state.copyWith(
-          status: StateStatus.success,
-          result: encryptedText,
-        ),
-      );
-    } catch (e) {
+
+    final res = await cryptoCoreService.passwordSealText(
+      password: key,
+      text: text,
+    );
+
+    if (res is CryptoCoreFailure<String>) {
       emit(
         state.copyWith(
           status: StateStatus.failed,
           failure: DefaultFailure(message: 'encryptionFailed'),
         ),
       );
+      return;
     }
+
+    emit(
+      state.copyWith(
+        status: StateStatus.success,
+        result: (res as CryptoCoreSuccess<String>).data,
+      ),
+    );
   }
 
   Future<void> decryptText({
@@ -61,25 +59,41 @@ class BasicEncryptionCubit extends Cubit<BasicEncryptionState> {
       return;
     }
     emit(state.copyWith(status: StateStatus.loading));
-    try {
-      final symmetricKey = _createKeyFromString(key);
-      final decryptedText =
-          await AESService.decryptText(encryptedText, symmetricKey);
-      emit(
-        state.copyWith(
-          status: StateStatus.success,
-          result: decryptedText,
-        ),
-      );
-    } catch (e) {
+
+    final res = await cryptoCoreService.passwordOpenText(
+      password: key,
+      blob: encryptedText,
+    );
+
+    if (res is CryptoCoreFailure<String>) {
       emit(
         state.copyWith(
           status: StateStatus.failed,
-          failure: DefaultFailure(
-            message: 'decryptionFailedCheckYourKeyOrEncryptedText',
-          ),
+          failure:
+              DefaultFailure(message: _decryptionFailureMessageOf(res.type)),
         ),
       );
+      return;
     }
+
+    emit(
+      state.copyWith(
+        status: StateStatus.success,
+        result: (res as CryptoCoreSuccess<String>).data,
+      ),
+    );
+  }
+
+  /// A tampered blob is indistinguishable from a wrong key (the AEAD tag
+  /// fails either way), so both read as "incorrect key"; only a string that
+  /// is not a fuzzed text at all reads as invalid.
+  static String _decryptionFailureMessageOf(CryptoCoreFailureType type) {
+    return switch (type) {
+      CryptoCoreFailureType.wrongPassword => 'basicsWrongPassword',
+      CryptoCoreFailureType.corrupt ||
+      CryptoCoreFailureType.unsupportedFormat =>
+        'corruptBlob',
+      _ => 'decryptionFailedCheckYourKeyOrEncryptedText',
+    };
   }
 }

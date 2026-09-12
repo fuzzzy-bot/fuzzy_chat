@@ -505,5 +505,7 @@
   "fileStillArriving": "This file is still being written — wait until it has fully arrived, then try again.",
   "@fileStillArriving": {},
   "fileCannotBeOpenedAskToResend": "This file cannot be opened; ask the sender to send it again.",
-  "@fileCannotBeOpenedAskToResend": {}
+  "@fileCannotBeOpenedAskToResend": {},
+  "basicsWrongPassword": "Incorrect key — this text cannot be unfuzzed with it.",
+  "@basicsWrongPassword": {}
 }

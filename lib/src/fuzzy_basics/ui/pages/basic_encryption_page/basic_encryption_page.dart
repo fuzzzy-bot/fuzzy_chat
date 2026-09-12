@@ -14,7 +14,9 @@ class BasicEncryptionPage extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<BasicEncryptionCubit>(
-          create: (context) => BasicEncryptionCubit(),
+          create: (context) => BasicEncryptionCubit(
+            cryptoCoreService: sl.get<CryptoCoreService>(),
+          ),
         ),
         BlocProvider<CustomFileProcessingCubit<FileEncryptionOption>>(
           create: (context) => CustomFileProcessingCubit(
@@ -131,6 +133,10 @@ class _ProvidedBasicEncryptionPageState
       case 'decryptionFailedCheckYourKeyOrEncryptedText':
         return context
             .fuzzyChatLocalizations.decryptionFailedCheckYourKeyOrEncryptedText;
+      case 'basicsWrongPassword':
+        return context.fuzzyChatLocalizations.basicsWrongPassword;
+      case 'corruptBlob':
+        return context.fuzzyChatLocalizations.corruptBlob;
       default:
         return message;
     }

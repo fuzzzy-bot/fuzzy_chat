@@ -805,4 +805,8 @@ class FuzzyChatLocalizationsKa extends FuzzyChatLocalizations {
   @override
   String get fileCannotBeOpenedAskToResend =>
       'ამ ფაილის გახსნა ვერ მოხერხდა; სთხოვეთ გამომგზავნს, ხელახლა გამოგზავნოს.';
+
+  @override
+  String get basicsWrongPassword =>
+      'არასწორი გასაღები — ამ გასაღებით ამ ტექსტის გაშიფვრა ვერ მოხერხდება.';
 }

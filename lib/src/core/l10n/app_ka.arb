@@ -505,5 +505,7 @@
   "fileStillArriving": "ეს ფაილი ჯერ კიდევ იწერება — დაელოდეთ სრულად ჩამოტვირთვას და სცადეთ ხელახლა.",
   "@fileStillArriving": {},
   "fileCannotBeOpenedAskToResend": "ამ ფაილის გახსნა ვერ მოხერხდა; სთხოვეთ გამომგზავნს, ხელახლა გამოგზავნოს.",
-  "@fileCannotBeOpenedAskToResend": {}
+  "@fileCannotBeOpenedAskToResend": {},
+  "basicsWrongPassword": "არასწორი გასაღები — ამ გასაღებით ამ ტექსტის გაშიფვრა ვერ მოხერხდება.",
+  "@basicsWrongPassword": {}
 }

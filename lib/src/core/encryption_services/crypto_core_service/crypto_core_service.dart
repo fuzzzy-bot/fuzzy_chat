@@ -3,6 +3,7 @@ import 'package:fuzzy_chat/lib.dart';
 import 'package:fuzzy_chat/rust_bridge/api/core.dart' as rust_core;
 import 'package:fuzzy_chat/rust_bridge/api/files.dart' as rust_files;
 import 'package:fuzzy_chat/rust_bridge/api/formats.dart' as rust_formats;
+import 'package:fuzzy_chat/rust_bridge/api/passwords.dart' as rust_passwords;
 import 'package:fuzzy_chat/rust_bridge/error.dart';
 import 'package:path/path.dart' as path;
 
@@ -268,6 +269,31 @@ class CryptoCoreService {
           job: job,
         ),
       ),
+    );
+  }
+
+  /// Fuzzes [text] under [password] (Argon2id, fresh salt and nonce) as a
+  /// paste-able `Fuzz/` 0x05 blob; like the password-mode file calls the
+  /// store is not involved, so this works with a locked store.
+  Future<CryptoCoreResponse<String>> passwordSealText({
+    required String password,
+    required String text,
+  }) {
+    return _guarded(
+      () => rust_passwords.passwordSealText(password: password, text: text),
+    );
+  }
+
+  /// Inverse of [passwordSealText]. A wrong password and a tampered blob are
+  /// both `wrongPassword` (the AEAD cannot tell them apart); a pasted string
+  /// that is not a 0x05 blob is `unsupportedFormat`, a malformed one
+  /// `corrupt`.
+  Future<CryptoCoreResponse<String>> passwordOpenText({
+    required String password,
+    required String blob,
+  }) {
+    return _guarded(
+      () => rust_passwords.passwordOpenText(password: password, blob: blob),
     );
   }
 

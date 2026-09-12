@@ -1565,6 +1565,12 @@ abstract class FuzzyChatLocalizations {
   /// In en, this message translates to:
   /// **'This file cannot be opened; ask the sender to send it again.'**
   String get fileCannotBeOpenedAskToResend;
+
+  /// No description provided for @basicsWrongPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect key — this text cannot be unfuzzed with it.'**
+  String get basicsWrongPassword;
 }
 
 class _FuzzyChatLocalizationsDelegate

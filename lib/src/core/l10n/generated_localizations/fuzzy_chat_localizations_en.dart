@@ -796,4 +796,8 @@ class FuzzyChatLocalizationsEn extends FuzzyChatLocalizations {
   @override
   String get fileCannotBeOpenedAskToResend =>
       'This file cannot be opened; ask the sender to send it again.';
+
+  @override
+  String get basicsWrongPassword =>
+      'Incorrect key — this text cannot be unfuzzed with it.';
 }
