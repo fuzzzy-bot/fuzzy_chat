@@ -130,7 +130,7 @@ pub(crate) fn derive_kek(
 }
 
 /// `local_key = HKDF-SHA256(ikm = store_key, salt = none, info = "fuzzy-local-seal-v1")`.
-fn local_key(store_key: &[u8; 32]) -> Result<Key32, CoreError> {
+pub(crate) fn local_key(store_key: &[u8; 32]) -> Result<Key32, CoreError> {
     let mut key = Zeroizing::new([0u8; 32]);
     Hkdf::<Sha256>::new(None, store_key)
         .expand(LOCAL_SEAL_INFO, key.as_mut())
@@ -209,8 +209,16 @@ pub(crate) fn unwrap_key(blob: &[u8], password: &[u8], aad: &[u8]) -> Result<Key
 
 /// Seals `bytes` under the HKDF-derived local key with a random nonce.
 pub fn seal_local(store_key: &[u8; 32], bytes: &[u8]) -> Result<Vec<u8>, CoreError> {
+    seal_local_with(store_key, bytes, random_array()?)
+}
+
+/// [`seal_local`] with the nonce supplied — the test vectors pin its output.
+pub(crate) fn seal_local_with(
+    store_key: &[u8; 32],
+    bytes: &[u8],
+    nonce: [u8; 24],
+) -> Result<Vec<u8>, CoreError> {
     let key = local_key(store_key)?;
-    let nonce: [u8; 24] = random_array()?;
     let ciphertext = seal(&key, &nonce, LOCAL_SEAL_AAD, bytes)?;
     Ok(LocalSeal { nonce, ciphertext }.encode())
 }
@@ -255,12 +263,20 @@ fn state_aad(chat_id: &str) -> Vec<u8> {
 }
 
 fn seal_state(store_key: &[u8; 32], state: &ChatState) -> Result<Vec<u8>, CoreError> {
+    seal_state_with(store_key, state, random_array()?)
+}
+
+/// [`seal_state`] with the nonce supplied — the test vectors pin its output.
+pub(crate) fn seal_state_with(
+    store_key: &[u8; 32],
+    state: &ChatState,
+    nonce: [u8; 24],
+) -> Result<Vec<u8>, CoreError> {
     // Exactly-sized, residue-free serialisation — a fixed pre-size is not a
     // bound: a receiving side with 5 chains of 40 skipped keys reaches > 30 KiB
     // and any `Vec` growth leaks an unwiped copy of the Olm state (pitfall §F.11,
     // F2-2 review R1).
     let body = serialize_exact(state)?;
-    let nonce: [u8; 24] = random_array()?;
     let ciphertext = seal(store_key, &nonce, &state_aad(&state.chat_id), &body)?;
     Ok(LocalSeal { nonce, ciphertext }.encode())
 }

@@ -15,3 +15,5 @@ pub mod safety;
 pub mod state;
 pub mod store;
 pub mod vault;
+#[cfg(test)]
+mod vectors;

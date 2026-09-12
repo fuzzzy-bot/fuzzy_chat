@@ -52,7 +52,7 @@ fn account_with_one_time_key() -> Result<(Account, Curve25519PublicKey), CoreErr
 }
 
 /// The signed 0x01 blob for `account`'s keys and `one_time_key`.
-fn invitation_blob(
+pub(crate) fn invitation_blob(
     account: &Account,
     chat_id: &str,
     one_time_key: Curve25519PublicKey,
