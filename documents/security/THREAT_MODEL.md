@@ -28,7 +28,7 @@ What an attacker wants, in the order the product cares about it.
 | A1 | **Message plaintext in transit** (text typed by a user, encrypted into a `Fuzz/` blob) | only inside a `0x03` blob, on whatever channel the users chose | the Olm session's per-message key (§4 below; `PROTOCOL.md` §7, §8, §14) |
 | A2 | **File plaintext in transit** | only inside a `0x04` container | a random per-file key sealed in one Olm message + STREAM chunks (`PROTOCOL.md` §9) |
 | A3 | **Identity keys of a chat** (one Ed25519 + one Curve25519 key pair per chat per device) and the **one-time key** | inside the Olm `Account` pickle in the sealed state file | the store key (`PROTOCOL.md` §3, §10.3) |
-| A4 | **Session state** (the double-ratchet chains — including the current *receiving chain key* — skipped message keys, the counter window) | the sealed state file `<chat_id>.state` | the store key; atomic write, save-before-return (`PROTOCOL.md` §10.3). A copy of this file is the post-compromise asset of §4.3 and §4.5: it decrypts every not-yet-read message on the current receiving chain until a DH ratchet round trip |
+| A4 | **Session state** (the double-ratchet chains — including the current *receiving chain key* — skipped message keys, the counter window) | the sealed state file `<chat_id>.state` | the store key; atomic write, save-before-return (`PROTOCOL.md` §10.3). A copy of this file is the post-compromise asset of §4.3 and §4.5: it decrypts every message the peer generates on the current receiving chain until the peer has received a new ratchet key from this device (§4.3) |
 | A5 | **The store key** (32 bytes, one per install) | exists in the clear only inside the unlocked process; at rest as a `0x10` wrapped blob in the platform secure storage | Argon2id-derived KEK from the app-lock password (`PROTOCOL.md` §10.2, §11) |
 | A6 | **The vault master key** and **vault item content** | `0x10` blob in the Isar vault metadata row; items as `0x20` files | the vault password; sealed items (`PROTOCOL.md` §10.6) |
 | A7 | **Local message history** (sent *and* received plaintext) | `StoredMessageData.sealedPlaintext`, one `0x20` seal per row | the local key derived from the store key (`PROTOCOL.md` §10.4) — subject to owner decision D-1 (§8) |
@@ -93,9 +93,19 @@ Two things the reader must know:
 2. **Biometric unlock stores the password itself.** When a user enables biometric unlock for the app lock
    or the vault, the *password* is written to a `biometric_storage` entry
    (`lib/src/fuzzy_auth/data/repositories/biometric_auth_repository.dart`, entry
-   `fuzzy_biometric_password_<scope>`) that the OS releases only after a successful biometric prompt. The
-   crate never sees this: it receives the password as if typed. The consequence is that with biometrics on,
-   the strength of the app lock is the strength of the OS biometric gate, not of the password (§4.3, §10 R20).
+   `fuzzy_biometric_password_<scope>`) that the OS releases only after a successful biometric prompt, or
+   within 30 s of one (`authenticationValidityDurationSeconds: 30`). The crate never sees this: it receives
+   the password as if typed. Per platform (`biometric_storage` 5.0.1 as configured in that repository):
+   **Android** — the password is encrypted under a Keystore key requiring `AUTH_BIOMETRIC_STRONG`
+   (`androidBiometricOnly: true`; StrongBox-backed where the device has it), ciphertext in the app's private
+   directory; **iOS/macOS** — a Keychain item with `kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly` and
+   `.biometryCurrentSet` (`darwinBiometricOnly: true`), so enrolling a new finger or face invalidates the
+   entry, and it is **always** in the data-protection keychain — the development-flavour login-keychain
+   exception of item 1 does *not* extend to the biometric copy (an unsigned development build cannot enable
+   biometrics at all); **Linux and Windows** — `canAuthenticate` reports the hardware unavailable, so the
+   feature cannot be enabled and no password copy ever exists there. The consequence is that with
+   biometrics on, the strength of the app lock is the strength of the OS biometric gate, not of the password
+   (§4.3, §10 R20).
 
 With the app lock **disabled**, the store key is wrapped under the empty string (`PROTOCOL.md` §10.2): the
 wrapping is real but the KEK is public, and the OS keystore is the only protection (§4.3).
@@ -135,6 +145,33 @@ ciphertext, every message's *sealed* plaintext (unreadable), and every piece of 
   `files::tests::original_name_is_bounded_and_free_of_control_characters`. The name is not display-sanitised
   and an existing output is replaced silently (§10, R14–R15).
 - **Two processes on one store are unsupported** (`PROTOCOL.md` §17.10).
+- **A prepared receive that never runs has already spent the file's message.** A `FileTicket` dropped
+  between `prepare_file_receive` and `run_file_job` — a process kill, a UI flow abandoned — consumed the
+  Olm message at prepare time (`PROTOCOL.md` §9.4 "Semantics a consumer must know"); the container is then
+  `Replay`, the same class as R9 with a different trigger. The app's guard against preparing a file that is
+  still arriving is a heuristic: two length samples 500 ms apart (`file_processing_cubit.dart`,
+  `_isInputStable`); a stalled download passes it and burns the step.
+
+### 2.8 OS and cloud backups
+
+Nothing in the app opts out of platform backups: `AndroidManifest.xml` sets neither `android:allowBackup`
+nor `android:dataExtractionRules` (so Android Auto Backup copies `files/`, the databases and shared
+preferences to the user's Google account by default), and nothing marks the store directory as excluded on
+iOS/macOS (Application Support is in iCloud and Time Machine backups by default). What leaves the device
+by default is therefore: every sealed state file (A3, A4 — ciphertext), the Isar database with every
+plaintext column of §2.4 (A9 — in the clear) and the sealed history (A7 — ciphertext), and on Android the
+preferences entry holding the `0x10`-wrapped store key. Two consequences:
+
+- **The metadata non-goal extends to the backup provider and to anyone who holds the account** (§7.4, T24).
+  With the app lock off, the Android `0x10` entry restored to the *same* device opens under the empty
+  string; a copy of it is permanent (R33).
+- **A restore cannot recover history.** The Keystore/Keychain-bound layers do not restore to a new device
+  (and a reinstall drops them), so a restored install holds sealed state without its key: every chat and
+  every message is lost (A11), on top of "a new device cannot re-read old blobs" (§8).
+
+The code fix — opt out on every platform (`allowBackup="false"` + `dataExtractionRules` excluding the store
+and the database; the darwin backup-exclusion attribute on the store directory) — is bound to F5-5's
+pre-step (owner decision D-8) and is **pending in this release**; until it lands, R34 stands.
 
 ### 2.6 The clipboard and the screen
 
@@ -168,7 +205,7 @@ message link adds in the clear.
 | **ADV-1 Passive channel observer** | reads every blob ever sent on the channel, forever | harvests ciphertext; correlates blobs by time, size and channel metadata; cannot touch a device |
 | **ADV-2 Active attacker on the channel** | ADV-1 plus: modifies, replaces, replays, reorders, drops and injects blobs, including during pairing | the man-in-the-middle case; may run the app themselves and pair with both victims |
 | **ADV-3 Malicious peer** | a legitimately paired counterpart | crafts hostile blobs and containers, hostile file names, hostile Argon2 headers; tries to make the victim's device misbehave, consume state, or leak |
-| **ADV-4 Device thief** | physical possession of a device, switched off or locked, app not running | in two sub-cases: **without** the app-lock password (and no biometric), or **with** it (or with the victim's finger/face while the OS session is open) |
+| **ADV-4 Device thief** | physical possession of a device — switched off, OS-locked, or seized with the OS session open and the app process alive | in two sub-cases: **without** the app-lock password (and no biometric), or **with** it (or with the victim's finger/face while the OS session is open) |
 | **ADV-5 Malware on an unlocked device** | code running as the same OS user while the app is unlocked | reads the app's files and database, the clipboard, the screen; on desktop, the same user's keystore entries |
 | **ADV-6 Harvest-now-decrypt-later** | ADV-1 with a future computer | keeps today's blobs to break them when the underlying problems become tractable |
 | **ADV-7 Supply chain** | a hostile or compromised dependency, tool, CI runner or release step | ships a build whose bytes are not the reviewed code |
@@ -190,8 +227,8 @@ An adversary who controls the victim's OS is not on this list (§7.1).
   *after* the blob was read cannot decrypt it. Tests: `api::messages::tests::forward_secrecy` and
   `api::files::tests::forward_secrecy_for_files` assert `MissingMessageKey` at the **Olm layer**, not merely
   an API refusal (the F2-4 review required exactly this). This is a statement about the *past*: the same
-  snapshot decrypts every message not yet read on its current receiving chain until a DH round trip
-  (§4.3, R32) — the passive observer never has such a snapshot, which is why it appears under the device
+  snapshot decrypts every message the peer generates on its current receiving chain until the peer has
+  received a new ratchet key from the victim (§4.3, R32) — the passive observer never has such a snapshot, which is why it appears under the device
   adversaries and not here.
 - **Nothing in the clear on a message blob but the Olm ciphertext**: no chat id, no counter, no sender
   (`PROTOCOL.md` §6.5). The observer learns "a Fuzzy Chat message of this length was sent" and nothing more
@@ -269,26 +306,42 @@ An adversary who controls the victim's OS is not on this list (§7.1).
   (§2.3); a thief who can satisfy the biometric prompt has it.
 - **What the thief gets regardless:** every plaintext column of §2.4 — who the user talks to (chat names),
   when, how much, and the ciphertext blobs.
+- **Limit — a password change never rotates a key.** Changing the app-lock password, enabling or disabling
+  the lock, or changing the vault password only *re-wraps* the same 32-byte store key or vault master key
+  (`PROTOCOL.md` §10.2 "nothing else is keyed by the password", §10.6 "items are never re-encrypted"); no
+  re-key path exists in the crate or the app. So a copy of the `0x10` blob taken while the lock was **off**
+  (empty-string wrap — an OS backup, a development-flavour keychain read) stays openable forever: enabling
+  the lock later protects nothing that already left the device. The same holds for the vault's `0x10` row,
+  which travels with any copy of the database, plus the vault password. The only remedy is to delete every
+  chat and the vault (or wipe the app) — R33.
 
 **With the app-lock password** (or the unlocked device in hand):
 
 - The thief reads the local history (A7) exactly as the user would, and can send and receive as the user
   in every chat from then on. This is not a cryptographic failure; it is the scope of the app lock.
+- **A device seized while the app process is alive and the OS session unlocked is this case with no
+  password needed**, for as long as the process lives: the chat store never auto-locks and offers no manual
+  lock (R21), so the OS screen lock is the only thing that ends the exposure — and the user cannot end it
+  deliberately either, short of killing the app.
 - **What the ratchet still bounds — past messages.** Blobs the user had already read *before* the theft are
   gone from the state — their keys were deleted on use (`PROTOCOL.md` §14 step 3) — so a blob captured on the
   channel earlier cannot be re-decrypted from the seized state; only the sealed local copy exposes it.
   Unread blobs outstanding at the time of theft are decryptable up to the windows of §7.7.
-- **What the ratchet does not bound — post-compromise, until a DH round trip.** A copy of a chat's state
+- **What the ratchet does not bound — post-compromise, until the peer ratchets.** A copy of a chat's state
   file (A4) holds the current **receiving chain key**. From it the thief derives the message key of the
-  next unread message on that chain **and of every later message on the same chain**, i.e. everything the
-  peer sends until the ratchet turns over: the peer must receive a new ratchet key from the victim (the
-  victim sends), and the victim must read the peer's reply built on it (`PROTOCOL.md` §8.1, §14 point 3, §17.14).
-  Until that round trip happens the copy keeps decrypting new traffic in that direction as it appears on
-  the channel — with no action needed on the stolen device. Forward secrecy (the past) holds; post-compromise
-  security (the future) needs a round trip and is otherwise **not provided**. No mitigation is in scope for
-  this version; it is listed as limitation R32. The sending direction is not affected by the copy in this
-  way: the thief can *send* as the victim (below) but reads the victim's own outgoing messages only from
-  the sealed local history.
+  next unread message on that chain **and of every later message the peer generates on the same chain**.
+  The copy stops working exactly when this device sends a message carrying a new ratchet key **and the peer
+  has received it**: the peer's next message is then on a chain the copy does not hold. No read on the
+  victim's device is required for that — the peer's first message after receiving the victim's is already
+  unreadable to the copy, whether or not the victim ever opens it (vodozemac advances the sending ratchet on
+  receipt of a new remote ratchet key; `PROTOCOL.md` §8.1, §14 point 3, §17.14, verified against the crate).
+  Messages the peer generated on the old chain *before* receiving the victim's message remain readable by
+  the copy. Until that happens the copy keeps decrypting new traffic in that direction as it appears on the
+  channel — with no action needed on the stolen device — and nothing in the protocol forces the victim to
+  send. Forward secrecy (the past) holds; post-compromise security (the future) is otherwise **not
+  provided**. No mitigation is in scope for this version; it is listed as limitation R32. The sending
+  direction is not affected by the copy in this way: the thief can *send* as the victim (below) but reads the
+  victim's own outgoing messages only from the sealed local history.
 - **Impersonation forward, not backward.** The chat's identity keys are long-lived; possessing them allows
   impersonation in that chat from then on, never the recovery of past message keys (`PROTOCOL.md` §17.13).
   There is no revocation; the peer's remedy is to delete and re-pair, which produces a new safety number.
@@ -345,10 +398,15 @@ Largely a non-goal (§7.1), stated here so the boundary is visible:
   every chat's sealed state file (A4); it opens them with the store key, which is in the unlocked process's
   memory and — with the app lock off — unwraps from the keystore blob under the empty string.
   As in §4.3: past messages stay unrecoverable (their keys are gone), but each chat's current receiving
-  chain key decrypts the next unread message and every later message on that chain until a DH ratchet
-  round trip, and the identity keys allow impersonation until the chat is deleted. The exposure is
-  therefore not "one snapshot", it is "one snapshot plus the future of every chain it holds until the
-  peer's next ratchet step is read on the victim's device". No mitigation in scope (R32).
+  chain key decrypts the next unread message and every later message the peer generates on that chain
+  until the peer has received a new ratchet key from the victim (the victim sends; the peer receives — no
+  victim read is needed), and the identity keys allow impersonation until the chat is deleted. The exposure
+  is therefore not "one snapshot", it is "one snapshot plus the future of every chain it holds until the
+  victim sends and the peer receives". No mitigation in scope (R32).
+- **A captured store key or vault master key is permanent.** Malware that read either key from the
+  unlocked process keeps opening every present *and future* state file, local seal and vault item after the
+  user changes the password, enables the lock, or re-pairs: a password change re-wraps the same key and
+  nothing is re-sealed (§4.3, R33). Only deleting every chat and the vault ends it.
 
 ### 4.6 ADV-6 — harvest-now-decrypt-later
 
@@ -374,9 +432,10 @@ sit in inboxes for years.
 See §9. The short version: every crate, direct and transitive, is fixed by `Cargo.lock` and built `--locked`
 (the four protocol crates and the bridge are additionally `=`-pinned); a dependency upgrade that changes
 any byte of any format fails the committed-vector test; the Rust core is built twice on independent
-runners and the hashes must agree; every release artifact is listed in `SHA256SUMS` and covered by a
-GitHub build-provenance attestation; both SBOMs are drift-checked in CI. What this does not prove:
-correctness (an attestation says who built the bytes), and the Flutter AOT layer is not reproducible.
+runners and the hashes must agree, and the Linux bundle ships exactly that core; every release artifact is
+listed in `SHA256SUMS` and covered by a GitHub build-provenance attestation; both SBOMs are drift-checked in
+CI. What this does not prove: correctness (an attestation says who built the bytes); the Flutter AOT layer
+is not reproducible; and the **Android APK's core is not byte-identical to the reproduced library** (§9.2).
 
 ---
 
@@ -388,7 +447,7 @@ Findings F-1 … F-9 are the nine defects the hardening brief opened (§6).
 | # | Threat | Control | `PROTOCOL.md` | Closes | Residual / limitation |
 |---|---|---|---|---|---|
 | T1 | Compromise of one device reveals past messages | Double ratchet, per-message keys deleted on use, deletion persisted before plaintext returns | §8.1, §14, §10.3 | F-1 | Sealed local history is as strong as the app lock (D-1, §8); unread blobs within the windows remain decryptable from a seized state (§7.7) |
-| T2 | Compromise of one device reveals future messages | Fresh DH on every ratchet step (Olm) — healing happens only when the peer's reply built on the victim's new ratchet key is read on the victim's device | §8.1, §14 point 3, §17.14 | F-1 (past) | **Post-compromise is not provided until a DH round trip**: a copied state file decrypts every later message on the current receiving chain (R32). Identity keys are long-lived per chat: impersonation forward is possible, no revocation (`PROTOCOL.md` §17.13) |
+| T2 | Compromise of one device reveals future messages | Fresh DH on every ratchet step (Olm) — a copied receiving chain dies when this device sends a new ratchet key and the peer has received it; the peer's next message is on a chain the copy lacks (no victim read needed) | §8.1, §14 point 3, §17.14 | F-1 (past) | **Post-compromise is not provided until the peer ratchets**: a copied state file decrypts every message the peer generates on the current receiving chain until then, and nothing forces the victim to send (R32). Identity keys are long-lived per chat: impersonation forward is possible, no revocation (`PROTOCOL.md` §17.13) |
 | T3 | MITM substitutes keys during pairing | Ed25519-signed pairing blobs bind each blob to the key inside it; 60-digit safety number over both identity keys + chat id; verified flag cannot pre-date or outlive the keys | §4.1, §5, §17.1 | F-2 | Detection only, and only when users compare out of band; defeating the comparison is a birthday search of ≈ 2¹⁰⁰ over the attacker's two substitute keys (not 2¹⁹⁹); no commitment round, so an SAS scheme would add nothing (`PROTOCOL.md` §17.1) |
 | T4 | Ciphertext bound to nothing (re-routing between chats / directions / versions) | Inner header inside the Olm plaintext: version, chat id, sender and recipient identity keys, direction, counter, content type; constant-time key comparison; ordered validation chain that changes no state on failure | §7.1, §7.2 | F-3 | Not in the clear by design (`PROTOCOL.md` §6.5) — the paste target is the open chat; a cross-chat paste surfaces as `Corrupt`, not `WrongChat` |
 | T5 | Replay of a captured blob | Olm consumed keys (`MissingMessageKey` → `Replay`) + per-direction 64-bit counter window | §7.2 check 3, §8.2 | F-4 | The window is stricter than Olm (§7.7); a genuine replay is refused before the window is consulted |
@@ -401,15 +460,16 @@ Findings F-1 … F-9 are the nine defects the hardening brief opened (§6).
 | T12 | File encryption unusably slow (product defect, and a reason users skip it) | Native STREAM at 576–605 MB/s on an Apple-silicon laptop (release), median 60 / 424 MB/s encrypt / decrypt on an API 35 emulator (profile), versus 1.2 MB/s before | §9 | F-9 | Debug builds ship the crate's dev profile (7 MB/s) — timing only in profile/release; `poly1305` has no NEON backend so the laptop ceiling is ≈ 580 MB/s |
 | T13 | Thief reads state files, history or vault from a powered-off device | All local state sealed under keys derived from the store / vault master key; keys wrapped under Argon2id of the password; wrapped blob doubles as the password verifier | §10.2–10.6, §11 | — | Empty-string wrap when the lock is off; biometric copy of the password (§2.3); OS keystore is the floor |
 | T14 | Thief or malware reads metadata | none | §10.5 | — | **Non-goal** (§7.4): chat names, timestamps, counts, sizes, blob texts, vault titles/tags are plaintext |
-| T15 | MAC forgery against Olm's 8-byte tag | No oracle: every decryption is a human paste; a failed check changes nothing; nothing decrypts automatically; no network to signal success | §17.6; §7.5 below | — | Stated as a known limitation; an untruncated MAC is vodozemac's `experimental-session-config` (R23) |
+| T15 | MAC forgery against Olm's 8-byte tag | No oracle: every decryption is a human paste; a failed check changes nothing (test `api::messages::tests::tampered_blob_corrupt`); nothing decrypts automatically; no network to signal success | §17.6; §7.5 below | — | Stated as a known limitation; an untruncated MAC is vodozemac's `experimental-session-config` (R23) |
 | T16 | Olm encoding malleability | Inherent to Olm; vodozemac re-encodes what it MACs; only canonically-equivalent encodings of the *same* message are accepted, same key consumption | §17.7 | — | Not a forgery; documented so an "accepted mutant" in a fuzzer is not mistaken for a bypass |
 | T17 | Hostile KDF parameters exhaust memory or hang the device | Caps `m ≤ 256 MiB`, `t ≤ 16` checked before allocation; one Argon2 buffer per process | §11, §17.9 | — | Up to ≈ 10 s of CPU on a phone per hostile blob, by the user's own paste |
 | T18 | Path traversal via a peer-chosen chat id or file name | Chat id shape-validated at every entry; blob chat ids only ever *compared*; file names validated as bare names on both sides | §2, §7.3 | — | Names are not display-safe; silent overwrite of an existing output (R14–R15) |
 | T19 | Unauthenticated `peek_chat_id` used to route a pasted pairing blob | Documented as a routing hint; every operation that acts on the id re-verifies the signature; the Dart side uses it only for a read-only lookup and for deleting a core state that has no database record | §13; F2-7 review | — | R16 |
 | T20 | State and message key lost to a crash mid-operation | Atomic write, save-before-return, cache evicted on any failure; a crash between Olm decrypt and write leaves the key → user re-pastes; a crash after the write has already returned the plaintext | §10.3 | — | The app-layer database write after a successful core call is not in the same transaction (R17–R18) |
-| T21 | Wrong-type / wrong-role blob accepted under the right password | AAD domains: `store-key` vs `vault-key` for `0x10`; `chat-state ‖ chat_id`, `local-seal`, `vault-item` for `0x20`; the first 31 bytes for `0x05`; storage-only types refused on paste | §6.7–6.9, §10 | — | — |
+| T21 | Wrong-type / wrong-role blob accepted under the right password | AAD domains: `store-key` vs `vault-key` for `0x10`; `chat-state ‖ chat_id`, `local-seal`, `vault-item` for `0x20`; the first 31 bytes for `0x05`; storage-only types refused on paste | §6.7–6.9, §10 | — | Tests: `vault::tests::store_key_and_vault_key_domains_are_separate`, `formats::tests::pasted_rejects_storage_only_kinds`, `store::tests::corrupt_missing_and_foreign_files` |
 | T22 | Post-quantum adversary records pairing blobs and messages | none in this version | §17.12 | — | **Non-goal** (§7.9); hybrid ML-KEM is the next protocol project (R22) |
-| T23 | A dependency, toolchain or CI runner ships different bytes than reviewed | `Cargo.lock` + `--locked`, committed vectors fail on any byte change, two-runner reproducible Rust core, `SHA256SUMS` + provenance attestation, SBOM drift gates | §12, §15, Appendix A; [`RELEASE.md`](RELEASE.md) | — | Flutter AOT not reproducible; macOS unsigned (D-3); Android CI key is a throwaway (D-6); a build with `--cfg fuzzing` would silently disable signature checks (§9.4) |
+| T23 | A dependency, toolchain or CI runner ships different bytes than reviewed | `Cargo.lock` + `--locked`, committed vectors fail on any byte change, two-runner reproducible Rust core, `SHA256SUMS` + provenance attestation, SBOM drift gates | §12, §15, Appendix A; [`RELEASE.md`](RELEASE.md) | — | Flutter AOT not reproducible; the Android APK's core is built by cargokit with a different link line and is **not** byte-identical to the reproduced library — only the Linux bundle's core is (`RELEASE.md` §5, §9.2); macOS unsigned (D-3); Android CI key is a throwaway (D-6); a build with `--cfg fuzzing` would silently disable signature checks (§9.4) |
+| T24 | OS / cloud backup carries the store, the wrapped keys and the plaintext metadata off the device | none in this release — no backup opt-out on any platform; the sealed layers stay ciphertext, the metadata does not | §10.5; §2.8 here | — | Metadata readable by the backup provider / account holder; a `""`-wrapped key blob in a backup is permanent (R33); a restore yields sealed state without its key — history lost (A11). Fix (opt out everywhere) pending in F5-5's pre-step, D-8 (R34) |
 
 ---
 
@@ -461,15 +521,19 @@ or time out the clipboard.
 The database is not encrypted as a whole (§2.4, `PROTOCOL.md` §10.5). Chat names, chat ids, timestamps,
 message ordering and counts, file names and sizes, the ciphertext blobs, vault item titles, tags, group and
 type are plaintext on disk. A thief without the password learns *who* (as named by the user), *when* and
-*how much*, never *what*. Sealing chat names and vault titles is the same `seal_local` call on more columns —
+*how much*, never *what* — and so does whoever holds the user's OS/cloud backup, since nothing opts the
+database out of it (§2.8, R34). Sealing chat names and vault titles is the same `seal_local` call on more columns —
 a documented follow-up, not this build (R11).
 
 Also in the clear, at the app layer only: a **"Copy as link"** message link
 (`fuzzylink://fuzz/<base64 JSON>`, `lib/src/core/services/fuzzy_link/fuzzy_link_generator.dart`) carries the
 **chat id** next to the blob so the receiving app can open the right chat. The raw `Fuzz/` blob never does
 (`PROTOCOL.md` §6.5). A user who shares links rather than blobs gives an observer a stable identifier that
-groups every link of one chat. Pairing links additionally carry a 24-hour `exp` hint. This is a product
-choice inherited from before the hardening; it is recorded as R12 for the owner.
+groups every link of one chat. Pairing links additionally carry a 24-hour `exp` hint. The leak is
+metadata-only: the receiving app uses `c` for a read-only database lookup and navigation, the crate takes
+the chat id from the database record, and a blob under the wrong `c` dies at the Olm MAC with no state
+change; an observer who saw the pairing blobs already knows the chat id. This is a product choice inherited
+from before the hardening; it is recorded as R12 for the owner (decision D-7), with both costs stated there.
 
 ### 7.5 The 8-byte Olm v1 MAC — and why no forgery oracle exists here
 
@@ -482,8 +546,9 @@ classic setting is a server that decrypts on arrival. Fuzzy Chat has none:
    (§2.6). Every trial is a human action; the ~2⁶³ expected trials of a blind forgery do not happen.
 2. **A failed trial changes nothing and says nothing new.** The Olm decrypt runs on a copy of the session;
    a MAC failure leaves the state file byte-identical and reports the same payload-free `Corrupt` as any
-   structural fault (`PROTOCOL.md` §7.2). Test: `api::messages::tests::wrong_inner_header_is_rejected_without_state_change`,
-   and the reviewer fuzz runs asserting byte-identical state after every rejection.
+   structural fault (`PROTOCOL.md` §7.2). Tests: `api::messages::tests::tampered_blob_corrupt` (a real MAC
+   failure, state file byte-identical), `api::messages::tests::wrong_inner_header_is_rejected_without_state_change`
+   (the post-MAC belt), and the reviewer fuzz runs asserting byte-identical state after every rejection.
 3. **A successful MAC forgery still has to pass the inner header.** The decrypted bytes must be a valid
    inner header naming this chat, both identity keys, the right direction and a fresh counter, or the
    result is `Corrupt`/`WrongChat` with no state change — indistinguishable from a MAC failure to anyone
@@ -553,10 +618,11 @@ the peer the safety number over a channel the attacker controls, is outside ever
 - **No anti-forensics.** Deleting a chat overwrites its state file with zeros before unlinking, best effort
   on flash storage (`PROTOCOL.md` §10.3 "Delete"); nothing else is promised about remanence, journaling file
   systems, backups the OS takes, or swap.
-- **No post-compromise security beyond what Olm's ratchet gives — and Olm heals only on a round trip.**
-  A compromised state file keeps decrypting the peer's messages on the current receiving chain until the
-  victim has sent something (carrying a new ratchet key) *and* read the peer's reply built on it; only then
-  is a chain the attacker does not hold in use (`PROTOCOL.md` §8.1, §14 point 3, §17.14). The identity keys stay
+- **No post-compromise security beyond what Olm's ratchet gives — and Olm heals only once the peer
+  ratchets.** A compromised state file keeps decrypting the peer's messages on the current receiving chain
+  until this device has sent a message carrying a new ratchet key *and the peer has received it*; the
+  peer's next message is then on a chain the attacker does not hold. No read on the victim's device is
+  needed, and nothing forces the victim to send (`PROTOCOL.md` §8.1, §14 point 3, §17.14). The identity keys stay
   compromised regardless and the attacker can impersonate in that chat until it is deleted (§4.3, §4.5, T2,
   R32). No mitigation ships in this version.
 
@@ -600,7 +666,8 @@ register, not to this repository).
 owner-facing **trade-off copy** on onboarding, chat creation and "About encryption" (R10). A reader of this
 document should assume the history behaviour above and expect the copy to say: *each fuzzed message can be
 unfuzzed once, on this device only; a blob more than 63 messages behind the newest one you already read
-can no longer be unfuzzed; a new device cannot re-read old blobs.*
+can no longer be unfuzzed; a new device cannot re-read old blobs.* It should also say that changing the
+password does not re-key anything already copied (R33) and that an OS backup cannot restore history (R34).
 
 Also pending and relevant to this model: **D-2** (safety number instead of emoji SAS — the build proceeds
 with the safety number, reversible), **D-3** (macOS signing), **D-5** (private vulnerability reporting and
@@ -612,7 +679,7 @@ the `security@` route), **D-6** (the Android release keystore). D-4 (build fully
 
 ### 9.1 What is pinned and checked on every push
 
-- **Toolchains:** Rust 1.98.1 (`rust-toolchain.toml`), Flutter 3.41.7 / Dart 3.11.5 (`.fvmrc`),
+- **Toolchains:** Rust 1.98.1 (`rust/fuzzy_crypto_core/rust-toolchain.toml`), Flutter 3.41.7 / Dart 3.11.5 (`.fvmrc`),
   NDK 28.2.13676358, `cargo-ndk` 4.1.2 (`RELEASE.md` §4).
 - **Dependencies:** the pin that matters is **`Cargo.lock` + `--locked`** on every build, CI and release
   alike — every crate, direct and transitive, resolves to the locked version or the build fails. On top of
@@ -636,10 +703,19 @@ the `security@` route), **D-6** (the Android release keystore). D-4 (build fully
 
 ### 9.2 Release integrity ([`RELEASE.md`](RELEASE.md))
 
-- **Reproducible Rust core.** Two independent runners build `libfuzzy_crypto_core` for the Linux host and
-  for `aarch64-linux-android`; `rust-repro-compare` fails the workflow if any hash differs or if a runner
-  path survives in the binary. The only machine path a release library embeds is `CARGO_HOME` inside
-  registry-crate panic strings, remapped by [`.cargo/config.toml`](../../.cargo/config.toml).
+- **Reproducible Rust core — with one honest limit.** Two independent runners build `libfuzzy_crypto_core`
+  for the Linux host and for `aarch64-linux-android`; `rust-repro-compare` fails the workflow if any hash
+  differs or if a runner path survives in the binary. The only machine path a release library embeds is
+  `CARGO_HOME` inside registry-crate panic strings, remapped by [`.cargo/config.toml`](../../.cargo/config.toml)
+  for desktop builds and seeded through `CARGO_ENCODED_RUSTFLAGS` in the `android` job (cargokit sets that
+  variable, which makes cargo ignore the config file's rustflags). **What the two runners prove today
+  (`RELEASE.md` §5, `v1.0.0-rc.1`):** they reproduce each other on both targets, and the **Linux bundle's
+  shipped core is byte-identical** to the reproduced library (`b13462d8…`). The **Android APK's core is
+  not**: cargokit links it with a different flag set (`--hash-style=both`, its own linker wrapper) from the
+  `cargo ndk` rebuild, so the shipped `ad625a3a…` and the reproduced `b8e30d0c…` differ in relocation and
+  dynamic-section layout at identical code sizes. Matching cargokit's link line is a follow-up; until then
+  the Android claim is "the core rebuilds identically on two machines", not "the byte-identical core is
+  inside the APK". Reproduce on a Linux x86_64 host only — a macOS-hosted NDK produces a different binary.
 - **`SHA256SUMS` and provenance.** On a `v*` tag, every artifact is listed in `SHA256SUMS` and
   `actions/attest-build-provenance` signs a SLSA provenance statement over that list (Sigstore, keyless);
   `gh attestation verify` ties a file to the repository, workflow, tag and run that built it. The pipeline
@@ -696,7 +772,7 @@ studio's flow directory; the review ids below are those records).
 | R9 | **Corrupt or cancelled chat-mode file consumes its message** — terminal for that container. | `PROTOCOL.md` §17.5; F3-2 review §3/N4; F3-3 review N2 | product copy |
 | R10 | **Archive export and trade-off copy not built** (gated on D-1). Until then history leaves the app only by copying messages. | backlog F2-10 / F2-11; §8 | owner → developer |
 | R11 | **`getMessagesForChat` degrades on a locked store**: every text row reads as an empty string with a logged warning; `MessageData` carries no "unreadable" marker. Harmless in the UI (the boot gate keeps chats unreachable until the store opens) but an archive export must gate on the store being open or it would silently write empty messages. | F2-8 review §8 | developer of F2-10 |
-| R12 | **The "Copy as link" message link carries the chat id in the clear**; pairing links carry `exp`. The raw blob does not. Decide whether message links should drop `c` (the paste target is the open chat) or accept the identifier. | §7.4; hardening plan §H (internal) rule "no chat id in the clear without a threat-model note" | owner |
+| R12 | **The "Copy as link" message link carries the chat id in the clear**; pairing links carry `exp`. The raw blob does not. Both options have a cost, for D-7: **keep `c`** — a stable per-chat identifier on every message link (metadata only, §7.4); **drop `c`** — link routing disappears, because the blob carries no chat id (`PROTOCOL.md` §6.5) and the only way to route without one would be to trial-decrypt across every chat's session on link open, which the §7.5 rule forbids — a message link could then only prefill the currently open chat or ask the user to pick one. | §7.4; hardening plan §H (internal) rule "no chat id in the clear without a threat-model note" | owner |
 | R13 | **A cancelled chat receive** shows no failure reason, and the next attempt on the same container reads "already unfuzzed". | F3-3 review N2 | product copy |
 | R14 | **Peer-chosen file names are not display-safe** (a Unicode direction override is a valid name); the UI shows the *input* name today. | `PROTOCOL.md` §7.3; F3-2 review N1; F3-3 review §1 | product |
 | R15 | **Output collisions overwrite silently** (`<chat>/<originalName>`), and the name is now peer-chosen. | `PROTOCOL.md` §9.3; F3-3 review N3 | product |
@@ -704,8 +780,8 @@ studio's flow directory; the review ids below are those records).
 | R17 | **Handshake half-commit window**: the core persists `complete_handshake` before the database record is updated; a kill between them leaves the record "invited" while the core is connected, and every retry is `InvitationAlreadyUsed` until the chat is deleted and re-paired. Recoverable; one chat wide. | F2-7 review nit 2 | developer (reconcile from `chat_status` at chat open) |
 | R18 | **Seal failure on write stores the row with a null seal** — reachable only if the store closes between `decrypt_text` and `seal_local`; today nothing closes the chat store while a chat is open. | F2-8 review §2 | none today; revisit with R21 |
 | R19 | **Passwords on the Dart side are not wipeable** (Dart `String`; the bridge's serialisation buffer is freed unwiped). Key material is unaffected. | §2.2; F2-2 review nits; brief F-8 | none (language limit) |
-| R20 | **Biometric unlock stores the password** in the OS biometric keystore; the app lock is then as strong as the OS biometric gate. | §2.3 | product copy |
-| R21 | **No auto-lock and no manual lock for the chat store** once unlocked at boot; only the vault has an inactivity timer. | §4.5; F2-8 review §2 (`lock()` has no caller) | product |
+| R20 | **Biometric unlock stores the password** in the OS biometric keystore (Android: `AUTH_BIOMETRIC_STRONG` Keystore key, 30 s validity; iOS/macOS: data-protection Keychain, `WhenPasscodeSetThisDeviceOnly` + `biometryCurrentSet`, 30 s reuse; not available on Linux/Windows); the app lock is then as strong as the OS biometric gate. | §2.3; `biometric_auth_repository.dart`; `biometric_storage` 5.0.1 | product copy |
+| R21 | **No auto-lock and no manual lock for the chat store** once unlocked at boot; only the vault has an inactivity timer. A device seized with the process alive and the OS session open is the with-password case with no password needed (§4.3). | §4.3, §4.5; F2-8 review §2 (`lock()` has no caller) | product |
 | R22 | **No post-quantum component**; harvest-now-decrypt-later on the X25519 key agreement is undefended. Hybrid ML-KEM + X25519 on the pre-key exchange is the next protocol project, after this one is audited. | §4.6, §7.9; `PROTOCOL.md` §17.12 | owner (sequencing) |
 | R23 | **Open audit question — MAC length.** Should a format version 2 adopt vodozemac's untruncated-MAC session config, given that the oracle argument rests on a product rule rather than on the primitive? | §7.5; R6 | auditor → owner |
 | R24 | **No CI gate for bridge-codegen drift** — reviewers re-run the generator per feature; a stale `lib/rust_bridge/**` would be caught by a human, not a job. | §9.3 | ops |
@@ -716,7 +792,9 @@ studio's flow directory; the review ids below are those records).
 | R29 | **Disclosure surface incomplete:** GitHub private vulnerability reporting not yet enabled; `security@` route not yet confirmed (`contact@` is the working address); `security.txt` not yet served on the website. | D-5; `SECURITY.md` | owner / ops |
 | R30 | **Two processes on one store** are unsupported; `.part` files survive a process kill. | `PROTOCOL.md` §17.10–17.11 | none (documented) |
 | R31 | **Pairing has no timeout**: a pending chat keeps its account and one-time key until accepted, regenerated or deleted; the link-level `exp` is a hint the core never checks. | `PROTOCOL.md` §4.6 | product |
-| R32 | **No post-compromise security until a DH round trip.** A copied state file (thief with the password, malware on an unlocked device, a backup the OS took) holds the current receiving chain key of each chat and decrypts every later message the peer sends on that chain until the victim sends and then reads the peer's reply. Past messages stay protected (forward secrecy). No mitigation in scope; candidates (forcing a ratchet step on every send, or re-keying on unlock) are a protocol change for a later version. | `PROTOCOL.md` §8.1, §14 point 3 (verified against the crate: a copy of B's state opened three later messages until B replied and read A's answer), §17.14; F5-1 security audit finding M1 | planner (format v2 candidate); product copy |
+| R32 | **No post-compromise security until the peer ratchets.** A copied state file (thief with the password, malware on an unlocked device, an OS backup) holds the current receiving chain key of each chat and decrypts every message the peer generates on that chain until this device sends a message carrying a new ratchet key and the peer has received it — the peer's next message is then on a chain the copy lacks; no victim read is required, and messages the peer generated before receiving it stay readable by the copy. Nothing forces the victim to send. Past messages stay protected (forward secrecy). No mitigation in scope; candidates (forcing a ratchet step on every send, or re-keying on unlock) are a protocol change for a later version. | `PROTOCOL.md` §8.1, §14 point 3 (verified against the crate: a copy of B's state opened three messages A generated afterwards, and got `Corrupt` on A's first message after A had received B's reply), §17.14; F5-1 security audit finding M1 | planner (format v2 candidate); product copy |
+| R33 | **No store or vault re-key; a leaked key outlives every password change.** `rewrap_store_key` and `vault_rewrap` re-wrap the *same* 32-byte key; nothing is re-sealed, no re-key path exists. A store key or vault master key read from the unlocked process, or a copy of the `""`-wrapped `0x10` blob taken while the lock was off (backup, dev-flavour keychain), opens every present and future state file, local seal and vault item after any password change, lock enable or re-pair. Remedy today: delete every chat and the vault, or wipe the app. Format v2 candidate: re-key = re-seal all state under a fresh store key. | `PROTOCOL.md` §10.2, §10.6; F4-1 review ("the master key never changes"), F4-2 review §2; §4.3, §4.5 | planner (format v2); product copy |
+| R34 | **OS / cloud backups are not opted out** on any platform: sealed state, the Isar database with its plaintext metadata, and (Android) the wrapped store key leave the device by default; a restore cannot recover history because the Keystore/Keychain-bound layers do not restore. Fix = `allowBackup="false"` + `dataExtractionRules` on Android, backup-exclusion attribute on the store directory on darwin — **pending in this release**, bound to F5-5's pre-step (D-8). | §2.8; T24; `AndroidManifest.xml` (no `allowBackup`/`dataExtractionRules`); owner decision D-8 | developer (F5-5 pre-step); product copy |
 
 ---
 
@@ -728,7 +806,7 @@ places where a fresh pair of eyes changes the risk.
 
 1. **The post-compromise window (R32) and the user-as-oracle argument (§7.5).** For R32: confirm from
    vodozemac's receiver-chain code how long a copied chain key stays live under realistic paste-messenger
-   traffic (the victim may read many peer messages before ever replying), and whether the product should
+   traffic (the victim may receive many peer messages before ever sending one), and whether the product should
    force a ratchet step or re-key on unlock in a later format. For §7.5: confirm there is no code path —
    deep link, clipboard listener, file watcher, share sheet, notification — that decrypts without a user
    action, and no path that reports an outcome off the device; then take a position on R23: is a product
@@ -752,8 +830,9 @@ places where a fresh pair of eyes changes the risk.
    reference only (a by-value opaque parameter would panic in frb's owned decode).
 7. **Zeroization on the Rust side** — including the exact-size serialisation of pickles (`state.rs`) and
    the wiped Argon2 buffer — and an honest statement of what the Dart side cannot wipe (R19).
-8. **Metadata (§7.4, R5, R12)** — whether the plaintext columns and the chat id in message links are
-   acceptable for the product's threat population.
+8. **Metadata and what leaves the device (§7.4, §2.8, R5, R12, R33, R34)** — whether the plaintext columns,
+   the chat id in message links, default-on backups and the absence of any re-key are acceptable for the
+   product's threat population.
 9. **The windows (§7.7)** — whether 40 / 5 / 2000 / 63 match how people will actually use a paste-based
    product, and whether `TooOld` and `Replay` are surfaced clearly enough that a user does not mistake a
    window limit for tampering.
