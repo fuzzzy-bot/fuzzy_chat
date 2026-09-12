@@ -487,5 +487,17 @@
   "blobTooOld": "ეს შეტყობინება გასაშიფრად ძალიან ძველია — მასზე ბევრად ახალი შეტყობინებები უკვე გაშიფრულია.",
   "@blobTooOld": {},
   "corruptBlob": "ეს არ არის სწორი დაშიფრული შეტყობინება.",
-  "@corruptBlob": {}
+  "@corruptBlob": {},
+  "safetyNumberTitle": "უსაფრთხოების ნომერი",
+  "@safetyNumberTitle": {},
+  "safetyNumberExplanation": "შეადარეთ ეს ციფრები თქვენს პარტნიორს ხმით ან პირადად. სანამ ისინი არ დაემთხვევა, შესაძლოა ვინმემ, ვინც მოწვევა ან მიღება გადაიჭირა, შუაში იყოს.",
+  "@safetyNumberExplanation": {},
+  "safetyNumberMarkVerified": "მონიშნე როგორც დადასტურებული",
+  "@safetyNumberMarkVerified": {},
+  "safetyNumberUnmark": "მონიშვნის მოხსნა",
+  "@safetyNumberUnmark": {},
+  "safetyNumberVerifiedBadge": "დადასტურებული",
+  "@safetyNumberVerifiedBadge": {},
+  "verifySafetyNumberCta": "უსაფრთხოების ნომრის შემოწმება",
+  "@verifySafetyNumberCta": {}
 }

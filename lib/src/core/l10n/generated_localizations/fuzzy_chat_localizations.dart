@@ -1511,6 +1511,42 @@ abstract class FuzzyChatLocalizations {
   /// In en, this message translates to:
   /// **'This is not a valid fuzzed message.'**
   String get corruptBlob;
+
+  /// No description provided for @safetyNumberTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Safety number'**
+  String get safetyNumberTitle;
+
+  /// No description provided for @safetyNumberExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare these digits with your partner by voice or in person. Until they match, someone who intercepted the invitation or acceptance could be in the middle.'**
+  String get safetyNumberExplanation;
+
+  /// No description provided for @safetyNumberMarkVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as verified'**
+  String get safetyNumberMarkVerified;
+
+  /// No description provided for @safetyNumberUnmark.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmark'**
+  String get safetyNumberUnmark;
+
+  /// No description provided for @safetyNumberVerifiedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get safetyNumberVerifiedBadge;
+
+  /// No description provided for @verifySafetyNumberCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify safety number'**
+  String get verifySafetyNumberCta;
 }
 
 class _FuzzyChatLocalizationsDelegate

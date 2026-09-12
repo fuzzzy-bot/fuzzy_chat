@@ -765,4 +765,23 @@ class FuzzyChatLocalizationsEn extends FuzzyChatLocalizations {
 
   @override
   String get corruptBlob => 'This is not a valid fuzzed message.';
+
+  @override
+  String get safetyNumberTitle => 'Safety number';
+
+  @override
+  String get safetyNumberExplanation =>
+      'Compare these digits with your partner by voice or in person. Until they match, someone who intercepted the invitation or acceptance could be in the middle.';
+
+  @override
+  String get safetyNumberMarkVerified => 'Mark as verified';
+
+  @override
+  String get safetyNumberUnmark => 'Unmark';
+
+  @override
+  String get safetyNumberVerifiedBadge => 'Verified';
+
+  @override
+  String get verifySafetyNumberCta => 'Verify safety number';
 }

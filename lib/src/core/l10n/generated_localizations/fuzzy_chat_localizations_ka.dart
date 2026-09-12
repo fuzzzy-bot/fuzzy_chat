@@ -774,4 +774,23 @@ class FuzzyChatLocalizationsKa extends FuzzyChatLocalizations {
 
   @override
   String get corruptBlob => 'ეს არ არის სწორი დაშიფრული შეტყობინება.';
+
+  @override
+  String get safetyNumberTitle => 'უსაფრთხოების ნომერი';
+
+  @override
+  String get safetyNumberExplanation =>
+      'შეადარეთ ეს ციფრები თქვენს პარტნიორს ხმით ან პირადად. სანამ ისინი არ დაემთხვევა, შესაძლოა ვინმემ, ვინც მოწვევა ან მიღება გადაიჭირა, შუაში იყოს.';
+
+  @override
+  String get safetyNumberMarkVerified => 'მონიშნე როგორც დადასტურებული';
+
+  @override
+  String get safetyNumberUnmark => 'მონიშვნის მოხსნა';
+
+  @override
+  String get safetyNumberVerifiedBadge => 'დადასტურებული';
+
+  @override
+  String get verifySafetyNumberCta => 'უსაფრთხოების ნომრის შემოწმება';
 }

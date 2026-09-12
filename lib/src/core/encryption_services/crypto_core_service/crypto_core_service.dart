@@ -191,6 +191,30 @@ class CryptoCoreService {
     return _withCore((core) => core.openLocal(blob: blob));
   }
 
+  /// The chat's 60-digit safety number (12 groups of 5, space-separated) —
+  /// identical on both sides once the peer's key is known; a chat without a
+  /// peer yet is `unknownChat`.
+  Future<CryptoCoreResponse<String>> safetyNumber(String chatId) {
+    return _withCore((core) => core.safetyNumber(chatId: chatId));
+  }
+
+  /// Records whether the user compared the safety number with the peer. The
+  /// flag lives in the chat's core state, so it resets with the keys on a
+  /// re-pair; a chat without a peer is `unknownChat`.
+  Future<CryptoCoreResponse<void>> markVerified({
+    required String chatId,
+    required bool verified,
+  }) {
+    return _withCore(
+      (core) => core.markVerified(chatId: chatId, verified: verified),
+    );
+  }
+
+  /// The flag [markVerified] set; `false` for a chat that was never marked.
+  Future<CryptoCoreResponse<bool>> isVerified(String chatId) {
+    return _withCore((core) => core.isVerified(chatId: chatId));
+  }
+
   /// Every chat call: no Argon2, so nothing to queue; a closed store answers
   /// `storeLocked` instead of reaching a null handle.
   Future<CryptoCoreResponse<T>> _withCore<T>(

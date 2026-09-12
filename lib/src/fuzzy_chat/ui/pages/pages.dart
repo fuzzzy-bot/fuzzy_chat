@@ -5,4 +5,5 @@ export 'chat_list_page/chat_list_page.dart';
 export 'connected_chat_page/connected_chat_page.dart';
 export 'invitation_acceptance_page/invitation_acceptance_page.dart';
 export 'onboarding_page/onboarding_page.dart';
+export 'safety_number_page/safety_number_page.dart';
 export 'settings_page/settings_page.dart';

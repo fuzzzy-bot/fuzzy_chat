@@ -502,6 +502,66 @@ void main() {
       }
     });
 
+    test('safety number is identical on both sides; markVerified round-trips',
+        () async {
+      final invitation = ((await service.createInvitation(_chatId))
+              as CryptoCoreSuccess<CryptoCoreInvitation>)
+          .data;
+      // A has no peer yet: no number, no flag to set.
+      expect(
+        _failureOf(await service.safetyNumber(_chatId)),
+        CryptoCoreFailureType.unknownChat,
+      );
+      expect(
+        (await service.isVerified(_chatId) as CryptoCoreSuccess<bool>).data,
+        isFalse,
+      );
+
+      final acceptance = ((await b.acceptInvitation(
+        chatId: _chatId,
+        invitation: invitation.content,
+      )) as CryptoCoreSuccess<CryptoCoreAcceptance>)
+          .data;
+      await service.completeHandshake(
+        chatId: _chatId,
+        acceptance: acceptance.content,
+      );
+
+      final numberA =
+          (await service.safetyNumber(_chatId) as CryptoCoreSuccess<String>)
+              .data;
+      final numberB =
+          (await b.safetyNumber(_chatId) as CryptoCoreSuccess<String>).data;
+      expect(numberA, numberB);
+      expect(numberA, matches(RegExp(r'^\d{5}( \d{5}){11}$')));
+
+      expect(
+        await service.markVerified(chatId: _chatId, verified: true),
+        isA<CryptoCoreSuccess<void>>(),
+      );
+      expect(
+        (await service.isVerified(_chatId) as CryptoCoreSuccess<bool>).data,
+        isTrue,
+      );
+      // The flag is per device: B never marked.
+      expect(
+        (await b.isVerified(_chatId) as CryptoCoreSuccess<bool>).data,
+        isFalse,
+      );
+
+      await service.close();
+      expect(
+        _failureOf(await service.isVerified(_chatId)),
+        CryptoCoreFailureType.storeLocked,
+      );
+      expect(
+        _failureOf(
+          await service.markVerified(chatId: _chatId, verified: false),
+        ),
+        CryptoCoreFailureType.storeLocked,
+      );
+    });
+
     test('a closed store answers storeLocked; deleteChat is idempotent',
         () async {
       expect(await service.deleteChat(_chatId), isA<CryptoCoreSuccess<void>>());

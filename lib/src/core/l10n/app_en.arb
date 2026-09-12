@@ -487,5 +487,17 @@
   "blobTooOld": "This message is too old to unfuzz — too many newer messages were unfuzzed first.",
   "@blobTooOld": {},
   "corruptBlob": "This is not a valid fuzzed message.",
-  "@corruptBlob": {}
+  "@corruptBlob": {},
+  "safetyNumberTitle": "Safety number",
+  "@safetyNumberTitle": {},
+  "safetyNumberExplanation": "Compare these digits with your partner by voice or in person. Until they match, someone who intercepted the invitation or acceptance could be in the middle.",
+  "@safetyNumberExplanation": {},
+  "safetyNumberMarkVerified": "Mark as verified",
+  "@safetyNumberMarkVerified": {},
+  "safetyNumberUnmark": "Unmark",
+  "@safetyNumberUnmark": {},
+  "safetyNumberVerifiedBadge": "Verified",
+  "@safetyNumberVerifiedBadge": {},
+  "verifySafetyNumberCta": "Verify safety number",
+  "@verifySafetyNumberCta": {}
 }

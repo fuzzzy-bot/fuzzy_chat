@@ -113,6 +113,8 @@ class _ProvidedChatInvitationPageState
                   chatGeneralData: state.chatData!,
                 ),
               );
+              // The safety number sits on top of the chat: back lands in it.
+              context.push(AppRouter.chatVerify, extra: state.chatData);
             } else if (state.status.isFailed) {
               FuzzzyToast.show(
                 context,

@@ -13,6 +13,7 @@ class AppRouter {
   static const chatAccept = '/chat/accept';
   static const chatAcceptanceExport = '/chat/acceptance-export';
   static const chatConnected = '/chat/connected';
+  static const chatVerify = '/chat/verify';
   static const settings = '/settings';
   static const auth = '/auth';
   static const basics = '/basics';
@@ -135,6 +136,13 @@ class AppRouter {
           builder: (_, state) {
             final payload = state.extra! as ConnectedChatPagePayload;
             return ConnectedChatPage(payload: payload);
+          },
+        ),
+        GoRoute(
+          path: chatVerify,
+          builder: (_, state) {
+            final chatGeneralData = state.extra! as ChatGeneralData;
+            return SafetyNumberPage(chatGeneralData: chatGeneralData);
           },
         ),
         GoRoute(
