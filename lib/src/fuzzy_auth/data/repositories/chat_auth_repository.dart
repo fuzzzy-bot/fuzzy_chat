@@ -15,13 +15,30 @@ class ChatAuthRepository {
   final CryptoStoreKeyRepository _cryptoStoreKeyRepository;
   final CryptoCoreService _cryptoCoreService;
 
+  /// The wrapped store-key blob is the truth about the lock and the
+  /// preference only a cache of it (F2-6 review R1): the store is tried under
+  /// `''` and the preference repaired when the two disagree, so a kill between
+  /// the two writes of [setupPassword] / [disableAuth] never locks anyone out.
+  /// Leaves the store open when the lock is disabled.
   Future<bool> isChatAuthEnabled() async {
-    final prefs = await _userAuthPreferencesRepository.getUserAuthPreferences();
-    if (prefs == null || !prefs.isAuthenticationOnceEnabled) return false;
-
     final readRes = await _cryptoStoreKeyRepository.read();
     if (readRes is CryptoCoreFailure) return false;
-    return (readRes as CryptoCoreSuccess<Uint8List?>).data != null;
+    final wrapped = (readRes as CryptoCoreSuccess<Uint8List?>).data;
+    if (wrapped == null) return false;
+
+    final openRes = await _cryptoCoreService.openStore(
+      wrapped: wrapped,
+      password: '',
+    );
+    final enabled = openRes is CryptoCoreFailure;
+
+    final prefs = await _userAuthPreferencesRepository.getUserAuthPreferences();
+    if ((prefs?.isAuthenticationOnceEnabled ?? false) != enabled) {
+      await _userAuthPreferencesRepository.updateUserAuthPreferences(
+        UserAuthPreferences(isAuthenticationOnceEnabled: enabled),
+      );
+    }
+    return enabled;
   }
 
   /// With the lock disabled the store key is wrapped under `''`; enabling it

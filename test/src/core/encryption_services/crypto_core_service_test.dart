@@ -225,5 +225,83 @@ void main() {
       expect(await chatAuthRepository.verifyPassword('any'), isFalse);
       expect(service.isOpen, isFalse);
     });
+
+    test('isChatAuthEnabled without a store key is false', () async {
+      when(() => userAuthPreferencesRepository.getUserAuthPreferences())
+          .thenAnswer(
+        (_) async => UserAuthPreferences(isAuthenticationOnceEnabled: true),
+      );
+
+      expect(await chatAuthRepository.isChatAuthEnabled(), isFalse);
+      expect(service.isOpen, isFalse);
+      verifyNever(
+        () => userAuthPreferencesRepository.updateUserAuthPreferences(any()),
+      );
+    });
+
+    // A kill between the two writes of enable / disable leaves the blob
+    // rewrapped and the preference stale (F2-6 review R1). Each half of
+    // `setupPassword` / `disableAuth` is replayed by hand: the rewrap lands,
+    // the preference write never does.
+    test('kill between the enable writes: blob wins, preference repaired',
+        () async {
+      await storeKeyRepository.ensureStoreKey('');
+      when(() => userAuthPreferencesRepository.getUserAuthPreferences())
+          .thenAnswer((_) async => null);
+
+      await storeKeyRepository.rewrap(oldPassword: '', newPassword: 'pw');
+
+      expect(await chatAuthRepository.isChatAuthEnabled(), isTrue);
+      expect(service.isOpen, isFalse, reason: "'' no longer opens the store");
+      final repaired = verify(
+        () => userAuthPreferencesRepository.updateUserAuthPreferences(
+          captureAny(),
+        ),
+      ).captured.single as UserAuthPreferences;
+      expect(repaired.isAuthenticationOnceEnabled, isTrue);
+
+      expect(await chatAuthRepository.verifyPassword('pw'), isTrue);
+    });
+
+    test('kill between the disable writes: blob wins, preference repaired',
+        () async {
+      await storeKeyRepository.ensureStoreKey('');
+      expect(await chatAuthRepository.setupPassword('pw'), isTrue);
+      when(() => userAuthPreferencesRepository.getUserAuthPreferences())
+          .thenAnswer(
+        (_) async => UserAuthPreferences(isAuthenticationOnceEnabled: true),
+      );
+
+      await storeKeyRepository.rewrap(oldPassword: 'pw', newPassword: '');
+
+      expect(await chatAuthRepository.isChatAuthEnabled(), isFalse);
+      expect(service.isOpen, isTrue, reason: "'' opens the store again");
+      final repaired = verify(
+        () => userAuthPreferencesRepository.updateUserAuthPreferences(
+          captureAny(),
+        ),
+      ).captured.last as UserAuthPreferences;
+      expect(repaired.isAuthenticationOnceEnabled, isFalse);
+    });
+
+    test('consistent states leave the preference alone', () async {
+      await storeKeyRepository.ensureStoreKey('');
+      when(() => userAuthPreferencesRepository.getUserAuthPreferences())
+          .thenAnswer((_) async => null);
+      expect(await chatAuthRepository.isChatAuthEnabled(), isFalse);
+      verifyNever(
+        () => userAuthPreferencesRepository.updateUserAuthPreferences(any()),
+      );
+
+      expect(await chatAuthRepository.setupPassword('pw'), isTrue);
+      when(() => userAuthPreferencesRepository.getUserAuthPreferences())
+          .thenAnswer(
+        (_) async => UserAuthPreferences(isAuthenticationOnceEnabled: true),
+      );
+      expect(await chatAuthRepository.isChatAuthEnabled(), isTrue);
+      verify(
+        () => userAuthPreferencesRepository.updateUserAuthPreferences(any()),
+      ).called(1);
+    });
   });
 }

@@ -31,6 +31,10 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(Uint8List(0));
+    registerFallbackValue(
+      UserAuthPreferences(isAuthenticationOnceEnabled: false),
+    );
+    registerFallbackValue(BiometricScope.chat);
   });
 
   setUp(() {
@@ -135,14 +139,19 @@ void main() {
   // checkAuthStatus
   // -----------------------------------------------------------------------
   group('checkAuthStatus', () {
+    setUp(() {
+      when(() => mockStoreKeyRepo.ensureStoreKey(''))
+          .thenAnswer((_) async => const CryptoCoreSuccess(null));
+      when(() => mockPrefsRepo.updateUserAuthPreferences(any()))
+          .thenAnswer((_) async {});
+    });
+
     blocTest<FuzzyAuthStore, FuzzyAuthState>(
       'with the lock disabled ensures the store key and opens the store '
       'under the empty password',
       setUp: () {
         when(() => mockPrefsRepo.getUserAuthPreferences())
             .thenAnswer((_) async => null);
-        when(() => mockStoreKeyRepo.ensureStoreKey(''))
-            .thenAnswer((_) async => const CryptoCoreSuccess(null));
         when(() => mockService.openStore(wrapped: wrapped, password: ''))
             .thenAnswer((_) async => const CryptoCoreSuccess(null));
       },
@@ -158,6 +167,7 @@ void main() {
           () => mockStoreKeyRepo.ensureStoreKey(''),
           () => mockService.openStore(wrapped: wrapped, password: ''),
         ]);
+        verifyNever(() => mockPrefsRepo.updateUserAuthPreferences(any()));
       },
     );
 
@@ -168,6 +178,9 @@ void main() {
         when(() => mockPrefsRepo.getUserAuthPreferences())
             .thenAnswer((_) async => null);
         when(() => mockStoreKeyRepo.ensureStoreKey('')).thenAnswer(
+          (_) async => const CryptoCoreFailure(CryptoCoreFailureType.io),
+        );
+        when(() => mockStoreKeyRepo.read()).thenAnswer(
           (_) async => const CryptoCoreFailure(CryptoCoreFailureType.io),
         );
       },
@@ -184,14 +197,21 @@ void main() {
             password: any(named: 'password'),
           ),
         );
+        verifyNever(() => mockPrefsRepo.updateUserAuthPreferences(any()));
       },
     );
 
     blocTest<FuzzyAuthStore, FuzzyAuthState>(
-      'with the lock enabled emits locked and leaves the store closed',
+      'with the lock enabled emits locked once the blob refuses the empty '
+      'password',
       setUp: () {
         when(() => mockPrefsRepo.getUserAuthPreferences()).thenAnswer(
           (_) async => UserAuthPreferences(isAuthenticationOnceEnabled: true),
+        );
+        when(() => mockService.openStore(wrapped: wrapped, password: ''))
+            .thenAnswer(
+          (_) async =>
+              const CryptoCoreFailure(CryptoCoreFailureType.wrongPassword),
         );
         when(() => mockBiometricRepo.isEnabled(BiometricScope.chat))
             .thenAnswer((_) async => true);
@@ -204,13 +224,66 @@ void main() {
             .having((s) => s.biometricEnabled, 'biometricEnabled', true),
       ],
       verify: (_) {
-        verifyNever(() => mockStoreKeyRepo.ensureStoreKey(any()));
-        verifyNever(
-          () => mockService.openStore(
-            wrapped: any(named: 'wrapped'),
-            password: any(named: 'password'),
-          ),
+        verify(() => mockService.openStore(wrapped: wrapped, password: ''))
+            .called(1);
+        verifyNever(() => mockPrefsRepo.updateUserAuthPreferences(any()));
+      },
+    );
+
+    // The blob is the truth, the preference a cache (F2-6 review R1): each
+    // inconsistent state is what a kill between the two writes of
+    // enable / disable leaves behind.
+    blocTest<FuzzyAuthStore, FuzzyAuthState>(
+      'preference disabled but blob under a password → locked and the '
+      'preference is repaired (kill after the enable rewrap)',
+      setUp: () {
+        when(() => mockPrefsRepo.getUserAuthPreferences())
+            .thenAnswer((_) async => null);
+        when(() => mockService.openStore(wrapped: wrapped, password: ''))
+            .thenAnswer(
+          (_) async =>
+              const CryptoCoreFailure(CryptoCoreFailureType.wrongPassword),
         );
+        when(() => mockBiometricRepo.isEnabled(BiometricScope.chat))
+            .thenAnswer((_) async => false);
+      },
+      build: buildStore,
+      act: (store) => store.checkAuthStatus(),
+      expect: () => [
+        isA<FuzzyAuthState>()
+            .having((s) => s.status, 'status', AuthStateStatus.locked),
+      ],
+      verify: (_) {
+        final repaired = verify(
+          () => mockPrefsRepo.updateUserAuthPreferences(captureAny()),
+        ).captured.single as UserAuthPreferences;
+        expect(repaired.isAuthenticationOnceEnabled, isTrue);
+      },
+    );
+
+    blocTest<FuzzyAuthStore, FuzzyAuthState>(
+      'preference enabled but blob opens without a password → noAuthRequired '
+      'and the preference is repaired (kill after the disable rewrap)',
+      setUp: () {
+        when(() => mockPrefsRepo.getUserAuthPreferences()).thenAnswer(
+          (_) async => UserAuthPreferences(isAuthenticationOnceEnabled: true),
+        );
+        when(() => mockService.openStore(wrapped: wrapped, password: ''))
+            .thenAnswer((_) async => const CryptoCoreSuccess(null));
+      },
+      build: buildStore,
+      act: (store) => store.checkAuthStatus(),
+      expect: () => [
+        isA<FuzzyAuthState>()
+            .having((s) => s.status, 'status', AuthStateStatus.noAuthRequired)
+            .having((s) => s.biometricEnabled, 'biometricEnabled', false),
+      ],
+      verify: (_) {
+        final repaired = verify(
+          () => mockPrefsRepo.updateUserAuthPreferences(captureAny()),
+        ).captured.single as UserAuthPreferences;
+        expect(repaired.isAuthenticationOnceEnabled, isFalse);
+        verifyNever(() => mockBiometricRepo.isEnabled(any()));
       },
     );
   });
