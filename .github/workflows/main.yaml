@@ -1,1 +1,175 @@
 name: fuzzy_chat
+on:
+  push:
+    branches: [main, 'agent/**']
+    tags: ['v*']
+  pull_request:
+env:
+  FLUTTER_VERSION: 3.41.7
+  CARGO_TERM_COLOR: always
+  CRATE: rust/fuzzy_crypto_core
+  # Dart gates (format / infos / warnings) apply to files changed since this commit; the
+  # inherited 58 unformatted files and 25 analyzer infos/warnings at the baseline are the E1
+  # publisher's one-off cleanup, after which the gates go back to whole-tree `lib test`.
+  DART_GATE_BASE: 5090f2c
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with: { components: "clippy, rustfmt" }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: "${{ env.CRATE }}" }
+      - run: cargo fmt --manifest-path $CRATE/Cargo.toml --all -- --check
+      - run: cargo clippy --manifest-path $CRATE/Cargo.toml --all-targets --locked -- -D warnings
+      - run: cargo test --manifest-path $CRATE/Cargo.toml --locked
+      - uses: taiki-e/install-action@v2
+        with: { tool: cargo-audit@0.22.2,cargo-cyclonedx@0.5.9 }
+      - run: cargo audit --file $CRATE/Cargo.lock
+      - run: cd $CRATE && cargo cyclonedx --format json --spec-version 1.5
+      - uses: actions/upload-artifact@v7
+        with: { name: sbom-rust, path: rust/fuzzy_crypto_core/*.cdx.json }
+  flutter-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }   # the Dart gates diff against DART_GATE_BASE
+      - uses: dtolnay/rust-toolchain@1.98.1
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: "${{ env.CRATE }}" }
+      - uses: ./.github/actions/pub-git-auth
+        with: { deploy-key: "${{ secrets.FUZZY_DESIGN_DEPLOY_KEY }}" }
+      - uses: subosito/flutter-action@v2
+        with: { flutter-version: "${{ env.FLUTTER_VERSION }}", channel: stable, cache: true }
+      - run: cargo build --release --locked --manifest-path $CRATE/Cargo.toml   # for the Dart tests' ExternalLibrary
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings   # errors anywhere fail; infos/warnings gated below
+      - name: Dart gates on files changed since DART_GATE_BASE (format, infos, warnings)
+        run: |
+          set -euo pipefail
+          files=$(git diff --name-only --diff-filter=ACMR "$DART_GATE_BASE" HEAD -- 'lib/*.dart' 'test/*.dart' | grep -v '^lib/rust_bridge/' || true)
+          if [ -z "$files" ]; then echo "no Dart files changed since $DART_GATE_BASE"; exit 0; fi
+          echo "$files"
+          dart format --set-exit-if-changed --output=none $files
+          dart analyze --fatal-infos --fatal-warnings $files
+      - run: flutter test
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with: { distribution: temurin, java-version: '17' }
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager "ndk;28.2.13676358"
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with: { targets: "aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android" }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: "${{ env.CRATE }}" }
+      - uses: ./.github/actions/pub-git-auth
+        with: { deploy-key: "${{ secrets.FUZZY_DESIGN_DEPLOY_KEY }}" }
+      - uses: subosito/flutter-action@v2
+        with: { flutter-version: "${{ env.FLUTTER_VERSION }}", channel: stable, cache: true }
+      - name: Throwaway signing key for the release build type
+        # android/app/build.gradle's `release` signingConfig requires a keystore
+        # (`SigningConfig "release" is missing required property "storeFile"` without one).
+        # CI proves the release build with a key generated here and discarded with the runner;
+        # the distributable key is a release-time secret wired by F5-4 through these same variables.
+        run: |
+          set -euo pipefail
+          keytool -genkeypair -keystore "$RUNNER_TEMP/ci-throwaway.jks" -storetype JKS -alias ci-throwaway \
+            -keyalg RSA -keysize 2048 -validity 1 -storepass ci-throwaway -keypass ci-throwaway \
+            -dname "CN=fuzzy_chat CI throwaway, O=FuzzyCore"
+          {
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/ci-throwaway.jks"
+            echo "ANDROID_KEYSTORE_ALIAS=ci-throwaway"
+            echo "ANDROID_KEYSTORE_PASSWORD=ci-throwaway"
+            echo "ANDROID_KEYSTORE_PRIVATE_KEY_PASSWORD=ci-throwaway"
+          } >> "$GITHUB_ENV"
+      - run: flutter build apk --release --flavor production -t lib/main_production.dart --split-debug-info=build/symbols
+      - name: 16 KB page-size check
+        # Every LOAD segment of the crate's .so must be aligned >= 0x4000 on the 64-bit ABIs
+        # (Android's 16 KB requirement; armeabi-v7a is 32-bit and printed for information only).
+        run: |
+          set -euo pipefail
+          readelf=$ANDROID_HOME/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf
+          unzip -o -q build/app/outputs/flutter-apk/app-production-release.apk 'lib/*' -d "$RUNNER_TEMP/apk"
+          find "$RUNNER_TEMP/apk/lib" -name 'libfuzzy_crypto_core.so' | sort
+          bad=0; checked=0
+          for abi in arm64-v8a x86_64; do
+            so="$RUNNER_TEMP/apk/lib/$abi/libfuzzy_crypto_core.so"
+            if [ ! -f "$so" ]; then echo "MISSING $so"; bad=1; continue; fi
+            echo "## $abi"
+            "$readelf" -lW "$so" | awk '$1 == "LOAD"'
+            for align in $("$readelf" -lW "$so" | awk '$1 == "LOAD" {print $NF}'); do
+              if [ "$((align))" -lt 16384 ]; then echo "BAD ALIGN $align in $so"; bad=1; fi
+            done
+            checked=$((checked + 1))
+          done
+          so="$RUNNER_TEMP/apk/lib/armeabi-v7a/libfuzzy_crypto_core.so"
+          if [ -f "$so" ]; then echo "## armeabi-v7a (32-bit, informational)"; "$readelf" -lW "$so" | awk '$1 == "LOAD"'; fi
+          echo "checked=$checked bad=$bad"
+          [ "$checked" -eq 2 ] && [ "$bad" -eq 0 ]
+      - uses: actions/upload-artifact@v7
+        with: { name: android-apk, path: build/app/outputs/flutter-apk/*.apk }
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev libsecret-1-dev
+      - uses: dtolnay/rust-toolchain@1.98.1
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: "${{ env.CRATE }}" }
+      - uses: ./.github/actions/pub-git-auth
+        with: { deploy-key: "${{ secrets.FUZZY_DESIGN_DEPLOY_KEY }}" }
+      - uses: subosito/flutter-action@v2
+        with: { flutter-version: "${{ env.FLUTTER_VERSION }}", channel: stable, cache: true }
+      - run: flutter build linux --release -t lib/main_production.dart
+      - uses: actions/upload-artifact@v7
+        with: { name: linux-bundle, path: build/linux/x64/release/bundle }
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.98.1
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: "${{ env.CRATE }}" }
+      - uses: ./.github/actions/pub-git-auth
+        with: { deploy-key: "${{ secrets.FUZZY_DESIGN_DEPLOY_KEY }}" }
+      - uses: subosito/flutter-action@v2
+        with: { flutter-version: "${{ env.FLUTTER_VERSION }}", channel: stable, cache: true }
+      - run: flutter build windows --release -t lib/main_production.dart
+      - uses: actions/upload-artifact@v7
+        with: { name: windows-bundle, path: build/windows/x64/runner/Release }
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with: { targets: "aarch64-apple-darwin,x86_64-apple-darwin" }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: "${{ env.CRATE }}" }
+      - uses: ./.github/actions/pub-git-auth
+        with: { deploy-key: "${{ secrets.FUZZY_DESIGN_DEPLOY_KEY }}" }
+      - uses: subosito/flutter-action@v2
+        with: { flutter-version: "${{ env.FLUTTER_VERSION }}", channel: stable, cache: true }
+      # The Xcode project only has flavored configurations (Release-production), and the Runner is
+      # signed with team C9387PQ63V, which the runner does not have — build unsigned (compile+link proof).
+      - run: flutter build macos --release --flavor production -t lib/main_production.dart
+        env:
+          FLUTTER_XCODE_CODE_SIGNING_ALLOWED: "NO"
+          FLUTTER_XCODE_CODE_SIGNING_REQUIRED: "NO"
+          FLUTTER_XCODE_CODE_SIGN_IDENTITY: ""
+      - uses: actions/upload-artifact@v7
+        with: { name: macos-app, path: build/macos/Build/Products/Release-production/*.app }
+  # ios: optional, `flutter build ios --release --no-codesign` on macos-latest; allowed to be added in Phase 5.
+  attest:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [android, linux, windows, macos]
+    runs-on: ubuntu-latest
+    permissions: { id-token: write, attestations: write, contents: read }
+    steps:
+      - uses: actions/download-artifact@v7
+      - run: find . -type f \( -name '*.apk' -o -name '*.exe' -o -name 'fuzzy_chat' \) -exec sha256sum {} \; > SHA256SUMS
+      - uses: actions/attest-build-provenance@v4
+        with: { subject-path: "**/*.apk,**/*.exe,linux-bundle/fuzzy_chat" }
