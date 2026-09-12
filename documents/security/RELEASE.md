@@ -99,15 +99,20 @@ what we promise:
    ```sh
    cd rust/fuzzy_crypto_core
    export RUSTFLAGS="--remap-path-prefix=$HOME/.cargo/registry/src=/cargo/registry/src"
-   cargo build --release --locked                                   # host
-   cargo ndk -t arm64-v8a build --release --locked                  # Android, NDK 28.2.13676358
-   sha256sum target/release/libfuzzy_crypto_core.so target/aarch64-linux-android/release/libfuzzy_crypto_core.so
+   cargo build --release --locked --target x86_64-unknown-linux-gnu             # the linux-bundle core
+   cargo ndk -t arm64-v8a -P 24 build --release --locked                         # the Android core, NDK 28.2.13676358
+   sha256sum target/x86_64-unknown-linux-gnu/release/libfuzzy_crypto_core.so \
+             target/aarch64-linux-android/release/libfuzzy_crypto_core.so
    ```
-   and compare with the `rust-repro-1` artifact's `SHA256SUMS` of the tag run. (Cargo's portable
-   `[profile.release] trim-paths` would replace the remap; it is nightly-only on 1.98.1.)
-   Known limit: a macOS `.dylib` additionally embeds the linker's `LC_UUID`, which changes with the
-   *target directory path* (measured: two builds into different `--target-dir`s differ in the UUID and the
-   ad-hoc signature only; same path → identical). Build in the default `target/` to match.
+   and compare with the `rust-repro-1` artifact's `SHA256SUMS` of the tag run (`-P 24` is Flutter's default
+   `minSdkVersion`, which cargokit passes; cargo-ndk alone would default to 21 and link `pthread_atfork`
+   instead of `__register_atfork`). (Cargo's portable `[profile.release] trim-paths` would replace the
+   remap; it is nightly-only on 1.98.1.)
+   Known limits, both measured: **the host matters** — rebuilding the Android core from a macOS host with the
+   same NDK, cargo-ndk and rustc gives a different binary (§5), so reproduce on a Linux x86_64 host, which is
+   what CI uses; and a macOS `.dylib` additionally embeds the linker's `LC_UUID`, which changes with the
+   *target directory path* (two builds into different `--target-dir`s differ in the UUID and the ad-hoc
+   signature only; same path → identical).
 4. **`SHA256SUMS` + attestations per release** (§2, §3), and the Android release built with
    `--split-debug-info`.
 

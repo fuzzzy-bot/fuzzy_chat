@@ -183,15 +183,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.98.1
         with: { targets: aarch64-linux-android }
       - run: cargo install cargo-ndk --version 4.1.2 --locked
-      - run: cargo build --release --locked
+      # Same invocation shape as cargokit's (explicit --target; Android API level = Flutter's default minSdk 24,
+      # cargo-ndk would otherwise pick 21) so the result is comparable with the core inside the shipped bundles.
+      - run: cargo build --release --locked --target x86_64-unknown-linux-gnu
         working-directory: ${{ env.CRATE }}
-      - run: ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358 cargo ndk -t arm64-v8a build --release --locked
+      - run: ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358 cargo ndk -t arm64-v8a -P 24 build --release --locked
         working-directory: ${{ env.CRATE }}
       - name: hashes
         run: |
           set -euo pipefail
           mkdir -p out/host out/android
-          cp $CRATE/target/release/libfuzzy_crypto_core.{so,a} out/host/
+          cp $CRATE/target/x86_64-unknown-linux-gnu/release/libfuzzy_crypto_core.{so,a} out/host/
           cp $CRATE/target/aarch64-linux-android/release/libfuzzy_crypto_core.{so,a} out/android/
           (cd out && sha256sum host/* android/* | tee SHA256SUMS)
       - uses: actions/upload-artifact@v7
