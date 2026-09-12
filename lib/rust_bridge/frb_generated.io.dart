@@ -6,6 +6,7 @@
 import 'api/core.dart';
 import 'api/formats.dart';
 import 'api/health.dart';
+import 'api/pairing.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
@@ -50,6 +51,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   BlobType dco_decode_blob_type(dynamic raw);
+
+  @protected
+  ChatStatus dco_decode_chat_status(dynamic raw);
 
   @protected
   CoreError dco_decode_core_error(dynamic raw);
@@ -97,6 +101,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   BlobType sse_decode_blob_type(SseDeserializer deserializer);
+
+  @protected
+  ChatStatus sse_decode_chat_status(SseDeserializer deserializer);
 
   @protected
   CoreError sse_decode_core_error(SseDeserializer deserializer);
@@ -147,6 +154,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   void sse_encode_blob_type(BlobType self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_chat_status(ChatStatus self, SseSerializer serializer);
 
   @protected
   void sse_encode_core_error(CoreError self, SseSerializer serializer);

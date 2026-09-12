@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fuzzy_chat/rust_bridge/api/core.dart';
 import 'package:fuzzy_chat/rust_bridge/api/formats.dart';
 import 'package:fuzzy_chat/rust_bridge/api/health.dart';
+import 'package:fuzzy_chat/rust_bridge/api/pairing.dart';
 import 'package:fuzzy_chat/rust_bridge/error.dart';
 
 import '../../helpers/crypto_core_test_init.dart';
@@ -159,6 +160,91 @@ void main() {
       );
       await core.close();
       core.dispose();
+    });
+  });
+
+  group('pairing (async, two stores)', () {
+    late Directory aDir;
+    late Directory bDir;
+    late CryptoCore a;
+    late CryptoCore b;
+
+    Future<CryptoCore> open(Directory dir) async => openStore(
+          storeDir: dir.path,
+          wrapped: await createStoreKey(password: ''),
+          password: '',
+        );
+
+    setUp(() async {
+      aDir = Directory.systemTemp.createTempSync('fuzzy_crypto_core_a_');
+      bDir = Directory.systemTemp.createTempSync('fuzzy_crypto_core_b_');
+      a = await open(aDir);
+      b = await open(bDir);
+    });
+
+    tearDown(() async {
+      await a.close();
+      await b.close();
+      a.dispose();
+      b.dispose();
+      for (final dir in [aDir, bDir]) {
+        if (dir.existsSync()) dir.deleteSync(recursive: true);
+      }
+    });
+
+    test('A invites → B accepts → A completes → both connected', () async {
+      final invitation = await a.createInvitation(chatId: _chatId);
+      expect(invitation, startsWith('Fuzz/'));
+      expect(blobTypeOf(text: invitation), BlobType.invitation);
+      expect(peekChatId(text: invitation), _chatId);
+      expect(await a.chatStatus(chatId: _chatId), ChatStatus.invited);
+
+      final acceptance = await b.acceptInvitation(
+        chatId: _chatId,
+        invitation: invitation,
+      );
+      expect(blobTypeOf(text: acceptance), BlobType.acceptance);
+      expect(await b.chatStatus(chatId: _chatId), ChatStatus.connected);
+
+      await a.completeHandshake(chatId: _chatId, acceptance: acceptance);
+      expect(await a.chatStatus(chatId: _chatId), ChatStatus.connected);
+
+      expect(await a.currentInvitation(chatId: _chatId), invitation);
+      expect(await b.currentAcceptance(chatId: _chatId), acceptance);
+
+      // The one-time key is gone: the same acceptance cannot be completed twice.
+      await expectLater(
+        a.completeHandshake(chatId: _chatId, acceptance: acceptance),
+        throwsA(CoreError.invitationAlreadyUsed),
+      );
+    });
+
+    test('tampered and foreign blobs are CoreError values, no state written',
+        () async {
+      final invitation = await a.createInvitation(chatId: _chatId);
+      final blob =
+          base64Url.decode(base64Url.normalize(invitation.substring(5)));
+      final tampered = List<int>.of(blob)..[100] ^= 1;
+
+      await expectLater(
+        b.acceptInvitation(chatId: _chatId, invitation: _fuzzText(tampered)),
+        throwsA(CoreError.invalidSignature),
+      );
+      await expectLater(
+        b.acceptInvitation(
+          chatId: '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d',
+          invitation: invitation,
+        ),
+        throwsA(CoreError.wrongChat),
+      );
+      await expectLater(
+        b.acceptInvitation(chatId: _chatId, invitation: 'Fuzz/RlVaWgEDAd6tvu8'),
+        throwsA(CoreError.unsupportedFormat),
+      );
+      await expectLater(
+        b.chatStatus(chatId: _chatId),
+        throwsA(CoreError.unknownChat),
+      );
     });
   });
 }

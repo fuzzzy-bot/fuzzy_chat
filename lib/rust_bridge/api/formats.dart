@@ -15,6 +15,10 @@ BlobType blobTypeOf({required String text}) =>
 
 /// The clear chat id of a pasted invitation or acceptance — the only two blobs
 /// that carry one. Anything else is `UnsupportedFormat`; a malformed payload is `Corrupt`.
+///
+/// A routing hint only: nothing is authenticated here. `accept_invitation` /
+/// `complete_handshake` verify the signature and re-check the chat id before
+/// the blob touches any state.
 String peekChatId({required String text}) =>
     FuzzyCryptoCoreLib.instance.api.crateApiFormatsPeekChatId(text: text);
 

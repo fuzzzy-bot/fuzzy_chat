@@ -5,8 +5,10 @@
 //! through `AccountPickle::encrypt` (deterministic IV, 8-byte MAC — pitfall §F.12).
 
 use serde::{Deserialize, Serialize};
-use vodozemac::olm::{AccountPickle, SessionPickle};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use vodozemac::olm::{Account, AccountPickle, SessionPickle};
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+
+use crate::error::CoreError;
 
 /// The state body version written into every file; anything else is `UnsupportedFormat`.
 pub const STATE_FORMAT_VERSION: u8 = 1;
@@ -60,5 +62,17 @@ impl ChatState {
             last_invitation: None,
             last_acceptance: None,
         }
+    }
+
+    /// The live Olm account behind the stored pickle. `AccountPickle` is not
+    /// `Clone` and `Account::from_pickle` moves, so the copy goes through the
+    /// pickle's serde form in a `Zeroizing` buffer (pitfall §F.12). Write the
+    /// mutated account back with `account.pickle()`.
+    pub fn account(&self) -> Result<Account, CoreError> {
+        let json =
+            Zeroizing::new(serde_json::to_vec(&self.account).map_err(|_| CoreError::Internal)?);
+        let pickle: AccountPickle =
+            serde_json::from_slice(&json).map_err(|_| CoreError::Internal)?;
+        Ok(Account::from_pickle(pickle))
     }
 }

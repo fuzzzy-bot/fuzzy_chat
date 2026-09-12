@@ -6,6 +6,7 @@
 import '../error.dart';
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'pairing.dart';
 
 // These functions are ignored because they are not marked as `pub`: `opened_mut`, `opened`
 
@@ -37,8 +38,37 @@ Future<Uint8List> rewrapStoreKey(
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CryptoCore>>
 abstract class CryptoCore implements RustOpaqueInterface {
+  /// B (accepter): verifies A's invitation, establishes the outbound session
+  /// on its one-time key and returns the signed acceptance as `Fuzz/` text.
+  /// `chat_id` must be the one inside the invitation (`WrongChat` otherwise);
+  /// a chat that already has state is `Internal`.
+  Future<String> acceptInvitation(
+      {required String chatId, required String invitation});
+
+  /// `Connected` once this side holds a session, `Invited` before.
+  Future<ChatStatus> chatStatus({required String chatId});
+
   /// Drops the store key and every cached state (all zeroised on drop).
   Future<void> close();
+
+  /// A (inviter): verifies B's acceptance and completes the handshake —
+  /// the one-time key is consumed exactly once, so a second acceptance for
+  /// the same invitation is `InvitationAlreadyUsed`. The session is on disk
+  /// before this returns; any failure leaves the chat untouched.
+  Future<void> completeHandshake(
+      {required String chatId, required String acceptance});
+
+  /// A (inviter): creates the chat's Olm account and returns the signed
+  /// invitation as `Fuzz/` text. Calling it again for a pending chat
+  /// **regenerates** — a brand-new account replaces the old one, so the old
+  /// invitation can no longer be completed. A connected chat is `Internal`.
+  Future<String> createInvitation({required String chatId});
+
+  /// The acceptance this chat last produced, for re-display.
+  Future<String> currentAcceptance({required String chatId});
+
+  /// The invitation this chat last produced, for re-display.
+  Future<String> currentInvitation({required String chatId});
 
   /// Overwrites the chat's state file with zeros (best effort), unlinks it
   /// and forgets the cached state.
