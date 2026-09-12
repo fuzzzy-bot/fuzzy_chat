@@ -400,8 +400,12 @@ void main() {
       );
     });
 
-    test('pause holds a send short of complete; cancel leaves no container',
+    test('pause/resume reach a chat send; cancel leaves no container',
         () async {
+      // Chat mode has no Argon2 window before the first chunk, so a 3 MiB
+      // send can finish before `pause()` lands on a fast machine; the
+      // deterministic "no progress while paused" proof is the password-mode
+      // test above. Here: pausing never loses the job, resume completes it.
       final paused = _dataOf(
         await a.service.encryptFileForChat(
           chatId: _chatId,
@@ -413,14 +417,16 @@ void main() {
       final done = paused.progressStream.forEach(events.add);
       paused.pause();
       await Future<void>.delayed(const Duration(milliseconds: 300));
-      expect(events.any((e) => e.isComplete), isFalse, reason: 'paused');
       final seenWhilePaused = events.length;
       await Future<void>.delayed(const Duration(milliseconds: 300));
       expect(events.length, seenWhilePaused, reason: 'no progress');
       paused.resume();
       await done;
+      _expectWellFormed(events);
       expect(events.last.isComplete, isTrue);
+      expect(events.last.errorMessage, isNull);
       expect(File(sealedPath).existsSync(), isTrue);
+      expect(File('$sealedPath.part').existsSync(), isFalse);
 
       final cancelledPath = a.pathOf('cancelled.fuzz');
       final cancelled = _dataOf(
