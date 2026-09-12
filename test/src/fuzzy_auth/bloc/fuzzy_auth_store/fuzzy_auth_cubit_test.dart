@@ -171,6 +171,29 @@ void main() {
       },
     );
 
+    // T-0329: the boot window is `initial` — no access until the store is
+    // open, then exactly one transition to an access-bearing status.
+    blocTest<FuzzyAuthStore, FuzzyAuthState>(
+      'boots without access and gains it only once the store is open',
+      setUp: () {
+        when(() => mockPrefsRepo.getUserAuthPreferences())
+            .thenAnswer((_) async => null);
+        when(() => mockService.openStore(wrapped: wrapped, password: ''))
+            .thenAnswer((_) async => const CryptoCoreSuccess(null));
+      },
+      build: buildStore,
+      act: (store) {
+        expect(store.state.status, AuthStateStatus.initial);
+        expect(store.state.status.hasAccess, isFalse);
+        return store.checkAuthStatus();
+      },
+      expect: () => [
+        isA<FuzzyAuthState>()
+            .having((s) => s.status, 'status', AuthStateStatus.noAuthRequired)
+            .having((s) => s.status.hasAccess, 'hasAccess', true),
+      ],
+    );
+
     blocTest<FuzzyAuthStore, FuzzyAuthState>(
       'with the lock disabled still reaches noAuthRequired when secure '
       'storage fails',

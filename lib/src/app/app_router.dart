@@ -56,7 +56,10 @@ class AppRouter {
         final matchedLocation = state.matchedLocation;
         final isUnprotected = _unprotectedRoutes.contains(matchedLocation);
 
-        if (!isUnprotected && authStatus.isLocked) {
+        // `initial` is the boot window while `openStore('')` still runs:
+        // gated like `locked`, so no chat is reachable before the store is
+        // open (T-0329).
+        if (!isUnprotected && !authStatus.hasAccess) {
           return chatUnlock;
         }
 
