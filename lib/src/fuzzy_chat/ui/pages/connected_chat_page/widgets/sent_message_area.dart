@@ -109,7 +109,7 @@ class _SentMessageAreaState extends State<SentMessageArea> {
       FuzzzyToast.show(context, message: localizations.copiedToTheClipboard);
 
       final hasVibrator = await Vibration.hasVibrator();
-      if (hasVibrator ?? true) {
+      if (hasVibrator) {
         await Vibration.vibrate();
       }
     });
@@ -424,7 +424,7 @@ class _SentMessageAreaState extends State<SentMessageArea> {
                                 Container(
                                   width: 60,
                                   height: 24,
-                                  color: Colors.white.withOpacity(0),
+                                  color: Colors.white.withValues(alpha: 0),
                                 ),
                                 Icon(
                                   isExpanded

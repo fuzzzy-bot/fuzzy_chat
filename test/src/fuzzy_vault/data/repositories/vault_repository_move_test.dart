@@ -1,6 +1,6 @@
+import 'package:flutter_test/flutter_test.dart';
 import 'package:fuzzy_chat/lib.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:flutter_test/flutter_test.dart';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -107,7 +107,7 @@ void main() {
 
       final result = await repository.moveItemToGroup('nonexistent', 'work');
 
-      expect(result, isA<VaultFailure>());
+      expect(result, isA<VaultFailure<VaultItemMetadata>>());
       expect(
         (result as VaultFailure).type,
         VaultFailureType.itemNotFound,
@@ -129,7 +129,7 @@ void main() {
 
       final result = await repository.moveItemToGroup('item-1', 'work');
 
-      expect(result, isA<VaultFailure>());
+      expect(result, isA<VaultFailure<VaultItemMetadata>>());
       expect(
         (result as VaultFailure).type,
         VaultFailureType.storageWriteError,

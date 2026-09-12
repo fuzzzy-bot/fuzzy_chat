@@ -133,7 +133,7 @@ class _SettingsLinkTile extends StatelessWidget {
           color: fuzzzyColors.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: fuzzzyColors.focus.withOpacity(0.2),
+            color: fuzzzyColors.focus.withValues(alpha: 0.2),
           ),
         ),
         child: Row(
@@ -204,10 +204,12 @@ class _SecurityLevelTile extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.12) : fuzzzyColors.surface,
+          color:
+              isSelected ? color.withValues(alpha: 0.12) : fuzzzyColors.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? color : fuzzzyColors.focus.withOpacity(0.2),
+            color:
+                isSelected ? color : fuzzzyColors.focus.withValues(alpha: 0.2),
             width: isSelected ? 1.5 : 1,
           ),
         ),

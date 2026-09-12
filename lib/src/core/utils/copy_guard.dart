@@ -45,6 +45,7 @@ class CopyGuard {
     }
 
     await Clipboard.setData(ClipboardData(text: textToCopy));
+    if (!context.mounted) return;
     FuzzzyToast.show(context, message: localizations.copiedToTheClipboard);
   }
 }

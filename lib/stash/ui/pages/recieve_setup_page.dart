@@ -386,7 +386,7 @@ class _ReceiveSetupPageState extends State<ReceiveSetupPage> {
             ),
           if (_highlighted)
             ColoredBox(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha: 0.5),
               child: const Center(
                 child: Text(
                   'Drop the file here to import key',

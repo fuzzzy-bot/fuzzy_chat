@@ -26,7 +26,7 @@ class InvitedChatTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       clipBehavior: Clip.antiAlias,
-      color: fuzzzyColors.surface.withOpacity(0.4),
+      color: fuzzzyColors.surface.withValues(alpha: 0.4),
       margin: const EdgeInsets.symmetric(
         horizontal: 16,
         vertical: 8,
