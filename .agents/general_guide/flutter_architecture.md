@@ -193,7 +193,7 @@ The app's core value is its cryptography, and **none of it is written in Dart**.
 
 | Layer | Where | Purpose |
 |---------|---------|---------|
-| `CryptoCoreService` | `lib/src/core/encryption_services/crypto_core_service/` | The single adapter: owns the `CryptoCore` handle, maps every Rust `CoreError` to `CryptoCoreResponse` (`CryptoCoreSuccess | CryptoCoreFailure`), serialises Argon2id calls. **The only importer of `package:fuzzy_chat/rust_bridge/…`** (plus `initializer.dart` and the test helper). |
+| `CryptoCoreService` | `lib/src/core/encryption_services/crypto_core_service/` | The single adapter: owns the `CryptoCore` handle, maps every Rust `CoreError` to `CryptoCoreResponse` (`CryptoCoreSuccess | CryptoCoreFailure`), serialises Argon2id calls. **The only `lib/` importer of `package:fuzzy_chat/rust_bridge/…`** (plus `initializer.dart`; in `test/`, only `helpers/crypto_core_test_init.dart` and `src/core/rust_bridge_smoke_test.dart`). |
 | `lib/rust_bridge/` | generated | `api/{core,pairing,files,passwords,vault,formats,health}.dart` (messages, safety and local seals are methods on `CryptoCore` in `core.dart`) + `error.dart` + `frb_generated*.dart` — codegen output, committed, never edited |
 | `rust/fuzzy_crypto_core/src/api/` | Rust | The frb surface; keys stay in `#[frb(opaque)]` handles (`CryptoCore`, `VaultKey`, `FileJob`) |
 | Crates | `Cargo.toml`, `=`-pinned + `Cargo.lock` | `vodozemac` (Olm), `chacha20poly1305` + `aead-stream` (AEAD, STREAM), `argon2` (Argon2id), `hkdf`/`sha2`, `subtle`/`zeroize`/`getrandom` |
@@ -207,8 +207,8 @@ Rules: no primitive, KDF, MAC or protocol by hand; no key bytes across the bridg
 | Script | Purpose | Usage |
 |--------|---------|-------|
 | `./exp.sh` | Regenerate all barrel files | Run after creating any new `.dart` file |
-| `./loc.sh` | Add localization entries | `./loc.sh "key||en||English text"` |
-| `./m.sh` | Merge file contents for AI context | `./m.sh lib/src/fuzzy_chat [-c]` |
+| `./loc.sh` | **BROKEN** — see `.agents/workflows/scripts_reference.md` (hand-edit both `.arb` files + `fvm flutter gen-l10n`) | Add localization entries |
+| `./m.sh` | **BROKEN** — see `.agents/workflows/scripts_reference.md` (`python3 scripts/merge_contents.py <dir>`) | Merge file contents for AI context |
 | `./buildrunner.sh` | **BROKEN** — see `.agents/workflows/scripts_reference.md` for the Isar codegen recipe | After modifying Isar models |
 | `flutter_rust_bridge_codegen generate` | Regenerate `lib/rust_bridge/` + `frb_generated.rs` | After any change under `rust/fuzzy_crypto_core/src/api/` |
 | `cargo test --locked` / `cargo build --release --locked` | Rust tests / the core `flutter test` loads | From `rust/fuzzy_crypto_core/` |

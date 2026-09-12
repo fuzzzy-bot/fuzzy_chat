@@ -20,7 +20,7 @@
 ### AP-003: Never Import Feature Files Directly
 **Problem:** Importing `package:fuzzy_chat/src/fuzzy_chat/data/models/some_model.dart` creates tight coupling.
 **Resolution:** Always import through the root barrel: `import 'package:fuzzy_chat/lib.dart';` (it re-exports `src/src.dart`).
-**Rule:** One import. `import 'package:fuzzy_chat/lib.dart';` is the only project import you write. Two sanctioned exceptions: `package:fuzzzy_ui_kit/fuzzzy_ui_kit.dart` where a kit widget is used, and `package:fuzzy_chat/rust_bridge/…` **only** inside `crypto_core_service.dart`, `initializer.dart` and `test/helpers/crypto_core_test_init.dart`.
+**Rule:** One import. `import 'package:fuzzy_chat/lib.dart';` is the only project import you write. Two sanctioned exceptions: `package:fuzzzy_ui_kit/fuzzzy_ui_kit.dart` where a kit widget is used, and `package:fuzzy_chat/rust_bridge/…` **only** in `lib/` inside `crypto_core_service.dart` and `initializer.dart`; in `test/`, only `test/helpers/crypto_core_test_init.dart` and `test/src/core/rust_bridge_smoke_test.dart` (the bridge smoke test imports the generated API directly by design).
 
 ### AP-004: Never Skip Barrel Files
 **Problem:** Missing barrel exports cause "undefined" errors.

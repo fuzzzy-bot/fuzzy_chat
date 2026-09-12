@@ -25,7 +25,7 @@ fvm flutter gen-l10n
 ```
 
 ### `./m.sh` — Content Merger (AI Context Dump) — **BROKEN**
-**Why:** it calls `python`, which is not on PATH on this Mac (only `python3`).
+**Why:** it calls `python`, which is not on PATH on this Mac (only `python3`). **It still exits 0** after `python: command not found`, so a caller cannot trust its exit code — check for the output file instead.
 **Recipe:**
 ```bash
 python3 scripts/merge_contents.py lib/src/fuzzy_chat     # → scripts/outputs/fuzzy_chat.txt (gitignored)

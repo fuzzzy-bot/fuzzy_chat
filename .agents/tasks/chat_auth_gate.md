@@ -2,7 +2,7 @@
 
 # TASK: Chat Authentication Gate — Finalize Implementation
 
-**Status:** IN_PROGRESS (Doer phase — ~70% complete)
+**Status:** SUPERSEDED — historical, see banner (was: IN_PROGRESS, Doer phase ~70%)
 
 ---
 ### PLAN (by [PLANNER])
