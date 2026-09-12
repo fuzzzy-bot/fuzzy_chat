@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fuzzy_chat/rust_bridge/api/core.dart';
 import 'package:fuzzy_chat/rust_bridge/api/formats.dart';
 import 'package:fuzzy_chat/rust_bridge/api/health.dart';
 import 'package:fuzzy_chat/rust_bridge/error.dart';
@@ -79,6 +81,84 @@ void main() {
         () => peekChatId(text: _fuzzText(truncated)),
         throwsA(CoreError.corrupt),
       );
+    });
+  });
+
+  group('store (async, opaque handle)', () {
+    late Directory storeDir;
+
+    setUp(() {
+      storeDir = Directory.systemTemp.createTempSync('fuzzy_crypto_core_');
+    });
+
+    tearDown(() {
+      if (storeDir.existsSync()) storeDir.deleteSync(recursive: true);
+    });
+
+    test('createStoreKey → openStore → sealLocal/openLocal → close', () async {
+      final wrapped = await createStoreKey(password: 'pw');
+      expect(wrapped.length, 103, reason: '0x10 blob: 6 + 16 + 9 + 24 + 48');
+      expect(wrapped.sublist(0, 6), [0x46, 0x55, 0x5A, 0x5A, 0x01, 0x10]);
+
+      final core = await openStore(
+        storeDir: storeDir.path,
+        wrapped: wrapped,
+        password: 'pw',
+      );
+      expect(await core.storeDir(), storeDir.path);
+      expect(
+        Directory('${storeDir.path}/fuzzy_crypto_store').existsSync(),
+        isTrue,
+      );
+
+      final sealed = await core.sealLocal(bytes: utf8.encode('history'));
+      expect(sealed.sublist(0, 6), [0x46, 0x55, 0x5A, 0x5A, 0x01, 0x20]);
+      expect(utf8.decode(await core.openLocal(blob: sealed)), 'history');
+
+      final tampered = List<int>.of(sealed)..[40] ^= 1;
+      await expectLater(
+        core.openLocal(blob: tampered),
+        throwsA(CoreError.corrupt),
+      );
+
+      await core.close();
+      await expectLater(
+        core.sealLocal(bytes: [1]),
+        throwsA(CoreError.storeLocked),
+      );
+      await expectLater(
+        core.deleteChat(chatId: _chatId),
+        throwsA(CoreError.storeLocked),
+      );
+      core.dispose();
+    });
+
+    test('wrong password and rewrap', () async {
+      final wrapped = await createStoreKey(password: 'pw');
+
+      await expectLater(
+        openStore(storeDir: storeDir.path, wrapped: wrapped, password: 'px'),
+        throwsA(CoreError.wrongPassword),
+      );
+
+      final rewrapped = await rewrapStoreKey(
+        wrapped: wrapped,
+        oldPassword: 'pw',
+        newPassword: '',
+      );
+      expect(rewrapped, isNot(wrapped));
+      await expectLater(
+        rewrapStoreKey(wrapped: wrapped, oldPassword: 'nope', newPassword: 'x'),
+        throwsA(CoreError.wrongPassword),
+      );
+
+      final core = await openStore(
+        storeDir: storeDir.path,
+        wrapped: rewrapped,
+        password: '',
+      );
+      await core.close();
+      core.dispose();
     });
   });
 }

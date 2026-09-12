@@ -25,6 +25,11 @@ thiserror = "2"
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
 
+# Argon2id at 64 MiB is ~15x slower unoptimised; keep `cargo test` and debug app
+# unlocks usable without touching the crate's own profile.
+[profile.dev.package.argon2]
+opt-level = 3
+
 [profile.release]
 panic = "unwind"
 opt-level = 3

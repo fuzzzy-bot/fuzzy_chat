@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/core.dart';
 import 'api/formats.dart';
 import 'api/health.dart';
 import 'dart:async';
@@ -22,6 +23,29 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
     required super.generalizedFrbRustBinding,
     required super.portManager,
   });
+
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_CryptoCorePtr =>
+      wire.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore;
+
+  @protected
+  CryptoCore
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          dynamic raw);
+
+  @protected
+  CryptoCore
+      dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          dynamic raw);
+
+  @protected
+  CryptoCore
+      dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          dynamic raw);
+
+  @protected
+  CryptoCore
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          dynamic raw);
 
   @protected
   String dco_decode_String(dynamic raw);
@@ -48,6 +72,29 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   void dco_decode_unit(dynamic raw);
 
   @protected
+  BigInt dco_decode_usize(dynamic raw);
+
+  @protected
+  CryptoCore
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          SseDeserializer deserializer);
+
+  @protected
+  CryptoCore
+      sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          SseDeserializer deserializer);
+
+  @protected
+  CryptoCore
+      sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          SseDeserializer deserializer);
+
+  @protected
+  CryptoCore
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          SseDeserializer deserializer);
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
@@ -72,7 +119,30 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer);
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          CryptoCore self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          CryptoCore self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          CryptoCore self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          CryptoCore self, SseSerializer serializer);
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
@@ -100,6 +170,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   void sse_encode_unit(void self, SseSerializer serializer);
 
   @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer);
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
 }
 
@@ -107,6 +180,18 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
 class FuzzyCryptoCoreLibWire implements BaseWire {
   FuzzyCryptoCoreLibWire.fromExternalLibrary(ExternalLibrary lib);
+
+  void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          int ptr) =>
+      wasmModule
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+              ptr);
+
+  void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          int ptr) =>
+      wasmModule
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+              ptr);
 }
 
 @JS('wasm_bindgen')
@@ -114,4 +199,12 @@ external FuzzyCryptoCoreLibWasmModule get wasmModule;
 
 @JS()
 @anonymous
-extension type FuzzyCryptoCoreLibWasmModule._(JSObject _) implements JSObject {}
+extension type FuzzyCryptoCoreLibWasmModule._(JSObject _) implements JSObject {
+  external void
+      rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          int ptr);
+
+  external void
+      rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          int ptr);
+}
