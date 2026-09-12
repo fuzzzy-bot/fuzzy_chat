@@ -4,7 +4,7 @@ version: 1.0.0+1
 publish_to: none
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   app_links: ^7.0.0
@@ -18,7 +18,10 @@ dependencies:
   flutter_dropzone: ^4.0.0
   flutter_localizations:
     sdk: flutter
+  flutter_rust_bridge: 2.13.0
   flutter_secure_storage: ^9.2.2
+  fuzzy_crypto_core:
+    path: rust_builder
   fuzzzy_ui_kit:
     git:
       url: https://github.com/fuzzzy-bot/fuzzy_design.git
