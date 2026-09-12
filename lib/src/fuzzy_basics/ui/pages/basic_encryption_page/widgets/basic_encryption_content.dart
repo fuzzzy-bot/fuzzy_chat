@@ -175,6 +175,7 @@ class BasicEncryptionContent extends StatelessWidget {
             ),
             subtitle: Text(
               file.outputFilePath ??
+                  file.failure?.type.toUiMessage(currentContextLocalization) ??
                   currentContextLocalization.processingFailed,
               maxLines: 2,
             ),

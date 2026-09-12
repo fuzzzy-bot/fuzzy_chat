@@ -18,11 +18,13 @@ class BasicEncryptionPage extends StatelessWidget {
         ),
         BlocProvider<CustomFileProcessingCubit<FileEncryptionOption>>(
           create: (context) => CustomFileProcessingCubit(
+            cryptoCoreService: sl.get<CryptoCoreService>(),
             processingOption: const FileEncryptionOption(),
           ),
         ),
         BlocProvider<CustomFileProcessingCubit<FileDecryptionOption>>(
           create: (context) => CustomFileProcessingCubit(
+            cryptoCoreService: sl.get<CryptoCoreService>(),
             processingOption: const FileDecryptionOption(),
           ),
         ),

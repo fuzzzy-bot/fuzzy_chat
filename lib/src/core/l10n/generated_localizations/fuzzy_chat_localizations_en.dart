@@ -784,4 +784,16 @@ class FuzzyChatLocalizationsEn extends FuzzyChatLocalizations {
 
   @override
   String get verifySafetyNumberCta => 'Verify safety number';
+
+  @override
+  String get wrongPasswordFile =>
+      'Wrong password — this file cannot be unfuzzed with it.';
+
+  @override
+  String get fileStillArriving =>
+      'This file is still being written — wait until it has fully arrived, then try again.';
+
+  @override
+  String get fileCannotBeOpenedAskToResend =>
+      'This file cannot be opened; ask the sender to send it again.';
 }

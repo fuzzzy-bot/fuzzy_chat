@@ -1,8 +1,10 @@
 import 'dart:typed_data';
 import 'package:fuzzy_chat/lib.dart';
 import 'package:fuzzy_chat/rust_bridge/api/core.dart' as rust_core;
+import 'package:fuzzy_chat/rust_bridge/api/files.dart' as rust_files;
 import 'package:fuzzy_chat/rust_bridge/api/formats.dart' as rust_formats;
 import 'package:fuzzy_chat/rust_bridge/error.dart';
+import 'package:path/path.dart' as path;
 
 export 'components/components.dart';
 
@@ -180,6 +182,120 @@ class CryptoCoreService {
     return _withCore((core) => core.decryptText(chatId: chatId, blob: blob));
   }
 
+  /// Fuzzes the file at [inputPath] for [chatId] into the chat-mode container
+  /// at [outputPath]. The file key rides in one Olm message — one ratchet
+  /// step, taken under the core lock and persisted before this returns — and
+  /// the chunks then stream without the core, so a running (or paused) file
+  /// never blocks a text message or a lock. Progress, pause/resume/cancel and
+  /// the `.part` rules arrive through the handler; a run failure is the
+  /// terminal event's `errorMessage` (a [CryptoCoreFailureType] name) with
+  /// `isComplete` set — check `errorMessage` first.
+  Future<CryptoCoreResponse<FileProcessingHandler>> encryptFileForChat({
+    required String chatId,
+    required String inputPath,
+    required String outputPath,
+  }) {
+    return _withCore((core) async {
+      final ticket =
+          await core.prepareFileSend(chatId: chatId, input: inputPath);
+      return _startFileJob(
+        (job) =>
+            rust_files.runFileJob(ticket: ticket, output: outputPath, job: job),
+      );
+    });
+  }
+
+  /// Unfuzzes the chat-mode container at [inputPath] for [chatId] into
+  /// [outputDirectoryPath] under the sender's original file name. The
+  /// container's key message is consumed here (a second attempt is `replay`;
+  /// `wrongChat`, `tooOld`, and `corrupt` for a truncated or tampered header
+  /// leave nothing consumed), so a run failure after a success here is
+  /// terminal for that container — the sender has to send it again. Never
+  /// call this on a file that is still being written.
+  Future<CryptoCoreResponse<CryptoCoreReceivedFile>> decryptFileForChat({
+    required String chatId,
+    required String inputPath,
+    required String outputDirectoryPath,
+  }) {
+    return _withCore((core) async {
+      final ticket =
+          await core.prepareFileReceive(chatId: chatId, input: inputPath);
+      // Before the run: a running job holds the ticket's write lock.
+      final outputPath =
+          path.join(outputDirectoryPath, await ticket.originalName());
+      final handler = await _startFileJob(
+        (job) =>
+            rust_files.runFileJob(ticket: ticket, output: outputPath, job: job),
+      );
+      return CryptoCoreReceivedFile(outputPath: outputPath, handler: handler);
+    });
+  }
+
+  /// Fuzzes the file at [inputPath] under [password] (Argon2id, fresh salt)
+  /// into the password-mode container at [outputPath]; the store is not
+  /// involved, so this works with a locked store and never queues a chat call.
+  Future<CryptoCoreResponse<FileProcessingHandler>> encryptFileWithPassword({
+    required String password,
+    required String inputPath,
+    required String outputPath,
+  }) {
+    return _guarded(
+      () => _startFileJob(
+        (job) => rust_files.encryptFile(
+          password: password,
+          input: inputPath,
+          output: outputPath,
+          job: job,
+        ),
+      ),
+    );
+  }
+
+  /// Inverse of [encryptFileWithPassword]. A wrong password (or a corrupt
+  /// first chunk) ends the stream with `wrongPassword`, any later damage
+  /// with `corrupt`; no output and no `.part` exist after a failure.
+  Future<CryptoCoreResponse<FileProcessingHandler>> decryptFileWithPassword({
+    required String password,
+    required String inputPath,
+    required String outputPath,
+  }) {
+    return _guarded(
+      () => _startFileJob(
+        (job) => rust_files.decryptFile(
+          password: password,
+          input: inputPath,
+          output: outputPath,
+          job: job,
+        ),
+      ),
+    );
+  }
+
+  /// One `FileJob` per file — a cancelled job is spent. Rust events map 1:1
+  /// onto [FileProcessingProgress]; the terminal event's error text becomes
+  /// the matching [CryptoCoreFailureType] name so no Rust string leaves here.
+  Future<FileProcessingHandler> _startFileJob(
+    Stream<rust_files.FileProgress> Function(rust_files.FileJob job) start,
+  ) async {
+    final job = await rust_files.newFileJob();
+    return FileProcessingHandler(
+      progressStream: start(job).map(
+        (event) => FileProcessingProgress(
+          progress: event.progress,
+          isComplete: event.isComplete,
+          isCancelled: event.isCancelled,
+          errorMessage: switch (event.errorMessage) {
+            null => null,
+            final text => _failureTypeOfText(text).name,
+          },
+        ),
+      ),
+      pause: job.pause,
+      resume: job.resume,
+      cancel: job.cancel,
+    );
+  }
+
   /// Seals [bytes] under the store-derived local key (0x20 blob) for
   /// at-rest storage on this device only.
   Future<CryptoCoreResponse<Uint8List>> sealLocal(Uint8List bytes) {
@@ -255,6 +371,19 @@ class CryptoCoreService {
       logger.e('ERROR: $ex');
       return const CryptoCoreFailure(CryptoCoreFailureType.internal);
     }
+  }
+
+  /// The `CoreError` display text a file job's terminal event carries (frb
+  /// runs stream functions unawaited, so an error cannot be thrown to Dart).
+  static CryptoCoreFailureType _failureTypeOfText(String text) {
+    return switch (text) {
+      'wrong password' => CryptoCoreFailureType.wrongPassword,
+      'corrupt' => CryptoCoreFailureType.corrupt,
+      'unsupported format' => CryptoCoreFailureType.unsupportedFormat,
+      'io' => CryptoCoreFailureType.io,
+      'store locked' => CryptoCoreFailureType.storeLocked,
+      _ => CryptoCoreFailureType.internal,
+    };
   }
 
   static CryptoCoreFailureType _failureTypeOf(CoreError error) {

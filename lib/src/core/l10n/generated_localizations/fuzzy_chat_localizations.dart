@@ -1547,6 +1547,24 @@ abstract class FuzzyChatLocalizations {
   /// In en, this message translates to:
   /// **'Verify safety number'**
   String get verifySafetyNumberCta;
+
+  /// No description provided for @wrongPasswordFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong password — this file cannot be unfuzzed with it.'**
+  String get wrongPasswordFile;
+
+  /// No description provided for @fileStillArriving.
+  ///
+  /// In en, this message translates to:
+  /// **'This file is still being written — wait until it has fully arrived, then try again.'**
+  String get fileStillArriving;
+
+  /// No description provided for @fileCannotBeOpenedAskToResend.
+  ///
+  /// In en, this message translates to:
+  /// **'This file cannot be opened; ask the sender to send it again.'**
+  String get fileCannotBeOpenedAskToResend;
 }
 
 class _FuzzyChatLocalizationsDelegate

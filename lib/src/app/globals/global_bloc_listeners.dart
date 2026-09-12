@@ -72,7 +72,10 @@ class GlobalBlocListeners extends StatelessWidget {
                 content: Text(
                   ' ${localizations.failedToProcessFiles}: ${state.failedToAddProcessedFiles?.map(
                     (file) {
-                      return file.inputFilePath.split('/').last;
+                      final name = file.inputFilePath.split('/').last;
+                      final reason =
+                          file.failure?.type.toUiMessage(localizations);
+                      return reason == null ? name : '$name ($reason)';
                     },
                   ).toList()}',
                 ),

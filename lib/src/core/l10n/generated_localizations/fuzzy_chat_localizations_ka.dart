@@ -793,4 +793,16 @@ class FuzzyChatLocalizationsKa extends FuzzyChatLocalizations {
 
   @override
   String get verifySafetyNumberCta => 'უსაფრთხოების ნომრის შემოწმება';
+
+  @override
+  String get wrongPasswordFile =>
+      'არასწორი პაროლი — ამ პაროლით ამ ფაილის გაშიფვრა ვერ მოხერხდება.';
+
+  @override
+  String get fileStillArriving =>
+      'ეს ფაილი ჯერ კიდევ იწერება — დაელოდეთ სრულად ჩამოტვირთვას და სცადეთ ხელახლა.';
+
+  @override
+  String get fileCannotBeOpenedAskToResend =>
+      'ამ ფაილის გახსნა ვერ მოხერხდა; სთხოვეთ გამომგზავნს, ხელახლა გამოგზავნოს.';
 }
