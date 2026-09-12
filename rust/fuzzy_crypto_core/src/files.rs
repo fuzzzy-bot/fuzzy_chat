@@ -240,22 +240,40 @@ pub(crate) fn unwrap_file_key(
 }
 
 /// Reads and decodes the header of the container at `input` — everything the
-/// receive side needs for its Olm step, without touching a chunk.
+/// receive side needs for its Olm step, without touching a chunk. The body is
+/// checked structurally here too (at least one tag, a last chunk no shorter
+/// than a tag), so a header-only or truncated container — an incomplete
+/// transfer — is `Corrupt` before the Olm step spends the file's message.
+/// A directory is `Io`.
 pub(crate) fn peek_header(input: &Path) -> Result<FileHeader, CoreError> {
     let mut reader = File::open(input).map_err(|_| CoreError::Io)?;
-    let file_len = reader.metadata().map_err(|_| CoreError::Io)?.len();
-    let (header, _) = read_header(&mut reader, file_len)?;
+    let metadata = reader.metadata().map_err(|_| CoreError::Io)?;
+    if !metadata.is_file() {
+        return Err(CoreError::Io);
+    }
+    let (header, header_bytes) = read_header(&mut reader, metadata.len())?;
+    chunk_layout(metadata.len(), header_bytes.len(), header.chunk_size)?;
     Ok(header)
 }
+
+/// Longest original name (NAME_MAX on every target; the sender derives it from
+/// a real basename, so nothing legitimate is lost).
+const MAX_ORIGINAL_NAME_LEN: usize = 255;
 
 /// The original name is a file *name*, never a path: a peer's name lands in
 /// the receiver's output path (F3-3), so a separator, NUL, `.` or `..` is
 /// `Corrupt` on both sides — the sender only ever derives it from a basename.
+/// It is also bounded to [`MAX_ORIGINAL_NAME_LEN`] bytes and free of control
+/// characters, so a name the OS would refuse (or one that hides a newline)
+/// never gets as far as spending the receiver's ratchet step.
 fn validate_original_name(name: &str) -> Result<(), CoreError> {
     if name.is_empty()
         || name == "."
         || name == ".."
-        || name.bytes().any(|byte| matches!(byte, b'/' | b'\\' | 0))
+        || name.len() > MAX_ORIGINAL_NAME_LEN
+        || name
+            .bytes()
+            .any(|byte| matches!(byte, b'/' | b'\\' | 0x00..=0x1f | 0x7f))
     {
         return Err(CoreError::Corrupt);
     }
@@ -336,15 +354,7 @@ pub(crate) fn decrypt_chunks(
     let key = key_for(&header)?;
 
     let sealed_len = u64::from(header.chunk_size) + TAG_LEN as u64;
-    let body_len = file_len
-        .checked_sub(header_bytes.len() as u64)
-        .filter(|body| *body >= TAG_LEN as u64)
-        .ok_or(CoreError::Corrupt)?;
-    let chunks = body_len.div_ceil(sealed_len);
-    let last_len = body_len - (chunks - 1) * sealed_len;
-    if last_len < TAG_LEN as u64 {
-        return Err(CoreError::Corrupt);
-    }
+    let (chunks, last_len) = chunk_layout(file_len, header_bytes.len(), header.chunk_size)?;
     let (mut aad, mut buffer) = chunk_buffers(&header_bytes, header.chunk_size)?;
     let mut stream = Some(DecryptorBE32::from_aead(
         XChaCha20Poly1305::new((&*key).into()),
@@ -400,6 +410,27 @@ fn read_header(reader: &mut File, file_len: u64) -> Result<(FileHeader, Vec<u8>)
     let (header, header_len) = FileHeader::decode(&prefix)?;
     prefix.truncate(header_len);
     Ok((header, prefix))
+}
+
+/// `(chunks, last sealed chunk length)` of a container body of
+/// `file_len - header_len` bytes: `Corrupt` when the body is shorter than one
+/// tag or its last chunk would be (a header-only or truncated container).
+fn chunk_layout(
+    file_len: u64,
+    header_len: usize,
+    chunk_size: u32,
+) -> Result<(u64, u64), CoreError> {
+    let sealed_len = u64::from(chunk_size) + TAG_LEN as u64;
+    let body_len = file_len
+        .checked_sub(header_len as u64)
+        .filter(|body| *body >= TAG_LEN as u64)
+        .ok_or(CoreError::Corrupt)?;
+    let chunks = body_len.div_ceil(sealed_len);
+    let last_len = body_len - (chunks - 1) * sealed_len;
+    if last_len < TAG_LEN as u64 {
+        return Err(CoreError::Corrupt);
+    }
+    Ok((chunks, last_len))
 }
 
 /// The AAD scratch and the one chunk buffer (`chunk_size + tag`, wiped on drop).
@@ -824,6 +855,71 @@ mod tests {
             edit_sealed(&files, |sealed| sealed.truncate(keep));
             assert_eq!(decrypt(&files, PASSWORD).unwrap_err(), CoreError::Corrupt);
             files.assert_no_output();
+        }
+    }
+
+    #[test]
+    fn peek_header_rejects_short_bodies_and_directories() {
+        // The structural check of `decrypt_chunks` runs at peek time too, so
+        // an incomplete transfer is `Corrupt` before any Olm step is spent.
+        let files = Files::with_plaintext(&pattern(SMALL_CHUNK as usize * 5 / 2));
+        encrypt(&files, &small_setup());
+        let pristine = fs::read(&files.sealed).unwrap();
+        assert!(peek_header(&files.sealed).is_ok());
+
+        // Header only, header + less than a tag, and a last chunk shorter
+        // than a tag (whole chunks + 15 bytes): all `Corrupt`.
+        for keep in [
+            HEADER_LEN,
+            HEADER_LEN + TAG_LEN - 1,
+            HEADER_LEN + 2 * SEALED_SMALL + TAG_LEN - 1,
+        ] {
+            fs::write(&files.sealed, &pristine[..keep]).unwrap();
+            assert_eq!(
+                peek_header(&files.sealed).unwrap_err(),
+                CoreError::Corrupt,
+                "kept {keep}"
+            );
+        }
+        // Whole chunks + exactly one tag is structurally fine (an empty last
+        // chunk); only the tag itself can reject it, later.
+        fs::write(
+            &files.sealed,
+            &pristine[..HEADER_LEN + 2 * SEALED_SMALL + TAG_LEN],
+        )
+        .unwrap();
+        assert!(peek_header(&files.sealed).is_ok());
+
+        // A directory opens on unix but is never a container.
+        assert_eq!(peek_header(&files.dir).unwrap_err(), CoreError::Io);
+        // The check reads only the header: a still-unopened container is intact.
+        fs::write(&files.sealed, &pristine).unwrap();
+        decrypt(&files, PASSWORD).unwrap();
+    }
+
+    #[test]
+    fn original_name_is_bounded_and_free_of_control_characters() {
+        let ok = |name: &str| assert!(validate_original_name(name).is_ok(), "{name:?}");
+        let bad = |name: &str| {
+            assert_eq!(
+                validate_original_name(name).unwrap_err(),
+                CoreError::Corrupt,
+                "{name:?}"
+            )
+        };
+        ok("report.pdf");
+        ok(&"a".repeat(MAX_ORIGINAL_NAME_LEN));
+        ok("ანგარიში 2026.pdf");
+        ok("\u{202e}gnp.exe"); // not display-safe, but a name the OS accepts
+        bad(&"a".repeat(MAX_ORIGINAL_NAME_LEN + 1));
+        bad(&"ა".repeat(MAX_ORIGINAL_NAME_LEN / 3 + 1)); // bytes, not chars
+        bad("a\nb");
+        bad("a\tb");
+        bad("a\x7fb");
+        bad("\x01");
+        // The pre-existing rejections still hold.
+        for name in ["", ".", "..", "a/b", "a\\b", "a\0b"] {
+            bad(name);
         }
     }
 

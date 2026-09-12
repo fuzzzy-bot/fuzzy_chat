@@ -201,7 +201,8 @@ impl CryptoCore {
     /// wraps it with the file's name in one Olm message on the session (one
     /// ratchet step, the next send counter — the rules of `encrypt_text`),
     /// persists the state and returns the ticket for [`run_file_job`]. A chat
-    /// that is not connected is `Internal`; an unreadable `input` is `Io` —
+    /// that is not connected is `Internal`; an unreadable `input`, or one that
+    /// is not a regular file (a directory opens fine on unix), is `Io` —
     /// checked first, so no counter is spent on a file that cannot be read.
     pub fn prepare_file_send(
         &mut self,
@@ -215,7 +216,10 @@ impl CryptoCore {
             .and_then(|name| name.to_str())
             .ok_or(CoreError::Io)?
             .to_owned();
-        std::fs::File::open(&input).map_err(|_| CoreError::Io)?;
+        let readable = std::fs::File::open(&input).map_err(|_| CoreError::Io)?;
+        if !readable.metadata().map_err(|_| CoreError::Io)?.is_file() {
+            return Err(CoreError::Io);
+        }
         let setup = ChatFileSetup::random()?;
         let (key, header) = self.opened_mut()?.with_state_mut(&chat_id, |state| {
             files::wrap_file_key(state, &original_name, &setup)
@@ -232,9 +236,11 @@ impl CryptoCore {
     }
 
     /// Step one of receiving the chat-mode container at `input` on `chat_id`:
-    /// reads the header, opens the embedded Olm message through the same chain
-    /// as a text message (`Replay`, `TooOld`, `WrongChat`, `Corrupt` exactly as
-    /// `decrypt_text`; a password-mode container is `UnsupportedFormat`),
+    /// reads the header (a header-only or truncated container is `Corrupt`
+    /// here, before the message is spent; a directory is `Io`), opens the
+    /// embedded Olm message through the same chain as a text message
+    /// (`Replay`, `TooOld`, `WrongChat`, `Corrupt` exactly as `decrypt_text`;
+    /// a password-mode container is `UnsupportedFormat`),
     /// persists the state and returns the ticket. Nothing is written to disk
     /// besides the state: the output appears only under [`run_file_job`], so a
     /// rejection here leaves no `.part` behind. The original name is on the
@@ -409,6 +415,7 @@ mod tests {
     use crate::files::ChatFileSetup;
     use crate::formats::{FileHeader, FileKeyMode, OlmType, CHUNK_SIZE};
     use crate::store::test_support::temp_dir;
+    use crate::store::STORE_SUBDIR;
 
     const CHAT_X: &str = "6f1e9b2c-3d4a-4f5b-8c6d-7e8f9a0b1c2d";
     const CHAT_Y: &str = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
@@ -457,6 +464,11 @@ mod tests {
                 .load_state(chat_id)
                 .unwrap()
                 .recv_highest
+        }
+
+        /// The sealed on-disk state file, for byte-identical assertions.
+        fn state_bytes(&self, chat_id: &str) -> Vec<u8> {
+            fs::read(self.dir.join(STORE_SUBDIR).join(format!("{chat_id}.state"))).unwrap()
         }
     }
 
@@ -632,6 +644,90 @@ mod tests {
             CoreError::Replay
         );
         assert_absent(&out2);
+    }
+
+    #[test]
+    fn incomplete_container_rejected_before_the_message_is_spent() {
+        let mut a = Device::new();
+        let mut b = Device::new();
+        pair(&mut a, &mut b, CHAT_X);
+
+        let plaintext = pattern(CHUNK_SIZE as usize + 100); // two chunks
+        let sealed = send(&mut a, CHAT_X, "partial.bin", &plaintext);
+        let pristine = fs::read(&sealed).unwrap();
+        let header_len = crate::files::peek_header(&sealed)
+            .unwrap()
+            .encode()
+            .unwrap()
+            .len();
+        let sealed_text = sealed.to_string_lossy().into_owned();
+        let output = b.path("out.bin");
+        let before = b.state_bytes(CHAT_X);
+
+        // Header only, header + 15 bytes, and a last chunk shorter than a tag:
+        // every one is `Corrupt` at prepare with B's state byte-identical —
+        // the file's message is still unspent.
+        for keep in [
+            header_len,
+            header_len + 15,
+            header_len + CHUNK_SIZE as usize + 16 + 15,
+        ] {
+            fs::write(&sealed, &pristine[..keep]).unwrap();
+            assert_eq!(
+                b.core
+                    .prepare_file_receive(CHAT_X.into(), sealed_text.clone())
+                    .err()
+                    .unwrap(),
+                CoreError::Corrupt,
+                "kept {keep}"
+            );
+            assert_absent(&output);
+            assert_eq!(
+                b.state_bytes(CHAT_X),
+                before,
+                "state untouched after {keep}"
+            );
+        }
+
+        // The complete container then receives normally — no `Replay`.
+        fs::write(&sealed, &pristine).unwrap();
+        let mut ticket = b
+            .core
+            .prepare_file_receive(CHAT_X.into(), sealed_text)
+            .unwrap();
+        run(&mut ticket, &output).unwrap();
+        assert_eq!(fs::read(&output).unwrap(), plaintext);
+    }
+
+    #[test]
+    fn directories_are_io_on_both_sides_and_spend_nothing() {
+        let mut a = Device::new();
+        let mut b = Device::new();
+        pair(&mut a, &mut b, CHAT_X);
+
+        let dir = a.path("a_folder");
+        fs::create_dir(&dir).unwrap();
+        let dir_text = dir.to_string_lossy().into_owned();
+        let a_before = a.state_bytes(CHAT_X);
+        assert_eq!(
+            a.core
+                .prepare_file_send(CHAT_X.into(), dir_text.clone())
+                .err()
+                .unwrap(),
+            CoreError::Io
+        );
+        assert_eq!(a.state_bytes(CHAT_X), a_before, "no step spent");
+
+        let b_before = b.state_bytes(CHAT_X);
+        assert_eq!(
+            b.core
+                .prepare_file_receive(CHAT_X.into(), dir_text)
+                .err()
+                .unwrap(),
+            CoreError::Io
+        );
+        assert_eq!(b.state_bytes(CHAT_X), b_before, "no step spent");
+        assert_absent(&b.path("out.bin"));
     }
 
     #[test]
