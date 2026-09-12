@@ -82,7 +82,11 @@ fn open(key: &[u8; 32], nonce: &[u8; 24], aad: &[u8], ct: &[u8]) -> Result<Vec<u
 
 /// Argon2id(password, salt, params) → 32-byte KEK. Parameters come from a blob
 /// header, so an unusable set is `Corrupt`, never a panic or a runaway allocation.
-fn derive_kek(password: &[u8], salt: &[u8; 16], params: Argon2Params) -> Result<Key32, CoreError> {
+pub(crate) fn derive_kek(
+    password: &[u8],
+    salt: &[u8; 16],
+    params: Argon2Params,
+) -> Result<Key32, CoreError> {
     if params.m_cost > MAX_ARGON2_M_COST || params.t_cost > MAX_ARGON2_T_COST {
         return Err(CoreError::Corrupt);
     }
@@ -248,7 +252,7 @@ fn open_state(store_key: &[u8; 32], chat_id: &str, file: &[u8]) -> Result<ChatSt
 
 /// Creates the temp file, `0o600` on unix so the sealed state is never group- or
 /// world-readable (F2-2 review nit).
-fn create_tmp(path: &Path) -> io::Result<File> {
+pub(crate) fn create_tmp(path: &Path) -> io::Result<File> {
     let mut options = fs::OpenOptions::new();
     options.write(true).create(true).truncate(true);
     #[cfg(unix)]

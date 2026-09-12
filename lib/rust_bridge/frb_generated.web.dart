@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/core.dart';
+import 'api/files.dart';
 import 'api/formats.dart';
 import 'api/health.dart';
 import 'api/pairing.dart';
@@ -28,9 +29,20 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_CryptoCorePtr =>
       wire.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore;
 
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_FileJobPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob;
+
+  @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw);
+
   @protected
   CryptoCore
       dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          dynamic raw);
+
+  @protected
+  FileJob
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
           dynamic raw);
 
   @protected
@@ -44,9 +56,23 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
           dynamic raw);
 
   @protected
+  FileJob
+      dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          dynamic raw);
+
+  @protected
   CryptoCore
       dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           dynamic raw);
+
+  @protected
+  FileJob
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          dynamic raw);
+
+  @protected
+  RustStreamSink<FileProgress> dco_decode_StreamSink_file_progress_Sse(
+      dynamic raw);
 
   @protected
   String dco_decode_String(dynamic raw);
@@ -64,6 +90,12 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   CoreError dco_decode_core_error(dynamic raw);
 
   @protected
+  double dco_decode_f_64(dynamic raw);
+
+  @protected
+  FileProgress dco_decode_file_progress(dynamic raw);
+
+  @protected
   int dco_decode_i_32(dynamic raw);
 
   @protected
@@ -71,6 +103,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -82,8 +117,16 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   BigInt dco_decode_usize(dynamic raw);
 
   @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
+
+  @protected
   CryptoCore
       sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          SseDeserializer deserializer);
+
+  @protected
+  FileJob
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
           SseDeserializer deserializer);
 
   @protected
@@ -97,9 +140,23 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
           SseDeserializer deserializer);
 
   @protected
+  FileJob
+      sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          SseDeserializer deserializer);
+
+  @protected
   CryptoCore
       sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           SseDeserializer deserializer);
+
+  @protected
+  FileJob
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<FileProgress> sse_decode_StreamSink_file_progress_Sse(
+      SseDeserializer deserializer);
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
@@ -117,6 +174,12 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   CoreError sse_decode_core_error(SseDeserializer deserializer);
 
   @protected
+  double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
+  FileProgress sse_decode_file_progress(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
@@ -124,6 +187,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -135,9 +201,18 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
+  void sse_encode_AnyhowException(
+      AnyhowException self, SseSerializer serializer);
+
+  @protected
   void
       sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           CryptoCore self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          FileJob self, SseSerializer serializer);
 
   @protected
   void
@@ -151,8 +226,22 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   void
+      sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          FileJob self, SseSerializer serializer);
+
+  @protected
+  void
       sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           CryptoCore self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          FileJob self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_StreamSink_file_progress_Sse(
+      RustStreamSink<FileProgress> self, SseSerializer serializer);
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
@@ -170,6 +259,12 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   void sse_encode_core_error(CoreError self, SseSerializer serializer);
 
   @protected
+  void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_progress(FileProgress self, SseSerializer serializer);
+
+  @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
@@ -178,6 +273,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   @protected
   void sse_encode_list_prim_u_8_strict(
       Uint8List self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
@@ -205,6 +303,18 @@ class FuzzyCryptoCoreLibWire implements BaseWire {
       wasmModule
           .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
               ptr);
+
+  void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          int ptr) =>
+      wasmModule
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+              ptr);
+
+  void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          int ptr) =>
+      wasmModule
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+              ptr);
 }
 
 @JS('wasm_bindgen')
@@ -219,5 +329,13 @@ extension type FuzzyCryptoCoreLibWasmModule._(JSObject _) implements JSObject {
 
   external void
       rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          int ptr);
+
+  external void
+      rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          int ptr);
+
+  external void
+      rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
           int ptr);
 }

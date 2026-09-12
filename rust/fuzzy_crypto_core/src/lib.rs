@@ -5,6 +5,7 @@
 pub mod api;
 mod counters;
 pub mod error;
+pub mod files;
 pub mod formats;
 mod frb_generated;
 pub mod messages;

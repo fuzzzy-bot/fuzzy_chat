@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuzzy_chat/rust_bridge/api/core.dart';
+import 'package:fuzzy_chat/rust_bridge/api/files.dart';
 import 'package:fuzzy_chat/rust_bridge/api/formats.dart';
 import 'package:fuzzy_chat/rust_bridge/api/health.dart';
 import 'package:fuzzy_chat/rust_bridge/api/pairing.dart';
@@ -299,6 +300,164 @@ void main() {
       expect(await b.isVerified(chatId: _chatId), isFalse);
       await a.markVerified(chatId: _chatId, verified: false);
       expect(await a.isVerified(chatId: _chatId), isFalse);
+    });
+  });
+
+  group('files (async, StreamSink + FileJob)', () {
+    late Directory dir;
+    late CryptoCore core;
+    late File plain;
+    late String sealedPath;
+    late String openedPath;
+
+    /// 3 MiB of non-repeating bytes: three 1 MiB chunks.
+    List<int> plaintext() {
+      var state = 0x2545F491;
+      return List<int>.generate(3 * 1024 * 1024, (_) {
+        state ^= (state << 13) & 0xFFFFFFFF;
+        state ^= state >> 17;
+        state ^= (state << 5) & 0xFFFFFFFF;
+        return state & 0xFF;
+      });
+    }
+
+    setUp(() async {
+      dir = Directory.systemTemp.createTempSync('fuzzy_crypto_core_files_');
+      core = await openStore(
+        storeDir: dir.path,
+        wrapped: await createStoreKey(password: ''),
+        password: '',
+      );
+      plain = File('${dir.path}/plain.bin')..writeAsBytesSync(plaintext());
+      sealedPath = '${dir.path}/sealed.fuzz';
+      openedPath = '${dir.path}/opened.bin';
+    });
+
+    tearDown(() async {
+      await core.close();
+      core.dispose();
+      if (dir.existsSync()) dir.deleteSync(recursive: true);
+    });
+
+    void expectNoOutput() {
+      expect(File(openedPath).existsSync(), isFalse, reason: 'no output');
+      expect(
+        File('$openedPath.part').existsSync(),
+        isFalse,
+        reason: 'no .part',
+      );
+    }
+
+    test('encryptFile streams one event per chunk, decryptFile restores bytes',
+        () async {
+      final encryptJob = await newFileJob();
+      final encrypted = await encryptFile(
+        core: core,
+        password: 'pw',
+        input: plain.path,
+        output: sealedPath,
+        job: encryptJob,
+      ).toList();
+      expect(encrypted.length, greaterThanOrEqualTo(3));
+      expect(encrypted.last.isComplete, isTrue);
+      expect(encrypted.last.isCancelled, isFalse);
+      expect(encrypted.last.errorMessage, isNull);
+      expect(encrypted.last.progress, 1.0);
+      final fractions = encrypted.map((e) => e.progress).toList();
+      expect(fractions, orderedEquals([...fractions]..sort()));
+      expect(File('$sealedPath.part').existsSync(), isFalse);
+      final sealed = File(sealedPath).readAsBytesSync();
+      expect(sealed.sublist(0, 7), [0x46, 0x55, 0x5A, 0x5A, 0x01, 0x04, 0x02]);
+      expect(sealed.length, 55 + 3 * 1024 * 1024 + 3 * 16);
+
+      final decrypted = await decryptFile(
+        core: core,
+        password: 'pw',
+        input: sealedPath,
+        output: openedPath,
+        job: await newFileJob(),
+      ).toList();
+      expect(decrypted.last.isComplete, isTrue);
+      expect(decrypted.last.errorMessage, isNull);
+      expect(File(openedPath).readAsBytesSync(), plain.readAsBytesSync());
+      expect(File('$openedPath.part').existsSync(), isFalse);
+    });
+
+    test('wrong password and a tampered chunk fail with no output file',
+        () async {
+      await encryptFile(
+        core: core,
+        password: 'pw',
+        input: plain.path,
+        output: sealedPath,
+        job: await newFileJob(),
+      ).toList();
+
+      final wrong = await decryptFile(
+        core: core,
+        password: 'nope',
+        input: sealedPath,
+        output: openedPath,
+        job: await newFileJob(),
+      ).toList();
+      expect(wrong.last.errorMessage, 'wrong password');
+      expect(wrong.last.isCancelled, isFalse);
+      expectNoOutput();
+
+      // Flip a byte in chunk 1 of 3: chunk 0 is written to the .part and then
+      // discarded with it.
+      final sealed = File(sealedPath);
+      final tampered = sealed.readAsBytesSync();
+      tampered[55 + (1024 * 1024 + 16) + 4321] ^= 0x01;
+      sealed.writeAsBytesSync(tampered);
+      final corrupt = await decryptFile(
+        core: core,
+        password: 'pw',
+        input: sealedPath,
+        output: openedPath,
+        job: await newFileJob(),
+      ).toList();
+      expect(corrupt.last.errorMessage, 'corrupt');
+      expect(
+        corrupt.first.progress,
+        closeTo(1 / 3, 1e-9),
+        reason: 'chunk 0 opened before chunk 1 failed',
+      );
+      expectNoOutput();
+    });
+
+    test('cancel emits isCancelled and removes the .part', () async {
+      final job = await newFileJob();
+      final stream = encryptFile(
+        core: core,
+        password: 'pw',
+        input: plain.path,
+        output: sealedPath,
+        job: job,
+      );
+      // Sync calls from Dart while the job runs on the Rust pool.
+      job.pause();
+      job.cancel();
+      final events = await stream.toList();
+      expect(events.last.isCancelled, isTrue);
+      expect(events.last.isComplete, isFalse);
+      expect(events.last.errorMessage, isNull);
+      expect(File(sealedPath).existsSync(), isFalse);
+      expect(File('$sealedPath.part').existsSync(), isFalse);
+    });
+
+    test('a locked store reports store locked on the stream', () async {
+      await core.close();
+      final events = await encryptFile(
+        core: core,
+        password: 'pw',
+        input: plain.path,
+        output: sealedPath,
+        job: await newFileJob(),
+      ).toList();
+      expect(events, hasLength(1));
+      expect(events.single.errorMessage, 'store locked');
+      expect(File(sealedPath).existsSync(), isFalse);
     });
   });
 }
