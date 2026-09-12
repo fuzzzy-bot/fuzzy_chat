@@ -25,7 +25,7 @@ jobs:
       - run: cargo clippy --manifest-path $CRATE/Cargo.toml --all-targets --locked -- -D warnings
       - run: cargo test --manifest-path $CRATE/Cargo.toml --locked
       - uses: taiki-e/install-action@v2
-        with: { tool: cargo-audit@0.22.2,cargo-cyclonedx@0.5.9 }
+        with: { tool: "cargo-audit@0.22.2,cargo-cyclonedx@0.5.9" }
       - run: cargo audit --file $CRATE/Cargo.lock
       - run: cd $CRATE && cargo cyclonedx --format json --spec-version 1.5
       - uses: actions/upload-artifact@v7
@@ -128,7 +128,10 @@ jobs:
       - uses: actions/upload-artifact@v7
         with: { name: linux-bundle, path: build/linux/x64/release/bundle }
   windows:
-    runs-on: windows-latest
+    # windows-2022 (VS 2022): on windows-latest (= windows-2025-vs2026) the VS 2026 STL turns
+    # <experimental/coroutine> into a hard error, and permission_handler_windows (C++/WinRT under
+    # Flutter's C++17 runner) still includes it — an upstream plugin issue, not a cargokit one.
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.98.1
