@@ -7,6 +7,8 @@ import 'package:fuzzy_chat/rust_bridge/api/files.dart';
 import 'package:fuzzy_chat/rust_bridge/api/formats.dart';
 import 'package:fuzzy_chat/rust_bridge/api/health.dart';
 import 'package:fuzzy_chat/rust_bridge/api/pairing.dart';
+import 'package:fuzzy_chat/rust_bridge/api/passwords.dart';
+import 'package:fuzzy_chat/rust_bridge/api/vault.dart';
 import 'package:fuzzy_chat/rust_bridge/error.dart';
 
 import '../../helpers/crypto_core_test_init.dart';
@@ -458,6 +460,116 @@ void main() {
       expect(events, hasLength(1));
       expect(events.single.errorMessage, 'store locked');
       expect(File(sealedPath).existsSync(), isFalse);
+    });
+  });
+
+  group('passwords (async, 0x05 text blobs)', () {
+    test('seal/open text with a password; wrong password throws', () async {
+      final blob = await passwordSealText(password: 'pw', text: 'hello 🔐');
+      expect(blob, startsWith('Fuzz/'));
+      final raw = base64Url.decode(base64Url.normalize(blob.substring(5)));
+      expect(raw.sublist(0, 6), [0x46, 0x55, 0x5A, 0x5A, 0x01, 0x05]);
+      expect(
+        raw.sublist(22, 31),
+        [0, 1, 0, 0, 0, 0, 0, 4, 1],
+        reason: 'Argon2id m=65536 t=4 p=1 recorded in the header',
+      );
+
+      expect(await passwordOpenText(password: 'pw', blob: blob), 'hello 🔐');
+      expect(
+        await passwordOpenText(
+          password: 'pw',
+          blob: blob.replaceRange(20, 20, '\r\n '),
+        ),
+        'hello 🔐',
+        reason: 'whitespace from wrapping is ignored',
+      );
+      await expectLater(
+        passwordOpenText(password: 'px', blob: blob),
+        throwsA(CoreError.wrongPassword),
+      );
+      await expectLater(
+        passwordOpenText(password: 'pw', blob: 'Fuzz/RlVaWgEQAA'),
+        throwsA(CoreError.unsupportedFormat),
+        reason: 'a 0x10 blob is not a password-sealed text',
+      );
+
+      final bytes = await passwordSealBytes(password: 'pw', bytes: [0, 255, 7]);
+      expect(bytes.sublist(0, 6), [0x46, 0x55, 0x5A, 0x5A, 0x01, 0x05]);
+      expect(await passwordOpenBytes(password: 'pw', blob: bytes), [0, 255, 7]);
+      await expectLater(
+        passwordOpenBytes(password: '', blob: bytes),
+        throwsA(CoreError.wrongPassword),
+      );
+    });
+  });
+
+  group('vault (async, opaque VaultKey)', () {
+    test('init → unlock → seal/open → rewrap → old password rejected',
+        () async {
+      final created = await vaultInit(password: 'pw');
+      expect(
+        created.wrapped.length,
+        103,
+        reason: '0x10 blob like the store key',
+      );
+      expect(
+        created.wrapped.sublist(0, 6),
+        [0x46, 0x55, 0x5A, 0x5A, 0x01, 0x10],
+      );
+
+      final item =
+          await vaultSeal(key: created.key, bytes: utf8.encode('secret'));
+      expect(item.sublist(0, 6), [0x46, 0x55, 0x5A, 0x5A, 0x01, 0x20]);
+      expect(
+        utf8.decode(await vaultOpen(key: created.key, blob: item)),
+        'secret',
+      );
+
+      final unlocked =
+          await vaultUnlock(password: 'pw', wrapped: created.wrapped);
+      expect(utf8.decode(await vaultOpen(key: unlocked, blob: item)), 'secret');
+      await expectLater(
+        vaultUnlock(password: 'px', wrapped: created.wrapped),
+        throwsA(CoreError.wrongPassword),
+      );
+
+      final rewrapped = await vaultRewrap(
+        oldPassword: 'pw',
+        newPassword: 'new',
+        wrapped: created.wrapped,
+      );
+      expect(rewrapped, isNot(created.wrapped));
+      await expectLater(
+        vaultUnlock(password: 'pw', wrapped: rewrapped),
+        throwsA(CoreError.wrongPassword),
+        reason: 'the old password no longer opens the new blob',
+      );
+      final reopened = await vaultUnlock(password: 'new', wrapped: rewrapped);
+      expect(
+        utf8.decode(await vaultOpen(key: reopened, blob: item)),
+        'secret',
+        reason: 'the master key is unchanged — no item re-encryption',
+      );
+
+      final tampered = List<int>.of(item)..[35] ^= 1;
+      await expectLater(
+        vaultOpen(key: reopened, blob: tampered),
+        throwsA(CoreError.corrupt),
+      );
+
+      await reopened.close();
+      await expectLater(
+        vaultSeal(key: reopened, bytes: [1]),
+        throwsA(CoreError.storeLocked),
+      );
+      await expectLater(
+        vaultOpen(key: reopened, blob: item),
+        throwsA(CoreError.storeLocked),
+      );
+      for (final key in [created.key, unlocked, reopened]) {
+        key.dispose();
+      }
     });
   });
 }

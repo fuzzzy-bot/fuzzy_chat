@@ -5,4 +5,6 @@ pub mod health;
 pub mod local;
 pub mod messages;
 pub mod pairing;
+pub mod passwords;
 pub mod safety;
+pub mod vault;

@@ -8,6 +8,8 @@ import 'api/files.dart';
 import 'api/formats.dart';
 import 'api/health.dart';
 import 'api/pairing.dart';
+import 'api/passwords.dart';
+import 'api/vault.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'error.dart';
@@ -74,7 +76,7 @@ class FuzzyCryptoCoreLib extends BaseEntrypoint<FuzzyCryptoCoreLibApi,
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 638624754;
+  int get rustContentHash => -1005558607;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -144,6 +146,8 @@ abstract class FuzzyCryptoCoreLibApi extends BaseApi {
 
   void crateApiFilesFileJobResume({required FileJob that});
 
+  Future<void> crateApiVaultVaultKeyClose({required VaultKey that});
+
   BlobType crateApiFormatsBlobTypeOf({required String text});
 
   Future<String> crateApiHealthCoreVersion();
@@ -171,6 +175,18 @@ abstract class FuzzyCryptoCoreLibApi extends BaseApi {
       required List<int> wrapped,
       required String password});
 
+  Future<Uint8List> crateApiPasswordsPasswordOpenBytes(
+      {required String password, required List<int> blob});
+
+  Future<String> crateApiPasswordsPasswordOpenText(
+      {required String password, required String blob});
+
+  Future<Uint8List> crateApiPasswordsPasswordSealBytes(
+      {required String password, required List<int> bytes});
+
+  Future<String> crateApiPasswordsPasswordSealText(
+      {required String password, required String text});
+
   String crateApiFormatsPeekChatId({required String text});
 
   Future<Uint8List> crateApiCoreRewrapStoreKey(
@@ -179,6 +195,22 @@ abstract class FuzzyCryptoCoreLibApi extends BaseApi {
       required String newPassword});
 
   Future<Uint8List> crateApiHealthRoundTrip({required List<int> bytes});
+
+  Future<VaultInitResult> crateApiVaultVaultInit({required String password});
+
+  Future<Uint8List> crateApiVaultVaultOpen(
+      {required VaultKey key, required List<int> blob});
+
+  Future<Uint8List> crateApiVaultVaultRewrap(
+      {required String oldPassword,
+      required String newPassword,
+      required List<int> wrapped});
+
+  Future<Uint8List> crateApiVaultVaultSeal(
+      {required VaultKey key, required List<int> bytes});
+
+  Future<VaultKey> crateApiVaultVaultUnlock(
+      {required String password, required List<int> wrapped});
 
   RustArcIncrementStrongCountFnType
       get rust_arc_increment_strong_count_CryptoCore;
@@ -193,6 +225,14 @@ abstract class FuzzyCryptoCoreLibApi extends BaseApi {
   RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_FileJob;
 
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_FileJobPtr;
+
+  RustArcIncrementStrongCountFnType
+      get rust_arc_increment_strong_count_VaultKey;
+
+  RustArcDecrementStrongCountFnType
+      get rust_arc_decrement_strong_count_VaultKey;
+
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_VaultKeyPtr;
 }
 
 class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
@@ -736,12 +776,37 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
       );
 
   @override
+  Future<void> crateApiVaultVaultKeyClose({required VaultKey that}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+            that, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 20, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiVaultVaultKeyCloseConstMeta,
+      argValues: [that],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiVaultVaultKeyCloseConstMeta => const TaskConstMeta(
+        debugName: "VaultKey_close",
+        argNames: ["that"],
+      );
+
+  @override
   BlobType crateApiFormatsBlobTypeOf({required String text}) {
     return handler.executeSync(SyncTask(
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(text, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_blob_type,
@@ -764,7 +829,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 21, port: port_);
+            funcId: 22, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -788,7 +853,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(password, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 22, port: port_);
+            funcId: 23, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -825,7 +890,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
             job, serializer);
         sse_encode_StreamSink_file_progress_Sse(sink, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 23, port: port_);
+            funcId: 24, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -863,7 +928,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
             job, serializer);
         sse_encode_StreamSink_file_progress_Sse(sink, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 24, port: port_);
+            funcId: 25, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -887,7 +952,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 25, port: port_);
+            funcId: 26, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData:
@@ -917,7 +982,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
         sse_encode_list_prim_u_8_loose(wrapped, serializer);
         sse_encode_String(password, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 26, port: port_);
+            funcId: 27, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData:
@@ -936,12 +1001,120 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
       );
 
   @override
+  Future<Uint8List> crateApiPasswordsPasswordOpenBytes(
+      {required String password, required List<int> blob}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(password, serializer);
+        sse_encode_list_prim_u_8_loose(blob, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 28, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_prim_u_8_strict,
+        decodeErrorData: sse_decode_core_error,
+      ),
+      constMeta: kCrateApiPasswordsPasswordOpenBytesConstMeta,
+      argValues: [password, blob],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiPasswordsPasswordOpenBytesConstMeta =>
+      const TaskConstMeta(
+        debugName: "password_open_bytes",
+        argNames: ["password", "blob"],
+      );
+
+  @override
+  Future<String> crateApiPasswordsPasswordOpenText(
+      {required String password, required String blob}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(password, serializer);
+        sse_encode_String(blob, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 29, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_core_error,
+      ),
+      constMeta: kCrateApiPasswordsPasswordOpenTextConstMeta,
+      argValues: [password, blob],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiPasswordsPasswordOpenTextConstMeta =>
+      const TaskConstMeta(
+        debugName: "password_open_text",
+        argNames: ["password", "blob"],
+      );
+
+  @override
+  Future<Uint8List> crateApiPasswordsPasswordSealBytes(
+      {required String password, required List<int> bytes}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(password, serializer);
+        sse_encode_list_prim_u_8_loose(bytes, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 30, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_prim_u_8_strict,
+        decodeErrorData: sse_decode_core_error,
+      ),
+      constMeta: kCrateApiPasswordsPasswordSealBytesConstMeta,
+      argValues: [password, bytes],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiPasswordsPasswordSealBytesConstMeta =>
+      const TaskConstMeta(
+        debugName: "password_seal_bytes",
+        argNames: ["password", "bytes"],
+      );
+
+  @override
+  Future<String> crateApiPasswordsPasswordSealText(
+      {required String password, required String text}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(password, serializer);
+        sse_encode_String(text, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 31, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_core_error,
+      ),
+      constMeta: kCrateApiPasswordsPasswordSealTextConstMeta,
+      argValues: [password, text],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiPasswordsPasswordSealTextConstMeta =>
+      const TaskConstMeta(
+        debugName: "password_seal_text",
+        argNames: ["password", "text"],
+      );
+
+  @override
   String crateApiFormatsPeekChatId({required String text}) {
     return handler.executeSync(SyncTask(
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(text, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -970,7 +1143,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
         sse_encode_String(oldPassword, serializer);
         sse_encode_String(newPassword, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 28, port: port_);
+            funcId: 33, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -994,7 +1167,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_list_prim_u_8_loose(bytes, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 29, port: port_);
+            funcId: 34, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -1009,6 +1182,140 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   TaskConstMeta get kCrateApiHealthRoundTripConstMeta => const TaskConstMeta(
         debugName: "round_trip",
         argNames: ["bytes"],
+      );
+
+  @override
+  Future<VaultInitResult> crateApiVaultVaultInit({required String password}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(password, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 35, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_vault_init_result,
+        decodeErrorData: sse_decode_core_error,
+      ),
+      constMeta: kCrateApiVaultVaultInitConstMeta,
+      argValues: [password],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiVaultVaultInitConstMeta => const TaskConstMeta(
+        debugName: "vault_init",
+        argNames: ["password"],
+      );
+
+  @override
+  Future<Uint8List> crateApiVaultVaultOpen(
+      {required VaultKey key, required List<int> blob}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+            key, serializer);
+        sse_encode_list_prim_u_8_loose(blob, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 36, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_prim_u_8_strict,
+        decodeErrorData: sse_decode_core_error,
+      ),
+      constMeta: kCrateApiVaultVaultOpenConstMeta,
+      argValues: [key, blob],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiVaultVaultOpenConstMeta => const TaskConstMeta(
+        debugName: "vault_open",
+        argNames: ["key", "blob"],
+      );
+
+  @override
+  Future<Uint8List> crateApiVaultVaultRewrap(
+      {required String oldPassword,
+      required String newPassword,
+      required List<int> wrapped}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(oldPassword, serializer);
+        sse_encode_String(newPassword, serializer);
+        sse_encode_list_prim_u_8_loose(wrapped, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 37, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_prim_u_8_strict,
+        decodeErrorData: sse_decode_core_error,
+      ),
+      constMeta: kCrateApiVaultVaultRewrapConstMeta,
+      argValues: [oldPassword, newPassword, wrapped],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiVaultVaultRewrapConstMeta => const TaskConstMeta(
+        debugName: "vault_rewrap",
+        argNames: ["oldPassword", "newPassword", "wrapped"],
+      );
+
+  @override
+  Future<Uint8List> crateApiVaultVaultSeal(
+      {required VaultKey key, required List<int> bytes}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+            key, serializer);
+        sse_encode_list_prim_u_8_loose(bytes, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 38, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_prim_u_8_strict,
+        decodeErrorData: sse_decode_core_error,
+      ),
+      constMeta: kCrateApiVaultVaultSealConstMeta,
+      argValues: [key, bytes],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiVaultVaultSealConstMeta => const TaskConstMeta(
+        debugName: "vault_seal",
+        argNames: ["key", "bytes"],
+      );
+
+  @override
+  Future<VaultKey> crateApiVaultVaultUnlock(
+      {required String password, required List<int> wrapped}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(password, serializer);
+        sse_encode_list_prim_u_8_loose(wrapped, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 39, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey,
+        decodeErrorData: sse_decode_core_error,
+      ),
+      constMeta: kCrateApiVaultVaultUnlockConstMeta,
+      argValues: [password, wrapped],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiVaultVaultUnlockConstMeta => const TaskConstMeta(
+        debugName: "vault_unlock",
+        argNames: ["password", "wrapped"],
       );
 
   RustArcIncrementStrongCountFnType
@@ -1026,6 +1333,14 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   RustArcDecrementStrongCountFnType
       get rust_arc_decrement_strong_count_FileJob => wire
           .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob;
+
+  RustArcIncrementStrongCountFnType
+      get rust_arc_increment_strong_count_VaultKey => wire
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey;
+
+  RustArcDecrementStrongCountFnType
+      get rust_arc_decrement_strong_count_VaultKey => wire
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey;
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
@@ -1050,11 +1365,27 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   }
 
   @protected
+  VaultKey
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return VaultKeyImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   CryptoCore
       dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return CryptoCoreImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  VaultKey
+      dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return VaultKeyImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -1074,6 +1405,14 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   }
 
   @protected
+  VaultKey
+      dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return VaultKeyImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   CryptoCore
       dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           dynamic raw) {
@@ -1087,6 +1426,14 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
           dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return FileJobImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  VaultKey
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return VaultKeyImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -1189,6 +1536,20 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   }
 
   @protected
+  VaultInitResult dco_decode_vault_init_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return VaultInitResult(
+      key:
+          dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+              arr[0]),
+      wrapped: dco_decode_list_prim_u_8_strict(arr[1]),
+    );
+  }
+
+  @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_String(deserializer);
@@ -1214,11 +1575,29 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   }
 
   @protected
+  VaultKey
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return VaultKeyImpl.frbInternalSseDecode(
+        sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
+  }
+
+  @protected
   CryptoCore
       sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return CryptoCoreImpl.frbInternalSseDecode(
+        sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
+  }
+
+  @protected
+  VaultKey
+      sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return VaultKeyImpl.frbInternalSseDecode(
         sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
   }
 
@@ -1241,6 +1620,15 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   }
 
   @protected
+  VaultKey
+      sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return VaultKeyImpl.frbInternalSseDecode(
+        sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
+  }
+
+  @protected
   CryptoCore
       sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           SseDeserializer deserializer) {
@@ -1255,6 +1643,15 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
           SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return FileJobImpl.frbInternalSseDecode(
+        sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
+  }
+
+  @protected
+  VaultKey
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return VaultKeyImpl.frbInternalSseDecode(
         sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
   }
 
@@ -1368,6 +1765,16 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   }
 
   @protected
+  VaultInitResult sse_decode_vault_init_result(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_key =
+        sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+            deserializer);
+    var var_wrapped = sse_decode_list_prim_u_8_strict(deserializer);
+    return VaultInitResult(key: var_key, wrapped: var_wrapped);
+  }
+
+  @protected
   void sse_encode_AnyhowException(
       AnyhowException self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -1394,11 +1801,29 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          VaultKey self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+        (self as VaultKeyImpl).frbInternalSseEncode(move: true), serializer);
+  }
+
+  @protected
+  void
       sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           CryptoCore self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
         (self as CryptoCoreImpl).frbInternalSseEncode(move: false), serializer);
+  }
+
+  @protected
+  void
+      sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          VaultKey self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+        (self as VaultKeyImpl).frbInternalSseEncode(move: false), serializer);
   }
 
   @protected
@@ -1421,6 +1846,15 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   void
+      sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          VaultKey self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+        (self as VaultKeyImpl).frbInternalSseEncode(move: false), serializer);
+  }
+
+  @protected
+  void
       sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           CryptoCore self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -1435,6 +1869,15 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
         (self as FileJobImpl).frbInternalSseEncode(move: null), serializer);
+  }
+
+  @protected
+  void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          VaultKey self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+        (self as VaultKeyImpl).frbInternalSseEncode(move: null), serializer);
   }
 
   @protected
@@ -1543,6 +1986,15 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   void sse_encode_usize(BigInt self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
+  void sse_encode_vault_init_result(
+      VaultInitResult self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+        self.key, serializer);
+    sse_encode_list_prim_u_8_strict(self.wrapped, serializer);
   }
 }
 
@@ -1709,6 +2161,33 @@ class FileJobImpl extends RustOpaque implements FileJob {
 
   /// Continues a paused job at the next chunk boundary; a no-op otherwise.
   void resume() => FuzzyCryptoCoreLib.instance.api.crateApiFilesFileJobResume(
+        that: this,
+      );
+}
+
+@sealed
+class VaultKeyImpl extends RustOpaque implements VaultKey {
+  // Not to be used by end users
+  VaultKeyImpl.frbInternalDcoDecode(List<dynamic> wire)
+      : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  VaultKeyImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+      : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount: FuzzyCryptoCoreLib
+        .instance.api.rust_arc_increment_strong_count_VaultKey,
+    rustArcDecrementStrongCount: FuzzyCryptoCoreLib
+        .instance.api.rust_arc_decrement_strong_count_VaultKey,
+    rustArcDecrementStrongCountPtr: FuzzyCryptoCoreLib
+        .instance.api.rust_arc_decrement_strong_count_VaultKeyPtr,
+  );
+
+  /// Drops the master key (zeroised). Later `vault_seal`/`vault_open` calls
+  /// on this handle answer `StoreLocked`; a second `close` is a no-op.
+  Future<void> close() =>
+      FuzzyCryptoCoreLib.instance.api.crateApiVaultVaultKeyClose(
         that: this,
       );
 }

@@ -10,6 +10,8 @@ pub mod formats;
 mod frb_generated;
 pub mod messages;
 pub mod pairing;
+pub mod passwords;
 pub mod safety;
 pub mod state;
 pub mod store;
+pub mod vault;

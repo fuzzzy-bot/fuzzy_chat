@@ -11,6 +11,8 @@ import 'api/files.dart';
 import 'api/formats.dart';
 import 'api/health.dart';
 import 'api/pairing.dart';
+import 'api/passwords.dart';
+import 'api/vault.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'error.dart';
@@ -32,6 +34,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_FileJobPtr => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob;
 
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_VaultKeyPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey;
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
 
@@ -46,8 +51,18 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
           dynamic raw);
 
   @protected
+  VaultKey
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          dynamic raw);
+
+  @protected
   CryptoCore
       dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          dynamic raw);
+
+  @protected
+  VaultKey
+      dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
           dynamic raw);
 
   @protected
@@ -61,6 +76,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
           dynamic raw);
 
   @protected
+  VaultKey
+      dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          dynamic raw);
+
+  @protected
   CryptoCore
       dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           dynamic raw);
@@ -68,6 +88,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   @protected
   FileJob
       dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          dynamic raw);
+
+  @protected
+  VaultKey
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
           dynamic raw);
 
   @protected
@@ -117,6 +142,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   BigInt dco_decode_usize(dynamic raw);
 
   @protected
+  VaultInitResult dco_decode_vault_init_result(dynamic raw);
+
+  @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
@@ -130,8 +158,18 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
           SseDeserializer deserializer);
 
   @protected
+  VaultKey
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          SseDeserializer deserializer);
+
+  @protected
   CryptoCore
       sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          SseDeserializer deserializer);
+
+  @protected
+  VaultKey
+      sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
           SseDeserializer deserializer);
 
   @protected
@@ -145,6 +183,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
           SseDeserializer deserializer);
 
   @protected
+  VaultKey
+      sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          SseDeserializer deserializer);
+
+  @protected
   CryptoCore
       sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           SseDeserializer deserializer);
@@ -152,6 +195,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   @protected
   FileJob
       sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          SseDeserializer deserializer);
+
+  @protected
+  VaultKey
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
           SseDeserializer deserializer);
 
   @protected
@@ -201,6 +249,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
+  VaultInitResult sse_decode_vault_init_result(SseDeserializer deserializer);
+
+  @protected
   void sse_encode_AnyhowException(
       AnyhowException self, SseSerializer serializer);
 
@@ -216,8 +267,18 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          VaultKey self, SseSerializer serializer);
+
+  @protected
+  void
       sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           CryptoCore self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          VaultKey self, SseSerializer serializer);
 
   @protected
   void
@@ -231,6 +292,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   void
+      sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          VaultKey self, SseSerializer serializer);
+
+  @protected
+  void
       sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           CryptoCore self, SseSerializer serializer);
 
@@ -238,6 +304,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   void
       sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
           FileJob self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          VaultKey self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_file_progress_Sse(
@@ -285,6 +356,10 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_vault_init_result(
+      VaultInitResult self, SseSerializer serializer);
 }
 
 // Section: wire_class
@@ -315,6 +390,18 @@ class FuzzyCryptoCoreLibWire implements BaseWire {
       wasmModule
           .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
               ptr);
+
+  void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          int ptr) =>
+      wasmModule
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+              ptr);
+
+  void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          int ptr) =>
+      wasmModule
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+              ptr);
 }
 
 @JS('wasm_bindgen')
@@ -337,5 +424,13 @@ extension type FuzzyCryptoCoreLibWasmModule._(JSObject _) implements JSObject {
 
   external void
       rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          int ptr);
+
+  external void
+      rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
+          int ptr);
+
+  external void
+      rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
           int ptr);
 }

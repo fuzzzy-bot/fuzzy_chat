@@ -57,7 +57,7 @@ pub fn fill_random(dest: &mut [u8]) -> Result<(), CoreError> {
     getrandom::fill(dest).map_err(|_| CoreError::Internal)
 }
 
-fn random_array<const N: usize>() -> Result<[u8; N], CoreError> {
+pub(crate) fn random_array<const N: usize>() -> Result<[u8; N], CoreError> {
     let mut out = [0u8; N];
     fill_random(&mut out)?;
     Ok(out)
@@ -67,14 +67,25 @@ fn random_array<const N: usize>() -> Result<[u8; N], CoreError> {
 // AEAD + KDF primitives (all from the pinned crates)
 // ---------------------------------------------------------------------------
 
-fn seal(key: &[u8; 32], nonce: &[u8; 24], aad: &[u8], msg: &[u8]) -> Result<Vec<u8>, CoreError> {
+pub(crate) fn seal(
+    key: &[u8; 32],
+    nonce: &[u8; 24],
+    aad: &[u8],
+    msg: &[u8],
+) -> Result<Vec<u8>, CoreError> {
     XChaCha20Poly1305::new(key.into())
         .encrypt(nonce.into(), Payload { msg, aad })
         .map_err(|_| CoreError::Internal)
 }
 
-/// Tag failure is `Corrupt`; callers that know better (the wrapped key) remap it.
-fn open(key: &[u8; 32], nonce: &[u8; 24], aad: &[u8], ct: &[u8]) -> Result<Vec<u8>, CoreError> {
+/// Tag failure is `Corrupt`; callers that know better (the wrapped key, a
+/// password blob) remap it.
+pub(crate) fn open(
+    key: &[u8; 32],
+    nonce: &[u8; 24],
+    aad: &[u8],
+    ct: &[u8],
+) -> Result<Vec<u8>, CoreError> {
     XChaCha20Poly1305::new(key.into())
         .decrypt(nonce.into(), Payload { msg: ct, aad })
         .map_err(|_| CoreError::Corrupt)
