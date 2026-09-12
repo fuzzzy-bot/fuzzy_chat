@@ -15,6 +15,7 @@ class CryptoStoreKeyRepository {
 
   final CryptoCoreService _cryptoCoreService;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+    iOptions: secureStorageIosOptions,
     mOptions: secureStorageMacOsOptions,
   );
 

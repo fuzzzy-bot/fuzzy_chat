@@ -33,6 +33,7 @@ class BiometricAuthRepository {
   BiometricAuthRepository();
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+    iOptions: secureStorageIosOptions,
     mOptions: secureStorageMacOsOptions,
   );
 
