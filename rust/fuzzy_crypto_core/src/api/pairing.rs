@@ -483,9 +483,9 @@ mod tests {
     }
 
     #[test]
-    fn forged_acceptance_with_valid_signature_is_corrupt_not_a_session() {
-        // C signs an acceptance of its own but B's identity key in the clear —
-        // the signature verifies, the pre-key message does not match.
+    fn resigned_acceptance_under_another_identity_rejected() {
+        // C re-signs B's pre-key message under C's own keys — the signature
+        // verifies, but the pre-key message still names B's identity key.
         let mut a = Device::new();
         let mut b = Device::new();
         let mut c = Device::new();
@@ -640,10 +640,7 @@ mod tests {
     #[test]
     fn chat_id_is_validated_before_anything_else() {
         let mut a = Device::new();
-        let (_, invitation, acceptance) = {
-            let (a2, _b, invitation, acceptance) = paired();
-            (a2.dir.clone(), invitation, acceptance)
-        };
+        let (_a2, _b, invitation, acceptance) = paired();
         for bad in ["", "../../x", "6F1E9B2C-3D4A-4F5B-8C6D-7E8F9A0B1C2D"] {
             assert_eq!(
                 a.core.create_invitation(bad.into()).unwrap_err(),
