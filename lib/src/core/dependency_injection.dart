@@ -126,8 +126,6 @@ class DependencyInjection {
       ),
     );
 
-    await sl.get<VaultFileDataSource>().recoverStagedChangesIfNeeded();
-
     sl.safeRegisterSingleton<VaultItemLocalDataSource>(
       VaultItemLocalDataSource(isar: sl.get<Isar>()),
     );
@@ -139,6 +137,7 @@ class DependencyInjection {
     sl.safeRegisterSingleton<VaultCryptoRepository>(
       VaultCryptoRepository(
         passwordStrengthService: sl.get<PasswordStrengthService>(),
+        cryptoCoreService: sl.get<CryptoCoreService>(),
       ),
     );
 

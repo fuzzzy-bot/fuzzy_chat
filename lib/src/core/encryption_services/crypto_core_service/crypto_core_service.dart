@@ -4,10 +4,16 @@ import 'package:fuzzy_chat/rust_bridge/api/core.dart' as rust_core;
 import 'package:fuzzy_chat/rust_bridge/api/files.dart' as rust_files;
 import 'package:fuzzy_chat/rust_bridge/api/formats.dart' as rust_formats;
 import 'package:fuzzy_chat/rust_bridge/api/passwords.dart' as rust_passwords;
+import 'package:fuzzy_chat/rust_bridge/api/vault.dart' as rust_vault;
 import 'package:fuzzy_chat/rust_bridge/error.dart';
 import 'package:path/path.dart' as path;
 
 export 'components/components.dart';
+
+/// The vault master key as Dart ever holds it: an opaque handle whose bytes
+/// stay in the core. `close()` zeroises it (later seal/open calls answer
+/// `storeLocked`), `dispose()` frees the handle.
+typedef VaultKey = rust_vault.VaultKey;
 
 /// The only importer of `package:fuzzy_chat/rust_bridge/...` besides
 /// `initializer.dart`. Owns the single `CryptoCore` handle of the process and
@@ -355,6 +361,83 @@ class CryptoCoreService {
   /// The flag [markVerified] set; `false` for a chat that was never marked.
   Future<CryptoCoreResponse<bool>> isVerified(String chatId) {
     return _withCore((core) => core.isVerified(chatId: chatId));
+  }
+
+  /// Draws a fresh vault master key and wraps it under [password]: the
+  /// unlocked handle for this session plus the 0x10 blob the vault metadata
+  /// keeps. Queued with the store-key calls (one Argon2id at a time).
+  Future<CryptoCoreResponse<CryptoCoreVaultInit>> vaultInit(String password) {
+    return _serialized(() async {
+      final created = await rust_vault.vaultInit(password: password);
+      return CryptoCoreVaultInit(key: created.key, wrapped: created.wrapped);
+    });
+  }
+
+  /// Unwraps the vault master key from [wrapped]; a wrong password (or a
+  /// tampered blob) is `wrongPassword`.
+  Future<CryptoCoreResponse<VaultKey>> vaultUnlock({
+    required Uint8List wrapped,
+    required String password,
+  }) {
+    return _serialized(
+      () => rust_vault.vaultUnlock(password: password, wrapped: wrapped),
+    );
+  }
+
+  /// Re-wraps the same master key under [newPassword] (fresh salt and
+  /// nonce). The key does not change, so no vault item is re-encrypted; the
+  /// caller stores the returned blob in place of [wrapped].
+  Future<CryptoCoreResponse<Uint8List>> vaultRewrap({
+    required Uint8List wrapped,
+    required String oldPassword,
+    required String newPassword,
+  }) {
+    return _serialized(
+      () => rust_vault.vaultRewrap(
+        oldPassword: oldPassword,
+        newPassword: newPassword,
+        wrapped: wrapped,
+      ),
+    );
+  }
+
+  /// Seals one vault item under [key] (0x20 blob, AAD `vault-item`); a
+  /// closed handle answers `storeLocked`.
+  Future<CryptoCoreResponse<Uint8List>> vaultSeal({
+    required VaultKey key,
+    required Uint8List bytes,
+  }) {
+    return _guarded(() => rust_vault.vaultSeal(key: key, bytes: bytes));
+  }
+
+  /// Inverse of [vaultSeal]; a tampered or foreign blob is `corrupt`.
+  Future<CryptoCoreResponse<Uint8List>> vaultOpen({
+    required VaultKey key,
+    required Uint8List blob,
+  }) {
+    return _guarded(() => rust_vault.vaultOpen(key: key, blob: blob));
+  }
+
+  /// [passwordSealText] for arbitrary bytes, as the binary 0x05 blob — the
+  /// vault's optional custom-password layer over a sealed item.
+  Future<CryptoCoreResponse<Uint8List>> passwordSealBytes({
+    required String password,
+    required Uint8List bytes,
+  }) {
+    return _guarded(
+      () => rust_passwords.passwordSealBytes(password: password, bytes: bytes),
+    );
+  }
+
+  /// Inverse of [passwordSealBytes]; the same error rules as
+  /// [passwordOpenText].
+  Future<CryptoCoreResponse<Uint8List>> passwordOpenBytes({
+    required String password,
+    required Uint8List blob,
+  }) {
+    return _guarded(
+      () => rust_passwords.passwordOpenBytes(password: password, blob: blob),
+    );
   }
 
   /// Every chat call: no Argon2, so nothing to queue; a closed store answers
