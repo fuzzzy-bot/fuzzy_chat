@@ -23,9 +23,12 @@ jobs:
       - uses: taiki-e/install-action@v2
         with: { tool: "cargo-audit@0.22.2,cargo-cyclonedx@0.5.9" }
       - run: cargo audit --file $CRATE/Cargo.lock
-      - run: cd $CRATE && cargo cyclonedx --format json --spec-version 1.5
+      - name: sbom-rust
+        # Regenerates the Rust SBOM (cargo-cyclonedx 0.5.9, --target all) and fails if it differs from the
+        # committed documents/security/sbom/rust.cdx.json — a dependency bump must ship its SBOM (`./sbom.sh rust`).
+        run: ./sbom.sh rust --check
       - uses: actions/upload-artifact@v7
-        with: { name: sbom-rust, path: rust/fuzzy_crypto_core/*.cdx.json }
+        with: { name: sbom-rust, path: documents/security/sbom/rust.cdx.json }
   flutter-test:
     runs-on: ubuntu-latest
     steps:
@@ -42,6 +45,11 @@ jobs:
       - run: dart format --set-exit-if-changed --output=none lib test
       - run: flutter analyze --fatal-infos --fatal-warnings
       - run: flutter test
+      - name: sbom-flutter
+        # Same drift gate for the Dart half (cdxgen 12.8.4 via npx, from pubspec.lock): `./sbom.sh flutter` after a bump.
+        run: ./sbom.sh flutter --check
+      - uses: actions/upload-artifact@v7
+        with: { name: sbom-flutter, path: documents/security/sbom/flutter.cdx.json }
   android:
     runs-on: ubuntu-latest
     steps:
