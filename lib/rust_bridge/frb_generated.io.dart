@@ -3,10 +3,12 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/formats.dart';
 import 'api/health.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
+import 'error.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 
@@ -21,6 +23,15 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   String dco_decode_String(dynamic raw);
+
+  @protected
+  BlobType dco_decode_blob_type(dynamic raw);
+
+  @protected
+  CoreError dco_decode_core_error(dynamic raw);
+
+  @protected
+  int dco_decode_i_32(dynamic raw);
 
   @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
@@ -38,6 +49,15 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  BlobType sse_decode_blob_type(SseDeserializer deserializer);
+
+  @protected
+  CoreError sse_decode_core_error(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
 
   @protected
@@ -50,13 +70,19 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
-
-  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_blob_type(BlobType self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_core_error(CoreError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
@@ -70,9 +96,6 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);

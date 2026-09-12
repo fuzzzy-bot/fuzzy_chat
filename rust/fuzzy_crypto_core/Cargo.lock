@@ -690,6 +690,7 @@ version = "0.1.0"
 dependencies = [
  "aead-stream",
  "argon2",
+ "base64",
  "chacha20poly1305 0.11.0",
  "flutter_rust_bridge",
  "getrandom 0.4.3",
