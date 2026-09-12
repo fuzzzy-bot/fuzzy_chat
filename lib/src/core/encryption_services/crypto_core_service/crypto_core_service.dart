@@ -42,7 +42,7 @@ class CryptoCoreService {
         wrapped: wrapped,
         password: password,
       );
-      await close();
+      await _closeNow();
       _core = core;
     });
   }
@@ -62,8 +62,13 @@ class CryptoCoreService {
   }
 
   /// Zeroises the store key and every cached state; later calls on the core
-  /// fail with [CryptoCoreFailureType.storeLocked].
-  Future<void> close() async {
+  /// fail with [CryptoCoreFailureType.storeLocked]. Queued behind any
+  /// in-flight store-key call so a lock never races an open.
+  Future<CryptoCoreResponse<void>> close() {
+    return _serialized(_closeNow);
+  }
+
+  Future<void> _closeNow() async {
     final core = _core;
     if (core == null) return;
     _core = null;

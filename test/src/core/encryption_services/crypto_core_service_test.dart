@@ -17,6 +17,9 @@ class MockUserAuthPreferencesRepository extends Mock
 
 class MockKeyStorageRepository extends Mock implements KeyStorageRepository {}
 
+Uint8List? _blobOf(CryptoCoreResponse<Uint8List?> readRes) =>
+    (readRes as CryptoCoreSuccess<Uint8List?>).data;
+
 void main() {
   setUpAll(initCryptoCoreForTests);
 
@@ -44,7 +47,7 @@ void main() {
         await storeKeyRepository.ensureStoreKey('a'),
         isA<CryptoCoreSuccess<void>>(),
       );
-      final wrapped = await storeKeyRepository.read();
+      final wrapped = _blobOf(await storeKeyRepository.read());
       expect(wrapped, isNotNull);
       expect(wrapped!.length, 103, reason: '0x10 blob: 6 + 16 + 9 + 24 + 48');
 
@@ -53,7 +56,7 @@ void main() {
         await storeKeyRepository.ensureStoreKey('other'),
         isA<CryptoCoreSuccess<void>>(),
       );
-      expect(await storeKeyRepository.read(), wrapped);
+      expect(_blobOf(await storeKeyRepository.read()), wrapped);
 
       expect(
         await service.openStore(wrapped: wrapped, password: 'a'),
@@ -69,7 +72,7 @@ void main() {
         await storeKeyRepository.rewrap(oldPassword: 'a', newPassword: 'b'),
         isA<CryptoCoreSuccess<void>>(),
       );
-      final rewrapped = await storeKeyRepository.read();
+      final rewrapped = _blobOf(await storeKeyRepository.read());
       expect(rewrapped, isNot(wrapped));
 
       expect(
@@ -99,7 +102,7 @@ void main() {
 
     test('rewrap with the wrong old password changes nothing', () async {
       await storeKeyRepository.ensureStoreKey('a');
-      final wrapped = await storeKeyRepository.read();
+      final wrapped = _blobOf(await storeKeyRepository.read());
 
       final rewrapRes =
           await storeKeyRepository.rewrap(oldPassword: 'x', newPassword: 'b');
@@ -108,7 +111,7 @@ void main() {
         (rewrapRes as CryptoCoreFailure<void>).type,
         CryptoCoreFailureType.wrongPassword,
       );
-      expect(await storeKeyRepository.read(), wrapped);
+      expect(_blobOf(await storeKeyRepository.read()), wrapped);
     });
 
     test('rewrap without a store key is internal', () async {

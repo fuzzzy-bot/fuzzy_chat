@@ -32,7 +32,9 @@ extension on BiometricScope {
 class BiometricAuthRepository {
   BiometricAuthRepository();
 
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+    mOptions: secureStorageMacOsOptions,
+  );
 
   Future<bool> canUseBiometrics() async {
     final response = await BiometricStorage().canAuthenticate();

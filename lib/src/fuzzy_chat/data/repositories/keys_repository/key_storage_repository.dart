@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_redundant_argument_values
+
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -6,7 +8,9 @@ import 'package:fuzzy_chat/lib.dart';
 import 'package:pointycastle/export.dart';
 
 class KeyStorageRepository {
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+    mOptions: secureStorageMacOsOptions,
+  );
 
   Future<void> savePrivateKey(String chatId, RSAPrivateKey privateKey) async {
     final password = sl.get<FuzzyAuthStore>().state.authData.password;

@@ -39,8 +39,10 @@ void main() {
     mockService = MockCryptoCoreService();
     mockBiometricRepo = MockBiometricAuthRepository();
 
-    when(() => mockStoreKeyRepo.read()).thenAnswer((_) async => wrapped);
-    when(() => mockService.close()).thenAnswer((_) async {});
+    when(() => mockStoreKeyRepo.read())
+        .thenAnswer((_) async => CryptoCoreSuccess(wrapped));
+    when(() => mockService.close())
+        .thenAnswer((_) async => const CryptoCoreSuccess(null));
 
     chatAuthRepository = ChatAuthRepository(
       userAuthPreferencesRepository: mockPrefsRepo,
@@ -106,7 +108,8 @@ void main() {
     blocTest<FuzzyAuthStore, FuzzyAuthState>(
       'never calls the service when no store key exists',
       setUp: () {
-        when(() => mockStoreKeyRepo.read()).thenAnswer((_) async => null);
+        when(() => mockStoreKeyRepo.read())
+            .thenAnswer((_) async => const CryptoCoreSuccess(null));
       },
       build: buildStore,
       act: (store) => store.unlock('pw'),
@@ -155,6 +158,32 @@ void main() {
           () => mockStoreKeyRepo.ensureStoreKey(''),
           () => mockService.openStore(wrapped: wrapped, password: ''),
         ]);
+      },
+    );
+
+    blocTest<FuzzyAuthStore, FuzzyAuthState>(
+      'with the lock disabled still reaches noAuthRequired when secure '
+      'storage fails',
+      setUp: () {
+        when(() => mockPrefsRepo.getUserAuthPreferences())
+            .thenAnswer((_) async => null);
+        when(() => mockStoreKeyRepo.ensureStoreKey('')).thenAnswer(
+          (_) async => const CryptoCoreFailure(CryptoCoreFailureType.io),
+        );
+      },
+      build: buildStore,
+      act: (store) => store.checkAuthStatus(),
+      expect: () => [
+        isA<FuzzyAuthState>()
+            .having((s) => s.status, 'status', AuthStateStatus.noAuthRequired),
+      ],
+      verify: (_) {
+        verifyNever(
+          () => mockService.openStore(
+            wrapped: any(named: 'wrapped'),
+            password: any(named: 'password'),
+          ),
+        );
       },
     );
 

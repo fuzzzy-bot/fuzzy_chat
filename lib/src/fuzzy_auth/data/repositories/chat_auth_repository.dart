@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:fuzzy_chat/lib.dart';
 
 class ChatAuthRepository {
@@ -17,8 +19,9 @@ class ChatAuthRepository {
     final prefs = await _userAuthPreferencesRepository.getUserAuthPreferences();
     if (prefs == null || !prefs.isAuthenticationOnceEnabled) return false;
 
-    final wrapped = await _cryptoStoreKeyRepository.read();
-    return wrapped != null;
+    final readRes = await _cryptoStoreKeyRepository.read();
+    if (readRes is CryptoCoreFailure) return false;
+    return (readRes as CryptoCoreSuccess<Uint8List?>).data != null;
   }
 
   /// With the lock disabled the store key is wrapped under `''`; enabling it
@@ -39,7 +42,9 @@ class ChatAuthRepository {
   /// Opens the store under [password] and leaves it open — the wrapped store
   /// key is the verification token.
   Future<bool> verifyPassword(String password) async {
-    final wrapped = await _cryptoStoreKeyRepository.read();
+    final readRes = await _cryptoStoreKeyRepository.read();
+    if (readRes is CryptoCoreFailure) return false;
+    final wrapped = (readRes as CryptoCoreSuccess<Uint8List?>).data;
     if (wrapped == null) return false;
 
     final openRes = await _cryptoCoreService.openStore(
