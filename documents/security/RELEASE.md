@@ -128,4 +128,33 @@ The measured result for the first attested tag, `v1.0.0-rc.1`, is in §5.
 ## 5. Measurements per release
 
 ### v1.0.0-rc.1
-Filled in from the tag run — see the flow log until then.
+Rust core at this tag (unchanged since the measurement run
+<https://github.com/fuzzzy-bot/fuzzy_chat/actions/runs/34719697155>; the tag run re-proves the same values):
+
+| Target | File | SHA-256 (runner 1 = runner 2) |
+|---|---|---|
+| `x86_64-unknown-linux-gnu` | `libfuzzy_crypto_core.so` | `b13462d86d7ebc7abe435dc7fe1ac0938d1f1fd64a6e9adcf59e57e947ea02f6` |
+| `x86_64-unknown-linux-gnu` | `libfuzzy_crypto_core.a` | `985795c287f030744259b05ca6c75088792789c9c33f1170e476f61942f96ea3` |
+| `aarch64-linux-android` (API 24) | `libfuzzy_crypto_core.so` | `b8e30d0cfada0e6e55f7b9a37ad960a70fa597918b6b7d126f6523e2d98d6c3a` |
+| `aarch64-linux-android` (API 24) | `libfuzzy_crypto_core.a` | `7aa7442eb0caad6688e152af583f09b046c98381d86b13397b4e88d56325a46c` |
+
+- **Linux: the shipped core is the reproducible core.** `linux-bundle/lib/libfuzzy_crypto_core.so`, built by
+  cargokit inside `flutter build linux`, is byte-identical to the standalone rebuild above
+  (`b13462d8…`), and was already that hash on the previous commit's run — so the attested Linux bundle
+  carries a core anyone can rebuild and match.
+- **Android: the shipped core is not byte-identical to the standalone rebuild.** The APK's
+  `lib/arm64-v8a/libfuzzy_crypto_core.so` (`ad625a3a876d1cd3b76d19d368827b0309e12f1fe9f3b28a5f380346d80f2dd3`,
+  1,394,568 B) and the rebuild (`b8e30d0c…`, 1,393,664 B) have identical code-segment sizes and the same
+  imports, but a different relocation/dynamic-section layout: cargokit and cargo-ndk pass different linker
+  flags (cargokit: `--hash-style=both`, a libgcc→libunwind search path, its own linker wrapper). Matching the
+  exact link line is a follow-up; until then the Android claim is "the core rebuilds identically on two
+  machines", not "the byte-identical core is inside the APK".
+- **No runner path in any shipped core**: 0 occurrences of `/home/runner`, `/Users/runner` or `runneradmin`
+  in the Android, Linux, Windows and macOS cores of the run; the remapped `/cargo/registry/src` prefix
+  appears 87 / 87 / 52 / 334 times respectively.
+- **Host dependence (measured):** the same Android build from a macOS arm64 host (same NDK 28.2.13676358,
+  cargo-ndk 4.1.2, rustc 1.98.1, same `RUSTFLAGS` remap) differed from the CI binary in 17,159 bytes
+  spread over `.text`/`.rodata`/`.eh_frame`/`.gcc_except_table` at identical section sizes, plus an extra
+  `.comment` line from the darwin-hosted NDK clang (`-bolt, -mlgo` build of the same LLVM commit), which is
+  what compiles `dart-sys`'s `dart_api_dl.c` — the only C in the crate. Two builds on the same Mac were
+  identical. Reproduce on a Linux x86_64 host.
