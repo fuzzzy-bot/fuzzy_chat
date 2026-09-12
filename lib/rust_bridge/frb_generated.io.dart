@@ -32,6 +32,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_FileJobPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJobPtr;
 
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_FileTicketPtr =>
+      wire._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicketPtr;
+
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_VaultKeyPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKeyPtr;
 
@@ -49,6 +52,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
           dynamic raw);
 
   @protected
+  FileTicket
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
+          dynamic raw);
+
+  @protected
   VaultKey
       dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
           dynamic raw);
@@ -56,6 +64,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   @protected
   CryptoCore
       dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          dynamic raw);
+
+  @protected
+  FileTicket
+      dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
           dynamic raw);
 
   @protected
@@ -74,6 +87,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
           dynamic raw);
 
   @protected
+  FileTicket
+      dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
+          dynamic raw);
+
+  @protected
   VaultKey
       dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
           dynamic raw);
@@ -86,6 +104,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   @protected
   FileJob
       dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          dynamic raw);
+
+  @protected
+  FileTicket
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
           dynamic raw);
 
   @protected
@@ -156,6 +179,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
           SseDeserializer deserializer);
 
   @protected
+  FileTicket
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
+          SseDeserializer deserializer);
+
+  @protected
   VaultKey
       sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
           SseDeserializer deserializer);
@@ -163,6 +191,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   @protected
   CryptoCore
       sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+          SseDeserializer deserializer);
+
+  @protected
+  FileTicket
+      sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
           SseDeserializer deserializer);
 
   @protected
@@ -181,6 +214,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
           SseDeserializer deserializer);
 
   @protected
+  FileTicket
+      sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
+          SseDeserializer deserializer);
+
+  @protected
   VaultKey
       sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
           SseDeserializer deserializer);
@@ -193,6 +231,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   @protected
   FileJob
       sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
+          SseDeserializer deserializer);
+
+  @protected
+  FileTicket
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
           SseDeserializer deserializer);
 
   @protected
@@ -265,6 +308,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
+          FileTicket self, SseSerializer serializer);
+
+  @protected
+  void
       sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
           VaultKey self, SseSerializer serializer);
 
@@ -272,6 +320,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   void
       sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           CryptoCore self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
+          FileTicket self, SseSerializer serializer);
 
   @protected
   void
@@ -290,6 +343,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   void
+      sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
+          FileTicket self, SseSerializer serializer);
+
+  @protected
+  void
       sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerVaultKey(
           VaultKey self, SseSerializer serializer);
 
@@ -302,6 +360,11 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   void
       sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob(
           FileJob self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
+          FileTicket self, SseSerializer serializer);
 
   @protected
   void
@@ -436,6 +499,38 @@ class FuzzyCryptoCoreLibWire implements BaseWire {
           'frbgen_fuzzy_chat_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob');
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJob =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileJobPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+      rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicketPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+          'frbgen_fuzzy_chat_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket');
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicketPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+      rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicketPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+          'frbgen_fuzzy_chat_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket');
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicket =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileTicketPtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void

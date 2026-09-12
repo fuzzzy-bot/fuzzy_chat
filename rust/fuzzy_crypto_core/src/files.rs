@@ -10,7 +10,13 @@
 //! every other exit (error or cancel). One chunk is in flight at a time — a file
 //! is never read into memory.
 //!
-//! Only password mode (`key_mode 0x02`) lives here; chat mode is F3-2's.
+//! Two key modes share the loops: password mode (`key_mode 0x02`, the file key
+//! is Argon2id of a password) and chat mode (`key_mode 0x01`, a random file key
+//! travels inside one Olm message embedded in the header — [`wrap_file_key`] /
+//! [`unwrap_file_key`], the F2-4 message path with `content_type 0x02`). In chat
+//! mode the header is the only thing that binds the key to the container: it is
+//! every chunk's AAD, so a key message re-bound to another container's chunks
+//! or nonce prefix fails at chunk 0.
 
 use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -24,7 +30,11 @@ use chacha20poly1305::{KeyInit, XChaCha20Poly1305};
 use zeroize::Zeroizing;
 
 use crate::error::CoreError;
-use crate::formats::{Argon2Params, FileHeader, FileKeyMode, CHUNK_SIZE, ENVELOPE_LEN};
+use crate::formats::{
+    Argon2Params, ContentType, FileHeader, FileKeyBody, FileKeyMode, CHUNK_SIZE, ENVELOPE_LEN,
+};
+use crate::messages;
+use crate::state::ChatState;
 use crate::store::{self, Key32, ARGON2_PARAMS};
 
 /// `FileJob` control word, read before every chunk.
@@ -150,13 +160,116 @@ pub fn decrypt_with_key(key: &[u8; 32], input: &Path, output: &Path) -> Result<(
 }
 
 // ---------------------------------------------------------------------------
-// The STREAM loops (key-mode agnostic; F3-2 reuses them with an Olm-wrapped key)
+// Chat mode — the file key rides in one Olm message inside the header
+// ---------------------------------------------------------------------------
+
+/// The per-file values of a chat-mode header. Production draws them with
+/// [`ChatFileSetup::random`]; tests pin them (and use a small chunk size).
+pub(crate) struct ChatFileSetup {
+    pub(crate) chunk_size: u32,
+    pub(crate) nonce_prefix: [u8; 19],
+}
+
+impl ChatFileSetup {
+    /// A fresh nonce prefix and [`CHUNK_SIZE`] chunks.
+    pub(crate) fn random() -> Result<Self, CoreError> {
+        Ok(Self {
+            chunk_size: CHUNK_SIZE,
+            nonce_prefix: store::random_array()?,
+        })
+    }
+}
+
+/// The send side's Olm step (the whole of it runs under the core lock): draws
+/// a random file key, seals `file_key ‖ original_name` into one Olm message on
+/// the chat's session with the next send counter — exactly like a text
+/// message, `content_type 0x02` — and returns the key with the complete header
+/// that embeds the message. The ratchet and counter are committed to `state`;
+/// the caller persists before the key leaves this layer. An encoded header
+/// that would not fit (`olm_len u16`) fails here, before anything is committed.
+pub(crate) fn wrap_file_key(
+    state: &mut ChatState,
+    original_name: &str,
+    setup: &ChatFileSetup,
+) -> Result<(Key32, FileHeader), CoreError> {
+    validate_original_name(original_name)?;
+    let body = FileKeyBody {
+        file_key: Zeroizing::new(store::random_array()?),
+        original_name: original_name.to_owned(),
+    };
+    let encoded = body.encode()?;
+    let message = messages::encrypt_payload(state, ContentType::FileKeyEnvelope, &encoded)?;
+    let header = FileHeader {
+        chunk_size: setup.chunk_size,
+        nonce_prefix: setup.nonce_prefix,
+        key_mode: FileKeyMode::Chat {
+            olm_type: message.olm_type,
+            olm_body: message.olm_body,
+        },
+    };
+    header.encode()?;
+    Ok((body.file_key, header))
+}
+
+/// The receive side's Olm step: opens the Olm message embedded in `header`
+/// through the same chain as a text message — Olm decrypt (`Replay`, `TooOld`,
+/// `Corrupt`), the inner-header binding (`WrongChat`, `Corrupt`), the counter
+/// window — and returns the file key with the original name. A password-mode
+/// header is `UnsupportedFormat`. Nothing is committed to `state` unless every
+/// check passed; the caller persists before the key leaves this layer.
+pub(crate) fn unwrap_file_key(
+    state: &mut ChatState,
+    header: &FileHeader,
+) -> Result<(Key32, String), CoreError> {
+    let FileKeyMode::Chat { olm_type, olm_body } = &header.key_mode else {
+        return Err(CoreError::UnsupportedFormat);
+    };
+    let body = messages::decrypt_payload(
+        state,
+        *olm_type,
+        olm_body,
+        ContentType::FileKeyEnvelope,
+        |body| {
+            let body = Zeroizing::new(body);
+            let body = FileKeyBody::decode(&body)?;
+            validate_original_name(&body.original_name)?;
+            Ok(body)
+        },
+    )?;
+    Ok((body.file_key, body.original_name))
+}
+
+/// Reads and decodes the header of the container at `input` — everything the
+/// receive side needs for its Olm step, without touching a chunk.
+pub(crate) fn peek_header(input: &Path) -> Result<FileHeader, CoreError> {
+    let mut reader = File::open(input).map_err(|_| CoreError::Io)?;
+    let file_len = reader.metadata().map_err(|_| CoreError::Io)?.len();
+    let (header, _) = read_header(&mut reader, file_len)?;
+    Ok(header)
+}
+
+/// The original name is a file *name*, never a path: a peer's name lands in
+/// the receiver's output path (F3-3), so a separator, NUL, `.` or `..` is
+/// `Corrupt` on both sides — the sender only ever derives it from a basename.
+fn validate_original_name(name: &str) -> Result<(), CoreError> {
+    if name.is_empty()
+        || name == "."
+        || name == ".."
+        || name.bytes().any(|byte| matches!(byte, b'/' | b'\\' | 0))
+    {
+        return Err(CoreError::Corrupt);
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// The STREAM loops (key-mode agnostic: a password-derived or an Olm-wrapped key)
 // ---------------------------------------------------------------------------
 
 /// Writes `header` then one sealed chunk per `chunk_size` bytes of `input`
 /// (`encrypt_next` for all but the last, `encrypt_last` for the last — an empty
 /// file is one `encrypt_last` over 0 bytes) to `<output>.part`, then renames.
-fn encrypt_chunks(
+pub(crate) fn encrypt_chunks(
     key: &[u8; 32],
     header: &FileHeader,
     input: &Path,
@@ -209,7 +322,7 @@ fn encrypt_chunks(
 /// `first_chunk_failure`, on any later chunk `Corrupt`; the `.part` is gone
 /// either way. Structural faults (short body, chunk size out of range) are
 /// `Corrupt` before anything is created.
-fn decrypt_chunks(
+pub(crate) fn decrypt_chunks(
     input: &Path,
     output: &Path,
     job: &AtomicU8,

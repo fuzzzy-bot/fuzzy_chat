@@ -5,6 +5,7 @@
 
 import '../error.dart';
 import '../frb_generated.dart';
+import 'files.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'pairing.dart';
 
@@ -99,6 +100,26 @@ abstract class CryptoCore implements RustOpaqueInterface {
 
   /// Inverse of [`CryptoCore::seal_local`]; a tampered or foreign blob is `Corrupt`.
   Future<Uint8List> openLocal({required List<int> blob});
+
+  /// Step one of receiving the chat-mode container at `input` on `chat_id`:
+  /// reads the header, opens the embedded Olm message through the same chain
+  /// as a text message (`Replay`, `TooOld`, `WrongChat`, `Corrupt` exactly as
+  /// `decrypt_text`; a password-mode container is `UnsupportedFormat`),
+  /// persists the state and returns the ticket. Nothing is written to disk
+  /// besides the state: the output appears only under [`run_file_job`], so a
+  /// rejection here leaves no `.part` behind. The original name is on the
+  /// ticket — pick the output path from it, then run.
+  Future<FileTicket> prepareFileReceive(
+      {required String chatId, required String input});
+
+  /// Step one of sending the file at `input` on `chat_id`: draws the file key,
+  /// wraps it with the file's name in one Olm message on the session (one
+  /// ratchet step, the next send counter — the rules of `encrypt_text`),
+  /// persists the state and returns the ticket for [`run_file_job`]. A chat
+  /// that is not connected is `Internal`; an unreadable `input` is `Io` —
+  /// checked first, so no counter is spent on a file that cannot be read.
+  Future<FileTicket> prepareFileSend(
+      {required String chatId, required String input});
 
   /// The chat's 60-digit safety number (`"12345 67890 …"`, 12 groups), derived
   /// from both Ed25519 identity keys and the chat id (plan §B.3) — identical on

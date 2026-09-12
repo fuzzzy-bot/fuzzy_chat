@@ -7,6 +7,7 @@
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
+use zeroize::Zeroizing;
 
 use crate::error::CoreError;
 
@@ -601,6 +602,41 @@ impl InnerHeader {
 }
 
 // ---------------------------------------------------------------------------
+// File-key envelope body (inner header content type 0x02)
+// ---------------------------------------------------------------------------
+
+/// The body of a `content_type 0x02` inner header — the Olm-wrapped file key
+/// of a chat-mode 0x04 container (plan §C):
+/// `file_key 32 · original_name_len u16 · original_name UTF-8`.
+/// The key wipes on drop; the name is checked for UTF-8 only — whether it is a
+/// usable file name is the caller's job (F3-2), like the chat id's uuid shape.
+pub struct FileKeyBody {
+    pub file_key: Zeroizing<[u8; 32]>,
+    pub original_name: String,
+}
+
+impl FileKeyBody {
+    pub fn encode(&self) -> Result<Zeroizing<Vec<u8>>, CoreError> {
+        let mut out = Zeroizing::new(Vec::with_capacity(32 + 2 + self.original_name.len()));
+        out.extend_from_slice(&*self.file_key);
+        write_u16_prefixed(&mut out, self.original_name.as_bytes())?;
+        Ok(out)
+    }
+
+    pub fn decode(body: &[u8]) -> Result<Self, CoreError> {
+        let mut reader = Reader::new(body);
+        let file_key = Zeroizing::new(reader.array()?);
+        let original_name =
+            String::from_utf8(reader.u16_prefixed()?).map_err(|_| CoreError::Corrupt)?;
+        reader.finish()?;
+        Ok(Self {
+            file_key,
+            original_name,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Field helpers
 // ---------------------------------------------------------------------------
 
@@ -1018,6 +1054,76 @@ mod tests {
             hex("0000000000000000000000000000")
         );
         assert_eq!(InnerHeader::decode(&bytes).unwrap(), handshake);
+    }
+
+    // --- file-key envelope body (content type 0x02) ------------------------
+
+    #[test]
+    fn file_key_body_golden_bytes() {
+        // `file_key 32 · original_name_len u16 · original_name`: key 0x42×32,
+        // then `000a` = 10 and "report.pdf".
+        let body = FileKeyBody {
+            file_key: Zeroizing::new([0x42; 32]),
+            original_name: "report.pdf".into(),
+        };
+        let bytes = body.encode().unwrap();
+        assert_eq!(
+            *bytes,
+            hex(concat!(
+                "4242424242424242424242424242424242424242424242424242424242424242",
+                "000a",
+                "7265706f72742e706466",
+            ))
+        );
+        assert_eq!(bytes.capacity(), bytes.len(), "no reallocation residue");
+        let decoded = FileKeyBody::decode(&bytes).unwrap();
+        assert_eq!(*decoded.file_key, [0x42; 32]);
+        assert_eq!(decoded.original_name, "report.pdf");
+    }
+
+    #[test]
+    fn file_key_body_rejects_short_empty_trailing_and_non_utf8() {
+        let good = FileKeyBody {
+            file_key: Zeroizing::new([0x42; 32]),
+            original_name: "a".into(),
+        }
+        .encode()
+        .unwrap();
+        for cut in 0..good.len() {
+            assert_eq!(
+                FileKeyBody::decode(&good[..cut]).err().unwrap(),
+                CoreError::Corrupt,
+                "prefix {cut}"
+            );
+        }
+        let mut trailing = good.to_vec();
+        trailing.push(0);
+        assert_eq!(
+            FileKeyBody::decode(&trailing).err().unwrap(),
+            CoreError::Corrupt
+        );
+        // An empty name is refused on both sides.
+        let mut empty = [0x42u8; 32].to_vec();
+        empty.extend([0, 0]);
+        assert_eq!(
+            FileKeyBody::decode(&empty).err().unwrap(),
+            CoreError::Corrupt
+        );
+        assert_eq!(
+            FileKeyBody {
+                file_key: Zeroizing::new([0x42; 32]),
+                original_name: String::new(),
+            }
+            .encode()
+            .unwrap_err(),
+            CoreError::Corrupt
+        );
+        let mut bad_utf8 = [0x42u8; 32].to_vec();
+        bad_utf8.extend([0, 2, 0xFF, 0xFE]);
+        assert_eq!(
+            FileKeyBody::decode(&bad_utf8).err().unwrap(),
+            CoreError::Corrupt
+        );
     }
 
     // --- text envelope -----------------------------------------------------

@@ -4,10 +4,10 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
-import 'core.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `finished`, `run`, `running`
+// These functions are ignored because they are not marked as `pub`: `finished`, `run_ticket`, `run`, `running`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `JobKind`, `PreparedJob`
 
 Future<FileJob> newFileJob() =>
     FuzzyCryptoCoreLib.instance.api.crateApiFilesNewFileJob();
@@ -15,16 +15,15 @@ Future<FileJob> newFileJob() =>
 /// Encrypts the file at `input` into the password-mode 0x04 container at
 /// `output` (`.part` until the last chunk is written and fsynced), streaming
 /// one [`FileProgress`] per 1 MiB chunk into `sink`. The file key is
-/// Argon2id(password) with a fresh salt. Runs on frb's pool; the store must be
-/// unlocked (`store locked` otherwise).
+/// Argon2id(password) with a fresh salt. Runs on frb's pool and never touches
+/// the store, so the chat can keep sending while a file runs.
 Stream<FileProgress> encryptFile(
-        {required CryptoCore core,
-        required String password,
+        {required String password,
         required String input,
         required String output,
         required FileJob job}) =>
     FuzzyCryptoCoreLib.instance.api.crateApiFilesEncryptFile(
-        core: core, password: password, input: input, output: output, job: job);
+        password: password, input: input, output: output, job: job);
 
 /// Decrypts the password-mode container at `input` to `output`, writing each
 /// chunk to `<output>.part` only after its tag verified and renaming at the
@@ -33,13 +32,25 @@ Stream<FileProgress> encryptFile(
 /// chunk, a truncation or appended bytes), `unsupported format` (not a
 /// password-mode container).
 Stream<FileProgress> decryptFile(
-        {required CryptoCore core,
-        required String password,
+        {required String password,
         required String input,
         required String output,
         required FileJob job}) =>
     FuzzyCryptoCoreLib.instance.api.crateApiFilesDecryptFile(
-        core: core, password: password, input: input, output: output, job: job);
+        password: password, input: input, output: output, job: job);
+
+/// Step two: streams the prepared job to `output` — the container for a send
+/// ticket, the plaintext for a receive ticket — with the progress, `.part` and
+/// cancel rules of the password-mode functions, and never touches the core.
+/// A receive ticket opens only the container it was prepared on: chunk 0 of
+/// anything else (or a header changed since prepare) is `corrupt`. A second run
+/// of the same ticket is `internal`.
+Stream<FileProgress> runFileJob(
+        {required FileTicket ticket,
+        required String output,
+        required FileJob job}) =>
+    FuzzyCryptoCoreLib.instance.api
+        .crateApiFilesRunFileJob(ticket: ticket, output: output, job: job);
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<FileJob>>
 abstract class FileJob implements RustOpaqueInterface {
@@ -55,14 +66,22 @@ abstract class FileJob implements RustOpaqueInterface {
   void resume();
 }
 
+// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<FileTicket>>
+abstract class FileTicket implements RustOpaqueInterface {
+  /// The file's name as the sender saw it: the input's file name on a send
+  /// ticket, the name carried inside the Olm message on a receive ticket
+  /// (a bare name — never a path). Readable before and after the run.
+  Future<String> originalName();
+}
+
 /// One event of a file job — maps 1:1 onto the app's `FileProcessingProgress`.
 ///
 /// `progress` is the fraction of chunks done (one event per chunk). The last
 /// event is terminal: `is_complete` on success, `is_cancelled` after
 /// [`FileJob::cancel`], or `is_complete` with an `error_message` (the
 /// [`CoreError`]'s text: `wrong password`, `corrupt`, `unsupported format`,
-/// `io`, `store locked`, `internal`) on failure — no `Err` ever reaches Dart,
-/// because frb does not await a stream function's result (`unawaited`).
+/// `io`, `internal`) on failure — no `Err` ever reaches Dart, because frb does
+/// not await a stream function's result (`unawaited`).
 class FileProgress {
   final double progress;
   final bool isComplete;

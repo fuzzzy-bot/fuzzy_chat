@@ -354,7 +354,6 @@ void main() {
         () async {
       final encryptJob = await newFileJob();
       final encrypted = await encryptFile(
-        core: core,
         password: 'pw',
         input: plain.path,
         output: sealedPath,
@@ -373,7 +372,6 @@ void main() {
       expect(sealed.length, 55 + 3 * 1024 * 1024 + 3 * 16);
 
       final decrypted = await decryptFile(
-        core: core,
         password: 'pw',
         input: sealedPath,
         output: openedPath,
@@ -388,7 +386,6 @@ void main() {
     test('wrong password and a tampered chunk fail with no output file',
         () async {
       await encryptFile(
-        core: core,
         password: 'pw',
         input: plain.path,
         output: sealedPath,
@@ -396,7 +393,6 @@ void main() {
       ).toList();
 
       final wrong = await decryptFile(
-        core: core,
         password: 'nope',
         input: sealedPath,
         output: openedPath,
@@ -413,7 +409,6 @@ void main() {
       tampered[55 + (1024 * 1024 + 16) + 4321] ^= 0x01;
       sealed.writeAsBytesSync(tampered);
       final corrupt = await decryptFile(
-        core: core,
         password: 'pw',
         input: sealedPath,
         output: openedPath,
@@ -431,7 +426,6 @@ void main() {
     test('cancel emits isCancelled and removes the .part', () async {
       final job = await newFileJob();
       final stream = encryptFile(
-        core: core,
         password: 'pw',
         input: plain.path,
         output: sealedPath,
@@ -447,19 +441,127 @@ void main() {
       expect(File(sealedPath).existsSync(), isFalse);
       expect(File('$sealedPath.part').existsSync(), isFalse);
     });
+  });
 
-    test('a locked store reports store locked on the stream', () async {
-      await core.close();
-      final events = await encryptFile(
-        core: core,
-        password: 'pw',
-        input: plain.path,
+  group('chat files (async, two stores + tickets)', () {
+    late Directory aDir;
+    late Directory bDir;
+    late CryptoCore a;
+    late CryptoCore b;
+
+    Future<CryptoCore> open(Directory dir) async => openStore(
+          storeDir: dir.path,
+          wrapped: await createStoreKey(password: ''),
+          password: '',
+        );
+
+    /// 2.5 MiB of non-repeating bytes: three 1 MiB chunks.
+    List<int> plaintext() {
+      var state = 0x2545F491;
+      return List<int>.generate(5 * 1024 * 1024 ~/ 2, (_) {
+        state ^= (state << 13) & 0xFFFFFFFF;
+        state ^= state >> 17;
+        state ^= (state << 5) & 0xFFFFFFFF;
+        return state & 0xFF;
+      });
+    }
+
+    setUp(() async {
+      aDir = Directory.systemTemp.createTempSync('fuzzy_crypto_core_cfa_');
+      bDir = Directory.systemTemp.createTempSync('fuzzy_crypto_core_cfb_');
+      a = await open(aDir);
+      b = await open(bDir);
+      final invitation = await a.createInvitation(chatId: _chatId);
+      final acceptance =
+          await b.acceptInvitation(chatId: _chatId, invitation: invitation);
+      await a.completeHandshake(chatId: _chatId, acceptance: acceptance);
+    });
+
+    tearDown(() async {
+      await a.close();
+      await b.close();
+      a.dispose();
+      b.dispose();
+      for (final dir in [aDir, bDir]) {
+        if (dir.existsSync()) dir.deleteSync(recursive: true);
+      }
+    });
+
+    test('A prepares + runs encrypt, B prepares + runs decrypt, bytes equal',
+        () async {
+      final bytes = plaintext();
+      final input = File('${aDir.path}/report.pdf')..writeAsBytesSync(bytes);
+      final sealedPath = '${aDir.path}/report.pdf.fuzz';
+
+      // Send side: prepare under the lock (the file key rides in an Olm
+      // message in the header), then stream the chunks.
+      final sendTicket =
+          await a.prepareFileSend(chatId: _chatId, input: input.path);
+      expect(await sendTicket.originalName(), 'report.pdf');
+      final sent = await runFileJob(
+        ticket: sendTicket,
         output: sealedPath,
         job: await newFileJob(),
       ).toList();
-      expect(events, hasLength(1));
-      expect(events.single.errorMessage, 'store locked');
-      expect(File(sealedPath).existsSync(), isFalse);
+      expect(sent.last.isComplete, isTrue);
+      expect(sent.last.errorMessage, isNull);
+      final sealed = File(sealedPath).readAsBytesSync();
+      // FUZZ · 01 · 04 · key_mode 01 (chat).
+      expect(sealed.sublist(0, 7), [0x46, 0x55, 0x5A, 0x5A, 0x01, 0x04, 0x01]);
+
+      // Receive side: prepare (Olm decrypt + checks) yields the original name,
+      // then stream the plaintext.
+      final openedPath = '${bDir.path}/received.bin';
+      final recvTicket =
+          await b.prepareFileReceive(chatId: _chatId, input: sealedPath);
+      expect(await recvTicket.originalName(), 'report.pdf');
+      final received = await runFileJob(
+        ticket: recvTicket,
+        output: openedPath,
+        job: await newFileJob(),
+      ).toList();
+      expect(received.last.isComplete, isTrue);
+      expect(received.last.errorMessage, isNull);
+      expect(File(openedPath).readAsBytesSync(), bytes);
+      expect(File('$openedPath.part').existsSync(), isFalse);
+    });
+
+    test('replaying the same container throws Replay, no output', () async {
+      final bytes = plaintext();
+      final input = File('${aDir.path}/once.bin')..writeAsBytesSync(bytes);
+      final sealedPath = '${aDir.path}/once.fuzz';
+      final sendTicket =
+          await a.prepareFileSend(chatId: _chatId, input: input.path);
+      await runFileJob(
+        ticket: sendTicket,
+        output: sealedPath,
+        job: await newFileJob(),
+      ).toList();
+
+      final out1 = '${bDir.path}/out1.bin';
+      final t1 = await b.prepareFileReceive(chatId: _chatId, input: sealedPath);
+      await runFileJob(ticket: t1, output: out1, job: await newFileJob())
+          .toList();
+      expect(File(out1).readAsBytesSync(), bytes);
+
+      // The file's Olm message was consumed: a second prepare is a replay, and
+      // nothing is written for the second output.
+      final out2 = '${bDir.path}/out2.bin';
+      await expectLater(
+        b.prepareFileReceive(chatId: _chatId, input: sealedPath),
+        throwsA(CoreError.replay),
+      );
+      expect(File(out2).existsSync(), isFalse);
+      expect(File('$out2.part').existsSync(), isFalse);
+    });
+
+    test('prepare on a closed store throws storeLocked', () async {
+      await a.close();
+      final input = File('${aDir.path}/x.bin')..writeAsBytesSync([1, 2, 3]);
+      await expectLater(
+        a.prepareFileSend(chatId: _chatId, input: input.path),
+        throwsA(CoreError.storeLocked),
+      );
     });
   });
 
