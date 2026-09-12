@@ -66,7 +66,7 @@ we will not ask you to withhold a report after the fix has shipped and the discl
 ## Related documents
 
 - Protocol and wire formats: `documents/security/PROTOCOL.md`
-- Threat model: `documents/security/THREAT_MODEL.md` (forthcoming)
+- Threat model: `documents/security/THREAT_MODEL.md`
 - Software bills of materials: `documents/security/sbom/rust.cdx.json`, `documents/security/sbom/flutter.cdx.json`
   (regenerated and checked on every CI run by `./sbom.sh`)
 - `security.txt` (RFC 9116): `documents/security/security.txt`, served at
