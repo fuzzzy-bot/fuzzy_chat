@@ -41,6 +41,10 @@ class AppRouter {
       navigatorKey: navigatorKey,
       initialLocation: sl.get<PreferencesService>().lastSelectedTab,
       redirect: (context, state) {
+        // A fuzzylink:// deep link reaches the router as a location too; it
+        // belongs to FuzzyLinkHandler, never to a page (T-0328).
+        if (state.uri.scheme == FuzzyLinkParser.scheme) return AppRouter.home;
+
         final hasSeenOnboarding =
             sl.get<PreferencesService>().hasSeenOnboarding;
         final isOnboarding = state.matchedLocation == onboarding;
