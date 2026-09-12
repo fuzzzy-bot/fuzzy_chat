@@ -54,7 +54,9 @@ class ProvidedConnectedChatPage extends StatefulWidget {
 /// sticky across later page loads, so any other transition must stay silent.
 @visibleForTesting
 bool shouldToastFailure(
-    ConnectedChatState previous, ConnectedChatState current) {
+  ConnectedChatState previous,
+  ConnectedChatState current,
+) {
   return (previous.status != current.status && current.status.isFailed) ||
       (previous.actionStatus != current.actionStatus &&
           current.actionStatus.isFailed);
