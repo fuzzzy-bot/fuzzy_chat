@@ -206,8 +206,10 @@ the two runners' identical artifacts re-verified by an independent reviewer, not
 fixed on the next commit and a new `attest` step now extracts the shipped Linux and APK cores and fails a tag
 run unless their hashes are in the rebuild's `SHA256SUMS`. The Flutter AOT output (`libapp.so`, the desktop
 executables, the bundles) embeds build paths and ids and is not bit-for-bit reproducible today
-(dart-lang/sdk#52506). Rebuilding the Android core from a macOS host gives a different binary (17,159 bytes
-in `.text`/`.rodata`, a different NDK clang); reproduce on Linux x86_64, which is what CI uses.
+(dart-lang/sdk#52506). Rebuilding the Android core from a macOS host gives a different binary — 17,159 bytes
+spread over `.text`/`.rodata`/`.eh_frame`/`.gcc_except_table` at identical section sizes, plus an extra
+`.comment` line from the darwin-hosted NDK clang (`RELEASE.md` §5); reproduce on Linux x86_64, which is what
+CI uses.
 
 **Every release artifact is hashed and attested; none is signed by us.** A `v*` tag run produces `SHA256SUMS`
 over the APK, the Linux and Windows executables and crate libraries and the macOS zip, and
@@ -232,7 +234,11 @@ file container, password blob, wrapped keys, state file, safety number, …) are
 through the production code paths and compared in `cargo test`, so any dependency change that alters a byte
 fails CI (`PROTOCOL.md` Appendix A); the two SBOMs (`sbom/rust.cdx.json`, 175 components; `sbom/flutter.cdx.json`,
 203 components) are regenerated on every CI run and the run fails if they drift from the lock files; Dependabot
-keeps `flutter_rust_bridge` in lockstep across Cargo, pub and the codegen. Test counts at the time of writing:
+watches the cargo, pub and GitHub Actions ecosystems weekly — **except `flutter_rust_bridge`**, which is pinned
+three ways (Rust crate, Dart package, the codegen that wrote `lib/rust_bridge/**`) and must move as one, so it is
+excluded from Dependabot in both ecosystems and bumped by hand in lockstep with the codegen re-run; there is no
+CI gate for codegen drift — a stale generated bridge is caught by the per-feature reviewer re-running the
+generator, not by a job (`THREAT_MODEL.md` §9.3, R24). Test counts at the time of writing:
 `cargo test --locked` 161, `flutter test` 240, both green on every push (CI matrix: rust, flutter-test,
 android with a 16 KB page-size gate, linux, windows, macos, rust-repro ×2 + compare; `attest` on tags).
 
