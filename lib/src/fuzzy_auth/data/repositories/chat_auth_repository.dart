@@ -87,21 +87,11 @@ class ChatAuthRepository {
   Future<bool> changePassword({
     required String oldPassword,
     required String newPassword,
-    required List<String> chatIds,
-    required KeyStorageRepository keyStorageRepository,
   }) async {
     final rewrapRes = await _cryptoStoreKeyRepository.rewrap(
       oldPassword: oldPassword,
       newPassword: newPassword,
     );
-    if (rewrapRes is CryptoCoreFailure) return false;
-
-    await keyStorageRepository.reencryptAllKeys(
-      chatIds: chatIds,
-      oldPassword: oldPassword,
-      newPassword: newPassword,
-    );
-
-    return true;
+    return rewrapRes is! CryptoCoreFailure;
   }
 }

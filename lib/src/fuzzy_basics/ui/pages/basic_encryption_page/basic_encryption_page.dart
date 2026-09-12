@@ -153,6 +153,9 @@ class _ProvidedBasicEncryptionPageState
                 _resultText = state.result ?? '';
               });
             } else if (state.status.isFailed) {
+              setState(() {
+                _resultText = '';
+              });
               FuzzzyToast.show(
                 context,
                 message:

@@ -6,20 +6,14 @@ part 'fuzzy_user_auth_preferences_state.dart';
 class FuzzyUserAuthPreferencesCubit
     extends Cubit<FuzzyUserAuthPreferencesState> {
   final ChatAuthRepository _chatAuthRepository;
-  final ChatGeneralDataListRepository _chatGeneralDataListRepository;
-  final KeyStorageRepository _keyStorageRepository;
   final FuzzyAuthStore _fuzzyAuthStore;
   final BiometricAuthRepository _biometricAuthRepository;
 
   FuzzyUserAuthPreferencesCubit({
     required ChatAuthRepository chatAuthRepository,
-    required ChatGeneralDataListRepository chatGeneralDataListRepository,
-    required KeyStorageRepository keyStorageRepository,
     required FuzzyAuthStore fuzzyAuthStore,
     required BiometricAuthRepository biometricAuthRepository,
   })  : _chatAuthRepository = chatAuthRepository,
-        _chatGeneralDataListRepository = chatGeneralDataListRepository,
-        _keyStorageRepository = keyStorageRepository,
         _fuzzyAuthStore = fuzzyAuthStore,
         _biometricAuthRepository = biometricAuthRepository,
         super(
@@ -42,12 +36,6 @@ class FuzzyUserAuthPreferencesCubit
         return;
       }
 
-      final chatIds = await _allChatIds();
-      await _keyStorageRepository.reencryptAllKeys(
-        chatIds: chatIds,
-        oldPassword: '',
-        newPassword: password,
-      );
       await _fuzzyAuthStore.onPasswordSetup(password);
       emit(
         state.copyWith(
@@ -71,12 +59,9 @@ class FuzzyUserAuthPreferencesCubit
   }) async {
     emit(state.copyWith(activationStatus: StateStatus.loading));
     try {
-      final chatIds = await _allChatIds();
       final success = await _fuzzyAuthStore.changePassword(
         oldPassword: oldPassword,
         newPassword: newPassword,
-        chatIds: chatIds,
-        keyStorageRepository: _keyStorageRepository,
       );
 
       if (success) {
@@ -133,12 +118,6 @@ class FuzzyUserAuthPreferencesCubit
         return;
       }
 
-      final chatIds = await _allChatIds();
-      await _keyStorageRepository.reencryptAllKeys(
-        chatIds: chatIds,
-        oldPassword: currentPassword,
-        newPassword: '',
-      );
       await _biometricAuthRepository.disable(BiometricScope.chat);
       await _fuzzyAuthStore.checkAuthStatus();
       emit(
@@ -213,10 +192,5 @@ class FuzzyUserAuthPreferencesCubit
         ),
       );
     }
-  }
-
-  Future<List<String>> _allChatIds() async {
-    final chats = await _chatGeneralDataListRepository.getAllChats();
-    return chats.map((chat) => chat.chatId).toList();
   }
 }

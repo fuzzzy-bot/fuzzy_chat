@@ -759,6 +759,9 @@ class FuzzyChatLocalizationsEn extends FuzzyChatLocalizations {
   String get chatAuthEnterPassword => 'Please enter your current password';
 
   @override
+  String get chatAuthPasswordChanged => 'Chat Password Changed';
+
+  @override
   String get vaultFileSaveWarning =>
       '⚠️ The original file is NOT auto-deleted. After a successful save, the user\'s source file remains on disk untouched. The app currently doesn\'t warn about this.';
 

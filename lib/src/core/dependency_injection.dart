@@ -37,7 +37,6 @@ class DependencyInjection {
       [
         StoredChatGeneralDataSchema,
         StoredChatPreferencesSchema,
-        StoredChatSecurityDataSchema,
         StoredMessageDataSchema,
         StoredUserAuthPreferencesSchema,
         StoredVaultItemSchema,
@@ -89,9 +88,6 @@ class DependencyInjection {
         cryptoCoreService: sl.get<CryptoCoreService>(),
       ),
     );
-
-    sl.safeRegisterSingleton<KeyStorageRepository>(KeyStorageRepository());
-    await sl.get<KeyStorageRepository>().recoverStagedMigration();
 
     sl.safeRegisterSingleton<ChatGeneralDataListRepository>(
       ChatGeneralDataListRepository(

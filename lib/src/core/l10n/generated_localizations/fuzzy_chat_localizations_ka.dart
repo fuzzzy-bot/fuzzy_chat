@@ -768,6 +768,9 @@ class FuzzyChatLocalizationsKa extends FuzzyChatLocalizations {
   String get chatAuthEnterPassword => 'გთხოვთ შეიყვანოთ მიმდინარე პაროლი';
 
   @override
+  String get chatAuthPasswordChanged => 'ჩატის პაროლი შეიცვალა';
+
+  @override
   String get vaultFileSaveWarning =>
       '⚠️ ორიგინალი ფაილი არ იშლება ავტომატურად. შენახვის შემდეგ ფაილი რჩება მოწყობილობაზე. გთხოვთ წაშალოთ ის უსაფრთხოების მიზნით.';
 

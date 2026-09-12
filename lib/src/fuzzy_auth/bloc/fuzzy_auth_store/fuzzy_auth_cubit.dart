@@ -131,14 +131,10 @@ class FuzzyAuthStore extends Cubit<FuzzyAuthState> {
   Future<bool> changePassword({
     required String oldPassword,
     required String newPassword,
-    required List<String> chatIds,
-    required KeyStorageRepository keyStorageRepository,
   }) async {
     final success = await chatAuthRepository.changePassword(
       oldPassword: oldPassword,
       newPassword: newPassword,
-      chatIds: chatIds,
-      keyStorageRepository: keyStorageRepository,
     );
 
     if (success) {

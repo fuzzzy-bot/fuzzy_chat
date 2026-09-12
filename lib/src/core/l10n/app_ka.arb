@@ -492,6 +492,8 @@
   "@chatAuthNewPassword": {},
   "chatAuthEnterPassword": "გთხოვთ შეიყვანოთ მიმდინარე პაროლი",
   "@chatAuthEnterPassword": {},
+  "chatAuthPasswordChanged": "ჩატის პაროლი შეიცვალა",
+  "@chatAuthPasswordChanged": {},
   "vaultFileSaveWarning": "⚠️ ორიგინალი ფაილი არ იშლება ავტომატურად. შენახვის შემდეგ ფაილი რჩება მოწყობილობაზე. გთხოვთ წაშალოთ ის უსაფრთხოების მიზნით.",
   "@vaultFileSaveWarning": {},
   "invitationAlreadyUsed": "ეს მოწვევა უკვე გამოყენებულია.",

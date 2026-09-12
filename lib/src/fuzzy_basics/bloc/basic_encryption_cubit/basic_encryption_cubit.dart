@@ -13,7 +13,7 @@ class BasicEncryptionCubit extends Cubit<BasicEncryptionState> {
   Future<void> encryptText({required String text, required String key}) async {
     if (text.isEmpty || key.isEmpty) {
       emit(
-        state.copyWith(
+        BasicEncryptionState(
           status: StateStatus.failed,
           failure: DefaultFailure(message: 'textAndKeyCannotBeEmpty'),
         ),
@@ -29,7 +29,7 @@ class BasicEncryptionCubit extends Cubit<BasicEncryptionState> {
 
     if (res is CryptoCoreFailure<String>) {
       emit(
-        state.copyWith(
+        BasicEncryptionState(
           status: StateStatus.failed,
           failure: DefaultFailure(message: 'encryptionFailed'),
         ),
@@ -51,7 +51,7 @@ class BasicEncryptionCubit extends Cubit<BasicEncryptionState> {
   }) async {
     if (encryptedText.isEmpty || key.isEmpty) {
       emit(
-        state.copyWith(
+        BasicEncryptionState(
           status: StateStatus.failed,
           failure: DefaultFailure(message: 'encryptedTextAndKeyCannotBeEmpty'),
         ),
@@ -67,7 +67,7 @@ class BasicEncryptionCubit extends Cubit<BasicEncryptionState> {
 
     if (res is CryptoCoreFailure<String>) {
       emit(
-        state.copyWith(
+        BasicEncryptionState(
           status: StateStatus.failed,
           failure:
               DefaultFailure(message: _decryptionFailureMessageOf(res.type)),

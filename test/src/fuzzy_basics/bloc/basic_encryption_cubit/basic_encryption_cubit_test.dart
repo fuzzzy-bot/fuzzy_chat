@@ -142,5 +142,25 @@ void main() {
         expect: () => [loading(), failed(message)],
       );
     }
+
+    blocTest<BasicEncryptionCubit, BasicEncryptionState>(
+      'a failed decrypt clears the previous result',
+      setUp: () => stubOpen(const CryptoCoreSuccess('hello')),
+      build: build,
+      seed: () => const BasicEncryptionState(
+        status: StateStatus.success,
+        result: 'hello',
+      ),
+      act: (cubit) async {
+        stubOpen(const CryptoCoreFailure(CryptoCoreFailureType.wrongPassword));
+        await cubit.decryptText(encryptedText: _blob, key: 'wrong');
+      },
+      expect: () => [
+        isA<BasicEncryptionState>()
+            .having((s) => s.status, 'status', StateStatus.loading)
+            .having((s) => s.result, 'result', 'hello'),
+        failed('basicsWrongPassword'),
+      ],
+    );
   });
 }

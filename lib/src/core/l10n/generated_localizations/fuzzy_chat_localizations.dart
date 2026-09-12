@@ -1495,6 +1495,12 @@ abstract class FuzzyChatLocalizations {
   /// **'Please enter your current password'**
   String get chatAuthEnterPassword;
 
+  /// No description provided for @chatAuthPasswordChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Password Changed'**
+  String get chatAuthPasswordChanged;
+
   /// No description provided for @vaultFileSaveWarning.
   ///
   /// In en, this message translates to:

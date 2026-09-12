@@ -11,8 +11,6 @@ class FuzzyUserAuthPage extends StatelessWidget {
     return BlocProvider<FuzzyUserAuthPreferencesCubit>(
       create: (context) => FuzzyUserAuthPreferencesCubit(
         chatAuthRepository: sl.get<ChatAuthRepository>(),
-        chatGeneralDataListRepository: sl.get<ChatGeneralDataListRepository>(),
-        keyStorageRepository: sl.get<KeyStorageRepository>(),
         fuzzyAuthStore: sl.get<FuzzyAuthStore>(),
         biometricAuthRepository: sl.get<BiometricAuthRepository>(),
       ),
@@ -179,7 +177,7 @@ class _FuzzyUserAuthPageContentState extends State<_FuzzyUserAuthPageContent> {
             case AuthPreferencesAction.disable:
               message = localizations.chatAuthDisabled;
             case AuthPreferencesAction.changePassword:
-              message = localizations.chatAuthEnabled;
+              message = localizations.chatAuthPasswordChanged;
             case AuthPreferencesAction.enableBiometric:
               message = localizations.chatAuthBiometricEnabled;
             case AuthPreferencesAction.disableBiometric:

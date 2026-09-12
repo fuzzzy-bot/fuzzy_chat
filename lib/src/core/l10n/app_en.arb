@@ -492,6 +492,8 @@
   "@chatAuthNewPassword": {},
   "chatAuthEnterPassword": "Please enter your current password",
   "@chatAuthEnterPassword": {},
+  "chatAuthPasswordChanged": "Chat Password Changed",
+  "@chatAuthPasswordChanged": {},
   "vaultFileSaveWarning": "⚠️ The original file is NOT auto-deleted. After a successful save, the user's source file remains on disk untouched. The app currently doesn't warn about this.",
   "@vaultFileSaveWarning": {},
   "invitationAlreadyUsed": "This invitation was already used.",

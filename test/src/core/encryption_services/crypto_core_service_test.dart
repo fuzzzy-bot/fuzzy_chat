@@ -16,8 +16,6 @@ import '../../../helpers/crypto_core_test_init.dart';
 class MockUserAuthPreferencesRepository extends Mock
     implements UserAuthPreferencesRepository {}
 
-class MockKeyStorageRepository extends Mock implements KeyStorageRepository {}
-
 Uint8List? _blobOf(CryptoCoreResponse<Uint8List?> readRes) =>
     (readRes as CryptoCoreSuccess<Uint8List?>).data;
 
@@ -157,21 +155,12 @@ void main() {
 
   group('ChatAuthRepository change-password round trip (real library)', () {
     late MockUserAuthPreferencesRepository userAuthPreferencesRepository;
-    late MockKeyStorageRepository keyStorageRepository;
     late ChatAuthRepository chatAuthRepository;
 
     setUp(() {
       userAuthPreferencesRepository = MockUserAuthPreferencesRepository();
-      keyStorageRepository = MockKeyStorageRepository();
       when(() => userAuthPreferencesRepository.updateUserAuthPreferences(any()))
           .thenAnswer((_) async {});
-      when(
-        () => keyStorageRepository.reencryptAllKeys(
-          chatIds: any(named: 'chatIds'),
-          oldPassword: any(named: 'oldPassword'),
-          newPassword: any(named: 'newPassword'),
-        ),
-      ).thenAnswer((_) async {});
       chatAuthRepository = ChatAuthRepository(
         userAuthPreferencesRepository: userAuthPreferencesRepository,
         cryptoStoreKeyRepository: storeKeyRepository,
@@ -200,35 +189,17 @@ void main() {
         await chatAuthRepository.changePassword(
           oldPassword: 'wrong',
           newPassword: 'second',
-          chatIds: const [],
-          keyStorageRepository: keyStorageRepository,
         ),
         isFalse,
-      );
-      verifyNever(
-        () => keyStorageRepository.reencryptAllKeys(
-          chatIds: any(named: 'chatIds'),
-          oldPassword: any(named: 'oldPassword'),
-          newPassword: any(named: 'newPassword'),
-        ),
       );
 
       expect(
         await chatAuthRepository.changePassword(
           oldPassword: 'first',
           newPassword: 'second',
-          chatIds: const ['chat-1'],
-          keyStorageRepository: keyStorageRepository,
         ),
         isTrue,
       );
-      verify(
-        () => keyStorageRepository.reencryptAllKeys(
-          chatIds: const ['chat-1'],
-          oldPassword: 'first',
-          newPassword: 'second',
-        ),
-      ).called(1);
 
       expect(await chatAuthRepository.verifyPassword('second'), isTrue);
       expect(await chatAuthRepository.verifyPassword('first'), isFalse);

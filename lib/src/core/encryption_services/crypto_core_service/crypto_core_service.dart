@@ -351,7 +351,7 @@ class CryptoCoreService {
       final inputPath = path.join(directoryPath, 'fuzzy_bench.bin');
       final fuzzedPath = '$inputPath.$fuzzedFileIdentificator';
       final restoredPath = '$inputPath.unfuzzed';
-      final random = Random.secure();
+      final random = Random();
       final block = Uint8List.fromList(
         List<int>.generate(_benchmarkBlockSize, (_) => random.nextInt(256)),
       );
