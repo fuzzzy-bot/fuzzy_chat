@@ -1,0 +1,126 @@
+# Release procedure, attestations and reproducibility
+
+How a Fuzzy Chat release is cut from `.github/workflows/main.yaml`, what the pipeline proves about the
+artifacts, what it does **not** prove, and how anyone can check both.
+
+## 1. Cutting a release
+
+Every push already runs the full matrix (`rust`, `flutter-test`, `android`, `linux`, `windows`, `macos`,
+`rust-repro` ×2 + `rust-repro-compare`). A release is the same workflow on a `v*` tag, which additionally
+runs `attest`.
+
+1. The commit to release is on a branch with a green run. Bump `version:` in `pubspec.yaml` (release
+   candidates keep the previous version; only the final tag bumps it) and commit.
+2. Tag it — annotated, from that exact commit — and push the tag:
+   ```sh
+   git tag -a v1.2.3 -m "fuzzy_chat v1.2.3"
+   git push origin v1.2.3
+   ```
+3. Wait for the tag run (`gh run list --workflow fuzzy_chat --event push --branch v1.2.3`, ≈ 11 min; the
+   Android job is the long pole). Every job must be green — `attest` needs all of them, so a red job means
+   no attestation and no release.
+4. Download and check everything the run produced (§3), then attach the artifacts and `SHA256SUMS` to a
+   GitHub Release (`gh release create v1.2.3 …`). Creating the Release is the publisher's step after the
+   owner's go; the pipeline only produces and attests the files.
+
+Artifacts of a run (`gh run download <run-id> -D rel` puts each one in a directory of its name):
+
+| Artifact | Content | In `SHA256SUMS` / attested |
+|---|---|---|
+| `android-apk` | `app-production-release.apk` (production flavor, `--split-debug-info`) | the APK |
+| `linux-bundle` | `fuzzy_chat` + `lib/` + `data/` (the whole bundle directory) | `fuzzy_chat`, `lib/libfuzzy_crypto_core.so` |
+| `windows-bundle` | `fuzzy_chat.exe` + plugin DLLs + `data/` | `fuzzy_chat.exe`, `fuzzy_crypto_core.dll` |
+| `macos-app` | `fuzzy_chat-macos.zip` (`ditto` archive of `Fuzzy Chat.app`, symlinks and modes kept) | the zip |
+| `sha256sums` | `SHA256SUMS` — `sha256sum` lines over the six files above, paths relative to the download directory | — |
+| `sbom-rust`, `sbom-flutter` | the CycloneDX SBOMs committed under `documents/security/sbom/` | — |
+| `rust-repro-1`, `rust-repro-2` | the Rust core built twice on separate runners + each run's `SHA256SUMS` (§4) | — |
+
+## 2. What is attested — and what is not
+
+`attest` runs `actions/attest-build-provenance` with `SHA256SUMS` as the subject list, so GitHub signs a
+SLSA build-provenance statement binding every listed digest to this repository, the workflow file, the tag
+and the run that built it (Sigstore, keyless). Verifying an artifact therefore proves *which commit and
+which workflow produced these exact bytes* — nothing more.
+
+**Not proven, and stated here so nobody assumes it:**
+
+- **macOS is unsigned and not notarized.** The macOS job builds with code signing disabled
+  (`FLUTTER_XCODE_CODE_SIGNING_ALLOWED=NO`): the Xcode project is signed for team `C9387PQ63V` and CI
+  has no certificate. Gatekeeper will refuse the app unless the user overrides it. Signing needs an Apple
+  Developer certificate as a CI secret or a signing step on a Mac that holds it — an owner decision
+  (hardening decision D-3).
+- **iOS is not built.** There is no iOS job; nothing in a release is an iOS artifact.
+- **The Android APK is signed with a throwaway key.** The `android` job generates a fresh keystore per run
+  (`keytool -genkeypair … -validity 1`, `CN=fuzzy_chat CI throwaway`) because the `release` build type
+  refuses to build without one. The APK installs and runs, and is a faithful build of the commit, but it is
+  **not a store build**: it cannot update an installation signed with the real key, and the real key is
+  never in this repository or in CI until the owner provides it as the `ANDROID_KEYSTORE_*` secrets
+  (hardening decision D-6).
+- **Provenance is not a review.** The attestation says who built the bytes, not that the code is correct.
+  What the code does is documented in `PROTOCOL.md`; what it defends against, in `THREAT_MODEL.md`.
+
+## 3. Verifying a release
+
+Needs `gh` ≥ 2.49 (`gh attestation`) and `sha256sum` (macOS: `shasum -a 256 -c`).
+
+```sh
+gh run download <run-id> -R fuzzzy-bot/fuzzy_chat -D rel        # or download the files from the Release page
+cd rel
+sha256sum -c sha256sums/SHA256SUMS                               # every line must print OK
+gh attestation verify android-apk/app-production-release.apk -R fuzzzy-bot/fuzzy_chat
+gh attestation verify linux-bundle/fuzzy_chat -R fuzzzy-bot/fuzzy_chat
+```
+
+`gh attestation verify` fetches the attestation for the file's digest from GitHub, checks the Sigstore
+signature and that the signer is a workflow of `fuzzzy-bot/fuzzy_chat`, and prints the workflow, the ref
+and the commit it was built from. Compare that commit with the tag: `git rev-parse v1.2.3^{commit}`. Any
+file listed in `SHA256SUMS` can be verified the same way; the two crate libraries inside the bundles are
+listed so that the Rust core can be checked on its own (§4).
+
+## 4. Reproducibility — honest status
+
+**The Rust core (`rust/fuzzy_crypto_core`) is reproducible; the Flutter app around it is not.** Exactly
+what we promise:
+
+1. **Pinned toolchains.** Flutter 3.41.7 (`.fvmrc`, `FLUTTER_VERSION` in the workflow), Rust 1.98.1
+   (`rust-toolchain.toml`), `Cargo.lock` and `pubspec.lock` committed and built with `--locked`,
+   NDK 28.2.13676358, `cargo-ndk` 4.1.2.
+2. **The Rust core builds bit-for-bit identically on two independent machines.** `rust-repro` builds the
+   crate twice, on two separate runners with no shared cache, for the host (`x86_64-unknown-linux-gnu`,
+   the linux-bundle target) and for `aarch64-linux-android` (the Android target), `--release --locked`;
+   `rust-repro-compare` prints both runs' SHA-256 of `libfuzzy_crypto_core.so` and `.a` and **fails the
+   workflow if any pair differs**. It also fails if a runner path survives in the binary (below).
+3. **The hashes do not depend on the build machine.** With `strip = true` and no debuginfo, the only
+   machine path a release library embeds is `CARGO_HOME` in the panic-location strings of registry crates
+   (measured: the crate's own paths are relative, std's are `/rustc/<commit>/…`). `.cargo/config.toml`
+   remaps the GitHub hosted-runner homes to `/cargo/registry/src`, so a CI build carries no runner path.
+   To reproduce a published hash on your own machine, supply your own mapping (it replaces the config's,
+   which is a no-op off the runners) with the pinned toolchain:
+   ```sh
+   cd rust/fuzzy_crypto_core
+   export RUSTFLAGS="--remap-path-prefix=$HOME/.cargo/registry/src=/cargo/registry/src"
+   cargo build --release --locked                                   # host
+   cargo ndk -t arm64-v8a build --release --locked                  # Android, NDK 28.2.13676358
+   sha256sum target/release/libfuzzy_crypto_core.so target/aarch64-linux-android/release/libfuzzy_crypto_core.so
+   ```
+   and compare with the `rust-repro-1` artifact's `SHA256SUMS` of the tag run. (Cargo's portable
+   `[profile.release] trim-paths` would replace the remap; it is nightly-only on 1.98.1.)
+   Known limit: a macOS `.dylib` additionally embeds the linker's `LC_UUID`, which changes with the
+   *target directory path* (measured: two builds into different `--target-dir`s differ in the UUID and the
+   ad-hoc signature only; same path → identical). Build in the default `target/` to match.
+4. **`SHA256SUMS` + attestations per release** (§2, §3), and the Android release built with
+   `--split-debug-info`.
+
+**What we do not promise:** the Flutter AOT output (`libapp.so`, the desktop executables, the app
+bundles) is not bit-for-bit reproducible today — it embeds build paths and ids
+(dart-lang/sdk#52506; F-Droid rebuilds Flutter apps only by pinning the exact absolute build path). The
+Rust core *inside* the shipped bundles is built by cargokit with its own target directory and linker
+flags, so its hash is listed in `SHA256SUMS` for inspection but is **not** claimed equal to the
+`rust-repro` hash; the measured relation for each release is recorded in the release notes.
+
+The measured result for the first attested tag, `v1.0.0-rc.1`, is in §5.
+
+## 5. Measurements per release
+
+### v1.0.0-rc.1
+Filled in from the tag run — see the flow log until then.
