@@ -7,10 +7,14 @@
 //! been seen yet — or `(0, 1)` when the handshake already occupied counter 0
 //! (the inviter's B→A direction, F2-3).
 //!
-//! The window is 64 wide, ≥ Olm's 40-key limit, so this layer never rejects a
-//! message Olm would accept; Olm stays the cryptographic authority and catches
-//! the real replays first. This layer only turns those into explicit `Replay` /
-//! `TooOld` signals and guards against a state-restore bug replaying a counter.
+//! Olm stays the cryptographic authority and catches the real replays first;
+//! this layer turns them into explicit `Replay` / `TooOld` signals and guards
+//! against a state-restore bug replaying a counter. The window is 64 wide,
+//! ≥ Olm's 40-key store, but the two are not the same shape: Olm's store is per
+//! receiving *chain* and keeps a key until it is consumed, this window is per
+//! *direction* and drops anything more than 63 behind the newest accepted
+//! counter. So this layer can refuse (`TooOld`) a message Olm could still
+//! decrypt — strictly safer, never the other way round (F2-4 review N1).
 
 use crate::error::CoreError;
 

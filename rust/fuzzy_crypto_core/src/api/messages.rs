@@ -35,9 +35,14 @@ mod tests {
     use std::fs;
     use std::path::PathBuf;
 
+    use vodozemac::olm::{DecryptionError, Message as OlmNormalMessage, OlmMessage, PreKeyMessage};
+
     use super::*;
     use crate::api::core::{create_store_key, open_store};
-    use crate::formats::{decode_text, Message, OlmType};
+    use crate::formats::{
+        decode_text, encode_text, ContentType, Direction, InnerHeader, Message, OlmType,
+    };
+    use crate::state::ChatState;
     use crate::store::test_support::temp_dir;
     use crate::store::STORE_SUBDIR;
 
@@ -84,13 +89,22 @@ mod tests {
             fs::read(self.state_file(chat_id)).unwrap()
         }
 
+        /// The state as it is on disk right now (not the cache).
+        fn state(&self, chat_id: &str) -> ChatState {
+            self.core.opened().unwrap().load_state(chat_id).unwrap()
+        }
+
         fn send_counter(&self, chat_id: &str) -> u64 {
-            self.core
-                .opened()
-                .unwrap()
-                .load_state(chat_id)
-                .unwrap()
-                .send_counter
+            self.state(chat_id).send_counter
+        }
+
+        /// Raw Olm decrypt of `blob` on a clone of the on-disk session — the
+        /// layer *under* the API, with no header or counter checks and nothing
+        /// persisted. Distinguishes "Olm destroyed the key" from "our
+        /// bookkeeping refused" (F2-4 review R5).
+        fn olm_decrypt(&self, chat_id: &str, blob: &str) -> Result<Vec<u8>, DecryptionError> {
+            let mut session = self.state(chat_id).session().unwrap().unwrap();
+            session.decrypt(&olm_of(blob))
         }
     }
 
@@ -111,6 +125,19 @@ mod tests {
             .core
             .complete_handshake(chat_id.into(), acceptance)
             .unwrap();
+    }
+
+    /// The Olm message inside a `Fuzz/` message blob.
+    fn olm_of(text: &str) -> OlmMessage {
+        let message = Message::decode(&decode_text(text).unwrap()).unwrap();
+        match message.olm_type {
+            OlmType::PreKey => {
+                OlmMessage::PreKey(PreKeyMessage::from_bytes(&message.olm_body).unwrap())
+            }
+            OlmType::Normal => {
+                OlmMessage::Normal(OlmNormalMessage::from_bytes(&message.olm_body).unwrap())
+            }
+        }
     }
 
     /// The Olm message type carried by a `Fuzz/` message blob.
@@ -261,6 +288,27 @@ mod tests {
             .map(|i| a.core.encrypt_text(CHAT_X.into(), format!("m{i}")).unwrap())
             .collect();
 
+        // Every assertion below is made twice: at the API (the user-facing
+        // contract, `Replay`) and at the Olm layer underneath (`MissingMessageKey`
+        // — the key itself is gone, not merely refused by our counter window).
+        let assert_unrecoverable = |device: &mut Device, blob: &String, what: &str| {
+            assert_eq!(
+                device
+                    .core
+                    .decrypt_text(CHAT_X.into(), blob.clone())
+                    .unwrap_err(),
+                CoreError::Replay,
+                "{what}: API"
+            );
+            assert!(
+                matches!(
+                    device.olm_decrypt(CHAT_X, blob),
+                    Err(DecryptionError::MissingMessageKey(_))
+                ),
+                "{what}: Olm no longer holds the message key"
+            );
+        };
+
         // B decrypts messages 1..N-1 (indices 0..=N-2) in order.
         for blob in blobs.iter().take(N - 1) {
             b.core.decrypt_text(CHAT_X.into(), blob.clone()).unwrap();
@@ -272,39 +320,39 @@ mod tests {
             .decrypt_text(CHAT_X.into(), blobs[N - 1].clone())
             .unwrap();
 
-        // (i) Against the live state, message N-1's key is consumed → unrecoverable.
-        assert_eq!(
-            b.core
-                .decrypt_text(CHAT_X.into(), blobs[N - 2].clone())
-                .unwrap_err(),
-            CoreError::Replay
-        );
+        // (i) Against the live state, message N-1's key is consumed.
+        assert_unrecoverable(&mut b, &blobs[N - 2], "live state, message N-1");
 
         // Restore the snapshot (models an attacker who kept the older sealed file).
         fs::write(b.state_file(CHAT_X), &snapshot).unwrap();
         b.reopen();
 
         // (ii) The snapshot already consumed message N-1's key (at N-1) ...
-        assert_eq!(
-            b.core
-                .decrypt_text(CHAT_X.into(), blobs[N - 2].clone())
-                .unwrap_err(),
-            CoreError::Replay
-        );
-        // ... and message N-2's (consumed earlier still). No earlier message is
-        // recoverable from a later sealed snapshot.
-        assert_eq!(
-            b.core
-                .decrypt_text(CHAT_X.into(), blobs[N - 3].clone())
-                .unwrap_err(),
-            CoreError::Replay
-        );
+        assert_unrecoverable(&mut b, &blobs[N - 2], "snapshot, message N-1");
+        // (iii) ... and message N-2's (consumed earlier still). No earlier message
+        // is recoverable from a later sealed snapshot.
+        assert_unrecoverable(&mut b, &blobs[N - 3], "snapshot, message N-2");
+        // Sanity: the snapshot never consumed message N's key, so Olm still can
+        // decrypt it — that is not a forward-secrecy failure, it is the crash
+        // window plan §B.6 describes.
+        assert!(b.olm_decrypt(CHAT_X, &blobs[N - 1]).is_ok());
 
-        // The sender holds only the sending key: A can never decrypt its own blobs.
+        // The sender holds only the sending key: A can never decrypt its own
+        // blobs — Olm's MAC fails (`Corrupt`), not a header or counter refusal.
         for blob in &blobs {
-            assert!(
-                a.core.decrypt_text(CHAT_X.into(), blob.clone()).is_err(),
+            assert_eq!(
+                a.core
+                    .decrypt_text(CHAT_X.into(), blob.clone())
+                    .unwrap_err(),
+                CoreError::Corrupt,
                 "an Olm sender never holds the receiving key"
+            );
+            assert!(
+                matches!(
+                    a.olm_decrypt(CHAT_X, blob),
+                    Err(DecryptionError::InvalidMAC(_))
+                ),
+                "the sender's session cannot MAC-check its own output"
             );
         }
     }
@@ -389,6 +437,143 @@ mod tests {
         );
         // The honest blob still decrypts afterwards.
         assert_eq!(b.core.decrypt_text(CHAT_X.into(), blob).unwrap(), "honest");
+    }
+
+    /// The inner-header belt for messages: dishonest headers encrypted by A's
+    /// **real** session (so Olm's MAC passes) must be refused with the right
+    /// variant and leave B's state file byte-identical — every other committed
+    /// message test carries an honest header, so without this a dropped
+    /// `recipient_ed25519` or direction check would still pass `cargo test`
+    /// (F2-4 review N4).
+    #[test]
+    fn wrong_inner_header_is_rejected_without_state_change() {
+        let mut a = Device::new();
+        let mut b = Device::new();
+        pair(&mut a, &mut b, CHAT_X);
+        let a_state = a.state(CHAT_X);
+
+        // A's honest header for its next message; `corrupt` rewrites it.
+        let honest = || InnerHeader {
+            chat_id: CHAT_X.to_string(),
+            sender_ed25519: a_state.our_ed25519,
+            recipient_ed25519: a_state.peer_ed25519.unwrap(),
+            direction: Direction::AToB,
+            counter: a_state.send_counter,
+            content_type: ContentType::Text,
+            body: b"honest".to_vec(),
+        };
+        // Encrypt `plaintext` on a clone of A's real session (nothing persisted
+        // on A, so every forgery reuses the same chain index — and B, which never
+        // saves on a rejection, keeps that key for the next attempt).
+        let forge = |plaintext: Vec<u8>| -> String {
+            let mut session = a_state.session().unwrap().unwrap();
+            let (olm_type, olm_body) = match session.encrypt(plaintext).unwrap() {
+                OlmMessage::PreKey(message) => (OlmType::PreKey, message.to_bytes()),
+                OlmMessage::Normal(message) => (OlmType::Normal, message.to_bytes()),
+            };
+            encode_text(&Message { olm_type, olm_body }.encode().unwrap())
+        };
+
+        type Corrupt = Box<dyn Fn(InnerHeader) -> Vec<u8>>;
+        let variants: Vec<(&str, CoreError, Corrupt)> = vec![
+            (
+                "wrong chat id",
+                CoreError::WrongChat,
+                Box::new(|mut h: InnerHeader| {
+                    h.chat_id = CHAT_Y.to_string();
+                    h.encode().unwrap()
+                }),
+            ),
+            (
+                "wrong sender key",
+                CoreError::WrongChat,
+                Box::new(|mut h: InnerHeader| {
+                    h.sender_ed25519 = [0xEE; 32];
+                    h.encode().unwrap()
+                }),
+            ),
+            (
+                "wrong recipient key",
+                CoreError::WrongChat,
+                Box::new(|mut h: InnerHeader| {
+                    h.recipient_ed25519 = [0xEE; 32];
+                    h.encode().unwrap()
+                }),
+            ),
+            (
+                "wrong direction",
+                CoreError::Corrupt,
+                Box::new(|mut h: InnerHeader| {
+                    h.direction = Direction::BToA;
+                    h.encode().unwrap()
+                }),
+            ),
+            (
+                "handshake content type",
+                CoreError::Corrupt,
+                Box::new(|mut h: InnerHeader| {
+                    h.content_type = ContentType::Handshake;
+                    h.encode().unwrap()
+                }),
+            ),
+            (
+                "file-key content type",
+                CoreError::Corrupt,
+                Box::new(|mut h: InnerHeader| {
+                    h.content_type = ContentType::FileKeyEnvelope;
+                    h.encode().unwrap()
+                }),
+            ),
+            (
+                "invalid UTF-8 body",
+                CoreError::Corrupt,
+                Box::new(|mut h: InnerHeader| {
+                    h.body = vec![0xFF, 0xFE];
+                    h.encode().unwrap()
+                }),
+            ),
+            (
+                "inner version 2",
+                CoreError::Corrupt,
+                Box::new(|h: InnerHeader| {
+                    let mut bytes = h.encode().unwrap();
+                    bytes[0] = 2;
+                    bytes
+                }),
+            ),
+            (
+                "empty plaintext",
+                CoreError::Corrupt,
+                Box::new(|_h: InnerHeader| Vec::new()),
+            ),
+            (
+                "trailing byte",
+                CoreError::Corrupt,
+                Box::new(|h: InnerHeader| {
+                    let mut bytes = h.encode().unwrap();
+                    bytes.push(0);
+                    bytes
+                }),
+            ),
+        ];
+
+        let before = b.state_bytes(CHAT_X);
+        for (name, expected, corrupt) in &variants {
+            let blob = forge(corrupt(honest()));
+            assert_eq!(
+                b.core.decrypt_text(CHAT_X.into(), blob).unwrap_err(),
+                *expected,
+                "{name}"
+            );
+            assert_eq!(b.state_bytes(CHAT_X), before, "{name}: state untouched");
+        }
+
+        // The honest message (same chain index) still decrypts afterwards.
+        let honest_blob = a.core.encrypt_text(CHAT_X.into(), "honest".into()).unwrap();
+        assert_eq!(
+            b.core.decrypt_text(CHAT_X.into(), honest_blob).unwrap(),
+            "honest"
+        );
     }
 
     #[test]

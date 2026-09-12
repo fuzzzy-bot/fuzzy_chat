@@ -61,16 +61,17 @@ pub fn encrypt_text(state: &mut ChatState, text: &str) -> Result<String, CoreErr
     };
     let blob = Message { olm_type, olm_body }.encode()?;
 
-    // Commit only after the blob is built.
-    state.session = Some(session.pickle());
+    // Commit only after the blob is built, and all-or-nothing: the counter
+    // step is the only fallible part, so it goes first.
     state.send_counter = counter.checked_add(1).ok_or(CoreError::Internal)?;
+    state.session = Some(session.pickle());
     Ok(crate::formats::encode_text(&blob))
 }
 
 /// Decrypts a pasted 0x03 message blob. The checks run in the fixed order of
 /// plan §B.4 and stop at the first failure; nothing is committed to `state`
 /// until every one has passed (and the caller only persists on `Ok`):
-/// 1. envelope is a message (`UnsupportedFormat`);
+/// 1. envelope is a message (`UnsupportedFormat`) and its Olm body parses (`Corrupt`);
 /// 2. Olm decrypt — `MissingMessageKey` → `Replay`, `TooBigMessageGap` → `TooOld`,
 ///    any MAC/other failure → `Corrupt` (a blob from another chat fails here, its
 ///    MAC being under a different session);
