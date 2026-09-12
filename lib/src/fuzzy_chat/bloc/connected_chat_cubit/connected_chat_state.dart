@@ -8,7 +8,7 @@ class ConnectedChatState {
 
   final StateStatus actionStatus;
   final ChatActionType actionType;
-  final DefaultFailure? actionFailure;
+  final ConnectedChatFailure? actionFailure;
 
   const ConnectedChatState({
     required this.status,
@@ -27,7 +27,7 @@ class ConnectedChatState {
     DefaultFailure? failure,
     StateStatus? actionStatus,
     ChatActionType? actionType,
-    DefaultFailure? actionFailure,
+    ConnectedChatFailure? actionFailure,
   }) {
     return ConnectedChatState(
       status: status ?? this.status,

@@ -1493,6 +1493,24 @@ abstract class FuzzyChatLocalizations {
   /// In en, this message translates to:
   /// **'This code belongs to a different chat.'**
   String get wrongChatBlob;
+
+  /// No description provided for @alreadyUnfuzzed.
+  ///
+  /// In en, this message translates to:
+  /// **'This message was already unfuzzed on this device.'**
+  String get alreadyUnfuzzed;
+
+  /// No description provided for @blobTooOld.
+  ///
+  /// In en, this message translates to:
+  /// **'This message is too old to unfuzz — too many newer messages were unfuzzed first.'**
+  String get blobTooOld;
+
+  /// No description provided for @corruptBlob.
+  ///
+  /// In en, this message translates to:
+  /// **'This is not a valid fuzzed message.'**
+  String get corruptBlob;
 }
 
 class _FuzzyChatLocalizationsDelegate

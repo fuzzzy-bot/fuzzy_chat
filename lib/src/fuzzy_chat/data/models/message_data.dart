@@ -19,7 +19,11 @@ class MessageData {
     required this.isSent,
   });
 
-  factory MessageData.fromStored(StoredMessageData stored) {
+  /// [decryptedMessage] is the opened local seal — the repository fills it.
+  factory MessageData.fromStored(
+    StoredMessageData stored, {
+    String decryptedMessage = '',
+  }) {
     return MessageData(
       id: stored.id,
       chatId: stored.chatId,
@@ -28,7 +32,7 @@ class MessageData {
           ) ??
           MessageType.text,
       encryptedMessage: stored.encryptedMessage,
-      decryptedMessage: '',
+      decryptedMessage: decryptedMessage,
       sentAt: stored.sentAt,
       isSent: stored.isSent,
     );

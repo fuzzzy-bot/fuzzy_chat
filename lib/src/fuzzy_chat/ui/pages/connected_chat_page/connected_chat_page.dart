@@ -20,7 +20,7 @@ class ConnectedChatPage extends StatelessWidget {
       create: (context) => ConnectedChatCubit(
         chatId: payload.chatGeneralData.chatId,
         messageDataRepository: sl.get<MessageDataRepository>(),
-        keyStorageRepository: sl.get<KeyStorageRepository>(),
+        cryptoCoreService: sl.get<CryptoCoreService>(),
       )..loadInitialMessages(),
       child: ProvidedConnectedChatPage(payload: payload),
     );
@@ -190,10 +190,20 @@ class _ProvidedConnectedChatPageState extends State<ProvidedConnectedChatPage> {
     return FuzzyScaffold(
       hasAutomaticBackButton: false,
       body: BlocConsumer<ConnectedChatCubit, ConnectedChatState>(
+        listenWhen: (previous, current) =>
+            previous.status != current.status ||
+            previous.actionStatus != current.actionStatus,
         listener: (context, state) {
           if (state.status.isFailed) {
             if (state.failure?.message?.isEmpty ?? true) return;
             FuzzzyToast.show(context, message: state.failure?.message ?? '');
+          } else if (state.actionStatus.isFailed) {
+            FuzzzyToast.show(
+              context,
+              message: state.actionFailure?.type
+                      .toUiMessage(context.fuzzyChatLocalizations) ??
+                  '',
+            );
           }
         },
         builder: (context, state) {

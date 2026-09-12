@@ -481,5 +481,11 @@
   "invalidAcceptance": "This acceptance is invalid or damaged.",
   "@invalidAcceptance": {},
   "wrongChatBlob": "This code belongs to a different chat.",
-  "@wrongChatBlob": {}
+  "@wrongChatBlob": {},
+  "alreadyUnfuzzed": "This message was already unfuzzed on this device.",
+  "@alreadyUnfuzzed": {},
+  "blobTooOld": "This message is too old to unfuzz — too many newer messages were unfuzzed first.",
+  "@blobTooOld": {},
+  "corruptBlob": "This is not a valid fuzzed message.",
+  "@corruptBlob": {}
 }

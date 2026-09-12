@@ -481,5 +481,11 @@
   "invalidAcceptance": "ეს მიღება არასწორია ან დაზიანებულია.",
   "@invalidAcceptance": {},
   "wrongChatBlob": "ეს კოდი სხვა ჩატს ეკუთვნის.",
-  "@wrongChatBlob": {}
+  "@wrongChatBlob": {},
+  "alreadyUnfuzzed": "ეს შეტყობინება ამ მოწყობილობაზე უკვე გაშიფრულია.",
+  "@alreadyUnfuzzed": {},
+  "blobTooOld": "ეს შეტყობინება გასაშიფრად ძალიან ძველია — მასზე ბევრად ახალი შეტყობინებები უკვე გაშიფრულია.",
+  "@blobTooOld": {},
+  "corruptBlob": "ეს არ არის სწორი დაშიფრული შეტყობინება.",
+  "@corruptBlob": {}
 }

@@ -763,4 +763,15 @@ class FuzzyChatLocalizationsKa extends FuzzyChatLocalizations {
 
   @override
   String get wrongChatBlob => 'ეს კოდი სხვა ჩატს ეკუთვნის.';
+
+  @override
+  String get alreadyUnfuzzed =>
+      'ეს შეტყობინება ამ მოწყობილობაზე უკვე გაშიფრულია.';
+
+  @override
+  String get blobTooOld =>
+      'ეს შეტყობინება გასაშიფრად ძალიან ძველია — მასზე ბევრად ახალი შეტყობინებები უკვე გაშიფრულია.';
+
+  @override
+  String get corruptBlob => 'ეს არ არის სწორი დაშიფრული შეტყობინება.';
 }

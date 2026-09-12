@@ -159,6 +159,38 @@ class CryptoCoreService {
     return _withCore((core) => core.deleteChat(chatId: chatId));
   }
 
+  /// Fuzzes [text] on the chat's live Olm session; the ratcheted session is
+  /// on disk before the `Fuzz/` blob comes back. A chat that is not
+  /// connected is `internal`.
+  Future<CryptoCoreResponse<String>> encryptText({
+    required String chatId,
+    required String text,
+  }) {
+    return _withCore((core) => core.encryptText(chatId: chatId, text: text));
+  }
+
+  /// Unfuzzes a pasted `Fuzz/` message [blob] against the chat's session. A
+  /// blob decrypts once: a second paste is `replay`, one for another chat
+  /// `wrongChat`, one behind the window `tooOld`, garbage `corrupt` /
+  /// `unsupportedFormat`. Nothing is persisted on failure.
+  Future<CryptoCoreResponse<String>> decryptText({
+    required String chatId,
+    required String blob,
+  }) {
+    return _withCore((core) => core.decryptText(chatId: chatId, blob: blob));
+  }
+
+  /// Seals [bytes] under the store-derived local key (0x20 blob) for
+  /// at-rest storage on this device only.
+  Future<CryptoCoreResponse<Uint8List>> sealLocal(Uint8List bytes) {
+    return _withCore((core) => core.sealLocal(bytes: bytes));
+  }
+
+  /// Inverse of [sealLocal]; a tampered or foreign blob is `corrupt`.
+  Future<CryptoCoreResponse<Uint8List>> openLocal(Uint8List blob) {
+    return _withCore((core) => core.openLocal(blob: blob));
+  }
+
   /// Every chat call: no Argon2, so nothing to queue; a closed store answers
   /// `storeLocked` instead of reaching a null handle.
   Future<CryptoCoreResponse<T>> _withCore<T>(

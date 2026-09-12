@@ -11,6 +11,9 @@ class StoredMessageData {
   late String chatId;
 
   late String encryptedMessage;
+
+  /// base64 of the 0x20 local seal of the plaintext; `null` for file rows.
+  String? sealedPlaintext;
   String messageType = MessageType.text.name;
 
   DateTime sentAt = DateTime.now();

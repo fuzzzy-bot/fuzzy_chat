@@ -754,4 +754,15 @@ class FuzzyChatLocalizationsEn extends FuzzyChatLocalizations {
 
   @override
   String get wrongChatBlob => 'This code belongs to a different chat.';
+
+  @override
+  String get alreadyUnfuzzed =>
+      'This message was already unfuzzed on this device.';
+
+  @override
+  String get blobTooOld =>
+      'This message is too old to unfuzz — too many newer messages were unfuzzed first.';
+
+  @override
+  String get corruptBlob => 'This is not a valid fuzzed message.';
 }

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fuzzy_chat/lib.dart';
@@ -9,9 +8,8 @@ part 'connected_chat_state.dart';
 class ConnectedChatCubit extends Cubit<ConnectedChatState> {
   ConnectedChatCubit({
     required this.messageDataRepository,
-    required this.keyStorageRepository,
+    required this.cryptoCoreService,
     required this.chatId,
-    this.chatSymmetricKey,
     this.messagesPerPage = 8,
   }) : super(
           const ConnectedChatState(
@@ -26,10 +24,9 @@ class ConnectedChatCubit extends Cubit<ConnectedChatState> {
   late final StreamSubscription<NewMessageAdded> _newMessageUpdatesSubscription;
 
   final MessageDataRepository messageDataRepository;
-  final KeyStorageRepository keyStorageRepository;
+  final CryptoCoreService cryptoCoreService;
 
   final String chatId;
-  Uint8List? chatSymmetricKey;
 
   final int messagesPerPage;
   int currentPage = 0;
@@ -95,35 +92,10 @@ class ConnectedChatCubit extends Cubit<ConnectedChatState> {
         return;
       }
 
-      chatSymmetricKey = chatSymmetricKey ??
-          await keyStorageRepository.getSymmetricKey(chatId);
-
-      if (chatSymmetricKey == null) {
-        throw Exception('Symmetric key not found');
-      }
-
-      final symmetricKey = chatSymmetricKey!;
-
-      final decryptedMessages = await Future.wait(
-        paginatedMessages.map((message) async {
-          if (message.type.isText) {
-            final decryptedMessage = await AESService.decryptText(
-              message.encryptedMessage,
-              symmetricKey,
-            );
-            return message.copyWith(decryptedMessage: decryptedMessage);
-          } else {
-            return message.copyWith(
-              decryptedMessage: message.encryptedMessage,
-            );
-          }
-        }),
-      );
-
-      // Append newly loaded messages to the existing list
+      // The repository has already opened each row's local seal.
       final updatedMessages = [
         ...state.messages,
-        ...decryptedMessages,
+        ...paginatedMessages,
       ];
 
       emit(
@@ -154,23 +126,34 @@ class ConnectedChatCubit extends Cubit<ConnectedChatState> {
       ),
     );
 
+    final encryptRes = await cryptoCoreService.encryptText(
+      chatId: chatId,
+      text: text,
+    );
+
+    if (encryptRes is CryptoCoreFailure<String>) {
+      emit(
+        state.copyWith(
+          actionStatus: StateStatus.failed,
+          actionType: ChatActionType.sendMessage,
+          actionFailure: ConnectedChatFailure(
+            type: _failureTypeOf(encryptRes.type),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final blob = (encryptRes as CryptoCoreSuccess<String>).data;
+
     try {
-      chatSymmetricKey = chatSymmetricKey ??
-          await keyStorageRepository.getSymmetricKey(chatId);
-
-      if (chatSymmetricKey == null) {
-        throw Exception('Symmetric key not found');
-      }
-
-      final symmetricKey = chatSymmetricKey!;
-
-      final encryptedMessage = await AESService.encryptText(text, symmetricKey);
-
+      // The ratchet has moved on: this seal-and-store is the only copy of
+      // the plaintext a sender will ever be able to read back.
       final message = MessageData(
         id: 0,
         type: MessageType.text,
         chatId: chatId,
-        encryptedMessage: encryptedMessage,
+        encryptedMessage: blob.substring(fuzzIdentificator.length),
         decryptedMessage: text,
         sentAt: DateTime.now(),
         isSent: true,
@@ -200,7 +183,9 @@ class ConnectedChatCubit extends Cubit<ConnectedChatState> {
         state.copyWith(
           actionStatus: StateStatus.failed,
           actionType: ChatActionType.sendMessage,
-          actionFailure: DefaultFailure(),
+          actionFailure: ConnectedChatFailure(
+            type: ConnectedChatFailureType.unknown,
+          ),
         ),
       );
     }
@@ -216,19 +201,30 @@ class ConnectedChatCubit extends Cubit<ConnectedChatState> {
       ),
     );
 
+    final decryptRes = await cryptoCoreService.decryptText(
+      chatId: chatId,
+      blob: '$fuzzIdentificator$encryptedText',
+    );
+
+    if (decryptRes is CryptoCoreFailure<String>) {
+      emit(
+        state.copyWith(
+          actionStatus: StateStatus.failed,
+          actionType: ChatActionType.receiveMessage,
+          actionFailure: ConnectedChatFailure(
+            type: _failureTypeOf(decryptRes.type),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final decryptedMessage = (decryptRes as CryptoCoreSuccess<String>).data;
+
     try {
-      chatSymmetricKey = chatSymmetricKey ??
-          await keyStorageRepository.getSymmetricKey(chatId);
-
-      if (chatSymmetricKey == null) {
-        throw Exception('Symmetric key not found');
-      }
-
-      final symmetricKey = chatSymmetricKey!;
-
-      final decryptedMessage =
-          await AESService.decryptText(encryptedText, symmetricKey);
-
+      // The core has already persisted the advanced ratchet, so the blob can
+      // never be unfuzzed again: the sealed row must be on disk before the
+      // message is shown, or a crash in between loses the plaintext.
       final message = MessageData(
         id: 0,
         chatId: chatId,
@@ -263,7 +259,9 @@ class ConnectedChatCubit extends Cubit<ConnectedChatState> {
         state.copyWith(
           actionStatus: StateStatus.failed,
           actionType: ChatActionType.receiveMessage,
-          actionFailure: DefaultFailure(),
+          actionFailure: ConnectedChatFailure(
+            type: ConnectedChatFailureType.unknown,
+          ),
         ),
       );
     }
@@ -298,7 +296,9 @@ class ConnectedChatCubit extends Cubit<ConnectedChatState> {
         state.copyWith(
           actionStatus: StateStatus.failed,
           actionType: ChatActionType.deleteMessage,
-          actionFailure: DefaultFailure(),
+          actionFailure: ConnectedChatFailure(
+            type: ConnectedChatFailureType.unknown,
+          ),
         ),
       );
     }
@@ -329,9 +329,23 @@ class ConnectedChatCubit extends Cubit<ConnectedChatState> {
         state.copyWith(
           actionStatus: StateStatus.failed,
           actionType: ChatActionType.deleteAllMessages,
-          actionFailure: DefaultFailure(),
+          actionFailure: ConnectedChatFailure(
+            type: ConnectedChatFailureType.unknown,
+          ),
         ),
       );
     }
+  }
+
+  static ConnectedChatFailureType _failureTypeOf(CryptoCoreFailureType type) {
+    return switch (type) {
+      CryptoCoreFailureType.replay => ConnectedChatFailureType.alreadyUnfuzzed,
+      CryptoCoreFailureType.wrongChat => ConnectedChatFailureType.wrongChat,
+      CryptoCoreFailureType.tooOld => ConnectedChatFailureType.tooOld,
+      CryptoCoreFailureType.corrupt ||
+      CryptoCoreFailureType.unsupportedFormat =>
+        ConnectedChatFailureType.corrupt,
+      _ => ConnectedChatFailureType.unknown,
+    };
   }
 }

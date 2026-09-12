@@ -102,6 +102,7 @@ class DependencyInjection {
     sl.safeRegisterSingleton<MessageDataRepository>(
       MessageDataRepository(
         localDataSource: MessageDataLocalDataSource(isar: sl.get()),
+        cryptoCoreService: sl.get<CryptoCoreService>(),
       ),
     );
 
