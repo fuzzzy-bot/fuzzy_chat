@@ -655,6 +655,9 @@ class FuzzyChatLocalizationsEn extends FuzzyChatLocalizations {
   String get chatAuthMigratingKeys => 'Encrypting your keys...';
 
   @override
+  String get chatAuthResecuringKeys => 'Re-securing your keys…';
+
+  @override
   String get chatAuthentication => 'Chat Authentication';
 
   @override

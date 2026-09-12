@@ -861,7 +861,7 @@ function; the KEK is a wiped 32-byte buffer; the AEAD object wipes its key on dr
   would have to be introduced with an explicit discriminator (a new prefix or a byte after the prefix) and
   documented here; a version-1 decoder fed base91 text refuses it at §6.1 step 3, because base91 uses
   characters outside the base64url alphabet — it can never be misread as base64url.
-- **Crate pins** (§15): the five cryptographic crates and the FFI crate are `=`-pinned in `Cargo.toml`; the
+- **Crate pins** (§15): the four cryptographic crates and the FFI crate are `=`-pinned in `Cargo.toml`; the
   other nine dependencies are caret ranges. The effective pin for *every* crate is `Cargo.lock`, which CI builds
   `--locked`, so no resolution can change without a lock-file commit. A dependency upgrade that changes bytes
   additionally fails the vector check in `cargo test` (§Appendix A) and is therefore a deliberate act, not an

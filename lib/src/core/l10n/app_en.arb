@@ -420,6 +420,8 @@
   "@chatAuthProtectionDescription": {},
   "chatAuthMigratingKeys": "Encrypting your keys...",
   "@chatAuthMigratingKeys": {},
+  "chatAuthResecuringKeys": "Re-securing your keys…",
+  "@chatAuthResecuringKeys": {},
   "chatAuthentication": "Chat Authentication",
   "@chatAuthentication": {},
   "chatAuthenticationDescription": "Manage chat password protection",

@@ -337,6 +337,22 @@ mod tests {
         // window plan §B.6 describes.
         assert!(b.olm_decrypt(CHAT_X, &blobs[N - 1]).is_ok());
 
+        // (iv) Read-forward (PROTOCOL §14 point 3): the snapshot holds the receiving
+        // chain, so a message A sends after the snapshot opens from it too ...
+        let later = a.core.encrypt_text(CHAT_X.into(), "m5".into()).unwrap();
+        assert!(b.olm_decrypt(CHAT_X, &later).is_ok());
+        // ... until a round trip: B sends (new ratchet key), A reads it, and A's
+        // next message is on a chain the snapshot never derived — PCS heals.
+        let reply = b.core.encrypt_text(CHAT_X.into(), "r".into()).unwrap();
+        a.core.decrypt_text(CHAT_X.into(), reply).unwrap();
+        let healed = a.core.encrypt_text(CHAT_X.into(), "m6".into()).unwrap();
+        fs::write(b.state_file(CHAT_X), &snapshot).unwrap();
+        b.reopen();
+        assert!(matches!(
+            b.olm_decrypt(CHAT_X, &healed),
+            Err(DecryptionError::InvalidMAC(_))
+        ));
+
         // The sender holds only the sending key: A can never decrypt its own
         // blobs — Olm's MAC fails (`Corrupt`), not a header or counter refusal.
         for blob in &blobs {

@@ -1308,6 +1308,12 @@ abstract class FuzzyChatLocalizations {
   /// **'Encrypting your keys...'**
   String get chatAuthMigratingKeys;
 
+  /// No description provided for @chatAuthResecuringKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-securing your keys…'**
+  String get chatAuthResecuringKeys;
+
   /// No description provided for @chatAuthentication.
   ///
   /// In en, this message translates to:

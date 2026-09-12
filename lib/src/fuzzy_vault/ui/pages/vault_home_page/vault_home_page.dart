@@ -138,7 +138,13 @@ class _VaultTabBar extends StatelessWidget {
               children: [
                 const Icon(Icons.key_rounded, size: 16),
                 const SizedBox(width: 6),
-                Text(currentContextLocalization.vaultPasswords),
+                Flexible(
+                  child: Text(
+                    currentContextLocalization.vaultPasswords,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
@@ -149,7 +155,13 @@ class _VaultTabBar extends StatelessWidget {
               children: [
                 const Icon(Icons.notes_rounded, size: 16),
                 const SizedBox(width: 6),
-                Text(currentContextLocalization.vaultNotes),
+                Flexible(
+                  child: Text(
+                    currentContextLocalization.vaultNotes,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
@@ -160,7 +172,13 @@ class _VaultTabBar extends StatelessWidget {
               children: [
                 const Icon(Icons.file_present_rounded, size: 16),
                 const SizedBox(width: 6),
-                Text(currentContextLocalization.vaultFiles),
+                Flexible(
+                  child: Text(
+                    currentContextLocalization.vaultFiles,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),

@@ -420,6 +420,8 @@
   "@chatAuthProtectionDescription": {},
   "chatAuthMigratingKeys": "გასაღებების დაშიფვრა...",
   "@chatAuthMigratingKeys": {},
+  "chatAuthResecuringKeys": "გასაღებების ხელახლა დაცვა…",
+  "@chatAuthResecuringKeys": {},
   "chatAuthentication": "ჩატის ავთენტიფიკაცია",
   "@chatAuthentication": {},
   "chatAuthenticationDescription": "ჩატის პაროლით დაცვის მართვა",

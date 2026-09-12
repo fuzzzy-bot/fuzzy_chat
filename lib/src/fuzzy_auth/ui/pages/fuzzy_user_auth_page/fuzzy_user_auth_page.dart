@@ -301,7 +301,9 @@ class _FuzzyUserAuthPageContentState extends State<_FuzzyUserAuthPageContent> {
                       const CircularProgressIndicator(),
                       const SizedBox(height: 16),
                       Text(
-                        localizations.chatAuthMigratingKeys,
+                        state.lastAction == AuthPreferencesAction.changePassword
+                            ? localizations.chatAuthResecuringKeys
+                            : localizations.chatAuthMigratingKeys,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: Colors.white,
                         ),

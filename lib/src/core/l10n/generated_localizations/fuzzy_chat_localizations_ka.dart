@@ -662,6 +662,9 @@ class FuzzyChatLocalizationsKa extends FuzzyChatLocalizations {
   String get chatAuthMigratingKeys => 'გასაღებების დაშიფვრა...';
 
   @override
+  String get chatAuthResecuringKeys => 'გასაღებების ხელახლა დაცვა…';
+
+  @override
   String get chatAuthentication => 'ჩატის ავთენტიფიკაცია';
 
   @override

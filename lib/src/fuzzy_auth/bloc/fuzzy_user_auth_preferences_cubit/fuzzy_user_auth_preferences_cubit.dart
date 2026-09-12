@@ -23,7 +23,12 @@ class FuzzyUserAuthPreferencesCubit
         );
 
   Future<void> enableAuth(String password) async {
-    emit(state.copyWith(activationStatus: StateStatus.loading));
+    emit(
+      state.copyWith(
+        activationStatus: StateStatus.loading,
+        lastAction: AuthPreferencesAction.enable,
+      ),
+    );
     try {
       final isSetUp = await _chatAuthRepository.setupPassword(password);
       if (!isSetUp) {
@@ -57,7 +62,12 @@ class FuzzyUserAuthPreferencesCubit
     required String oldPassword,
     required String newPassword,
   }) async {
-    emit(state.copyWith(activationStatus: StateStatus.loading));
+    emit(
+      state.copyWith(
+        activationStatus: StateStatus.loading,
+        lastAction: AuthPreferencesAction.changePassword,
+      ),
+    );
     try {
       final success = await _fuzzyAuthStore.changePassword(
         oldPassword: oldPassword,
@@ -92,7 +102,12 @@ class FuzzyUserAuthPreferencesCubit
   }
 
   Future<void> disableAuth(String currentPassword) async {
-    emit(state.copyWith(activationStatus: StateStatus.loading));
+    emit(
+      state.copyWith(
+        activationStatus: StateStatus.loading,
+        lastAction: AuthPreferencesAction.disable,
+      ),
+    );
     try {
       final isValid = await _chatAuthRepository.verifyPassword(currentPassword);
       if (!isValid) {
@@ -137,7 +152,12 @@ class FuzzyUserAuthPreferencesCubit
   }
 
   Future<void> enableBiometric(String currentPassword) async {
-    emit(state.copyWith(activationStatus: StateStatus.loading));
+    emit(
+      state.copyWith(
+        activationStatus: StateStatus.loading,
+        lastAction: AuthPreferencesAction.enableBiometric,
+      ),
+    );
     try {
       final isValid = await _chatAuthRepository.verifyPassword(currentPassword);
       if (!isValid) {
@@ -174,7 +194,12 @@ class FuzzyUserAuthPreferencesCubit
   }
 
   Future<void> disableBiometric() async {
-    emit(state.copyWith(activationStatus: StateStatus.loading));
+    emit(
+      state.copyWith(
+        activationStatus: StateStatus.loading,
+        lastAction: AuthPreferencesAction.disableBiometric,
+      ),
+    );
     try {
       await _biometricAuthRepository.disable(BiometricScope.chat);
       await _fuzzyAuthStore.setBiometricEnabled(enabled: false);

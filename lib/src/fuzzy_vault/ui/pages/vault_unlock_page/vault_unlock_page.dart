@@ -62,8 +62,10 @@ class _VaultUnlockPageState extends State<VaultUnlockPage>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                currentContextLocalization
-                    .vaultUnlockFailed(state.failureType!.name),
+                state.failureType == VaultFailureType.incorrectMasterPassword
+                    ? currentContextLocalization.vaultIncorrectPassword
+                    : currentContextLocalization
+                        .vaultUnlockFailed(state.failureType!.name),
               ),
             ),
           );

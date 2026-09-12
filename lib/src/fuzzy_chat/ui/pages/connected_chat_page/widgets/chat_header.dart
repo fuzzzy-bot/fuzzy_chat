@@ -38,27 +38,37 @@ class ChatHeader extends StatelessWidget {
               onPressed: onBackPressed,
             ),
             const SizedBox(width: 8),
-            Text(
-              chatGeneralData.chatName,
-              style: fuzzzyTextStyles.titleM.copyWith(color: fuzzzyColors.ink),
-            ),
-            BlocBuilder<SafetyNumberCubit, SafetyNumberState>(
-              builder: (context, state) {
-                return IconButton(
-                  key: const ValueKey('verify_shield_button'),
-                  icon: Icon(
-                    state.isVerified
-                        ? Icons.verified_user
-                        : Icons.shield_outlined,
-                    color: state.isVerified
-                        ? fuzzzyColors.ink
-                        : fuzzzyColors.inkMute,
+            Expanded(
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      chatGeneralData.chatName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: fuzzzyTextStyles.titleM
+                          .copyWith(color: fuzzzyColors.ink),
+                    ),
                   ),
-                  onPressed: () => _openSafetyNumber(context),
-                );
-              },
+                  BlocBuilder<SafetyNumberCubit, SafetyNumberState>(
+                    builder: (context, state) {
+                      return IconButton(
+                        key: const ValueKey('verify_shield_button'),
+                        icon: Icon(
+                          state.isVerified
+                              ? Icons.verified_user
+                              : Icons.shield_outlined,
+                          color: state.isVerified
+                              ? fuzzzyColors.ink
+                              : fuzzzyColors.inkMute,
+                        ),
+                        onPressed: () => _openSafetyNumber(context),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-            const Spacer(),
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: FuzzyOverlaySpawner(
