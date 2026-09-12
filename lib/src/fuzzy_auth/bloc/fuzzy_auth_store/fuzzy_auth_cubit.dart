@@ -7,13 +7,19 @@ class FuzzyAuthStore extends Cubit<FuzzyAuthState> {
   FuzzyAuthStore({
     required this.chatAuthRepository,
     required this.biometricAuthRepository,
+    required this.cryptoStoreKeyRepository,
+    required this.cryptoCoreService,
   }) : super(
           const FuzzyAuthState.initial(),
         );
 
   final ChatAuthRepository chatAuthRepository;
   final BiometricAuthRepository biometricAuthRepository;
+  final CryptoStoreKeyRepository cryptoStoreKeyRepository;
+  final CryptoCoreService cryptoCoreService;
 
+  /// The store is open whenever the status is `noAuthRequired` or
+  /// `authenticated`, and closed on [lock].
   Future<void> checkAuthStatus() async {
     final enabled = await chatAuthRepository.isChatAuthEnabled();
     final biometricEnabled =
@@ -26,6 +32,7 @@ class FuzzyAuthStore extends Cubit<FuzzyAuthState> {
         ),
       );
     } else {
+      await _openStoreWithoutPassword();
       emit(
         state.copyWith(
           status: AuthStateStatus.noAuthRequired,
@@ -33,6 +40,17 @@ class FuzzyAuthStore extends Cubit<FuzzyAuthState> {
         ),
       );
     }
+  }
+
+  Future<void> _openStoreWithoutPassword() async {
+    final ensureRes = await cryptoStoreKeyRepository.ensureStoreKey('');
+    if (ensureRes is CryptoCoreFailure) {
+      logger.e('Store key could not be created: ${ensureRes.type}');
+      return;
+    }
+
+    final opened = await chatAuthRepository.verifyPassword('');
+    if (!opened) logger.e('Store did not open with the lock disabled');
   }
 
   Future<void> unlockWithBiometrics() async {
@@ -96,7 +114,8 @@ class FuzzyAuthStore extends Cubit<FuzzyAuthState> {
     );
   }
 
-  void lock() {
+  Future<void> lock() async {
+    await cryptoCoreService.close();
     emit(
       state.copyWith(
         status: AuthStateStatus.locked,

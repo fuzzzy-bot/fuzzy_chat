@@ -57,9 +57,23 @@ class DependencyInjection {
       ),
     );
 
+    sl.safeRegisterSingleton<CryptoCoreService>(
+      CryptoCoreService(
+        storeDirectoryPath: sl.get<AppSupportDirectory>().directory.path,
+      ),
+    );
+
+    sl.safeRegisterSingleton<CryptoStoreKeyRepository>(
+      CryptoStoreKeyRepository(
+        cryptoCoreService: sl.get<CryptoCoreService>(),
+      ),
+    );
+
     sl.safeRegisterSingleton<ChatAuthRepository>(
       ChatAuthRepository(
         userAuthPreferencesRepository: sl.get<UserAuthPreferencesRepository>(),
+        cryptoStoreKeyRepository: sl.get<CryptoStoreKeyRepository>(),
+        cryptoCoreService: sl.get<CryptoCoreService>(),
       ),
     );
 
@@ -71,6 +85,8 @@ class DependencyInjection {
       FuzzyAuthStore(
         chatAuthRepository: sl.get<ChatAuthRepository>(),
         biometricAuthRepository: sl.get<BiometricAuthRepository>(),
+        cryptoStoreKeyRepository: sl.get<CryptoStoreKeyRepository>(),
+        cryptoCoreService: sl.get<CryptoCoreService>(),
       ),
     );
 

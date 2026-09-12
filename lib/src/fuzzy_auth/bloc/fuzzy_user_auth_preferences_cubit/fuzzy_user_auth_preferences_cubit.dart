@@ -31,13 +31,23 @@ class FuzzyUserAuthPreferencesCubit
   Future<void> enableAuth(String password) async {
     emit(state.copyWith(activationStatus: StateStatus.loading));
     try {
+      final isSetUp = await _chatAuthRepository.setupPassword(password);
+      if (!isSetUp) {
+        emit(
+          state.copyWith(
+            activationStatus: StateStatus.failed,
+            activationFailure: DefaultFailure(),
+          ),
+        );
+        return;
+      }
+
       final chatIds = await _allChatIds();
       await _keyStorageRepository.reencryptAllKeys(
         chatIds: chatIds,
         oldPassword: '',
         newPassword: password,
       );
-      await _chatAuthRepository.setupPassword(password);
       await _fuzzyAuthStore.onPasswordSetup(password);
       emit(
         state.copyWith(
@@ -112,13 +122,23 @@ class FuzzyUserAuthPreferencesCubit
         return;
       }
 
+      final isDisabled = await _chatAuthRepository.disableAuth(currentPassword);
+      if (!isDisabled) {
+        emit(
+          state.copyWith(
+            activationStatus: StateStatus.failed,
+            activationFailure: DefaultFailure(),
+          ),
+        );
+        return;
+      }
+
       final chatIds = await _allChatIds();
       await _keyStorageRepository.reencryptAllKeys(
         chatIds: chatIds,
         oldPassword: currentPassword,
         newPassword: '',
       );
-      await _chatAuthRepository.disableAuth();
       await _biometricAuthRepository.disable(BiometricScope.chat);
       await _fuzzyAuthStore.checkAuthStatus();
       emit(
