@@ -8,10 +8,6 @@ env:
   FLUTTER_VERSION: 3.41.7
   CARGO_TERM_COLOR: always
   CRATE: rust/fuzzy_crypto_core
-  # Dart gates (format / infos / warnings) apply to files changed since this commit; the
-  # inherited 58 unformatted files and 25 analyzer infos/warnings at the baseline are the E1
-  # publisher's one-off cleanup, after which the gates go back to whole-tree `lib test`.
-  DART_GATE_BASE: 5090f2c
 jobs:
   rust:
     runs-on: ubuntu-latest
@@ -34,7 +30,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with: { fetch-depth: 0 }   # the Dart gates diff against DART_GATE_BASE
       - uses: dtolnay/rust-toolchain@1.98.1
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: "${{ env.CRATE }}" }
@@ -44,15 +39,8 @@ jobs:
         with: { flutter-version: "${{ env.FLUTTER_VERSION }}", channel: stable, cache: true }
       - run: cargo build --release --locked --manifest-path $CRATE/Cargo.toml   # for the Dart tests' ExternalLibrary
       - run: flutter pub get
-      - run: flutter analyze --no-fatal-infos --no-fatal-warnings   # errors anywhere fail; infos/warnings gated below
-      - name: Dart gates on files changed since DART_GATE_BASE (format, infos, warnings)
-        run: |
-          set -euo pipefail
-          files=$(git diff --name-only --diff-filter=ACMR "$DART_GATE_BASE" HEAD -- 'lib/*.dart' 'test/*.dart' | grep -v '^lib/rust_bridge/' || true)
-          if [ -z "$files" ]; then echo "no Dart files changed since $DART_GATE_BASE"; exit 0; fi
-          echo "$files"
-          dart format --set-exit-if-changed --output=none $files
-          dart analyze --fatal-infos --fatal-warnings $files
+      - run: dart format --set-exit-if-changed --output=none lib test
+      - run: flutter analyze --fatal-infos --fatal-warnings
       - run: flutter test
   android:
     runs-on: ubuntu-latest
@@ -168,7 +156,7 @@ jobs:
   # ios: optional, `flutter build ios --release --no-codesign` on macos-latest; allowed to be added in Phase 5.
   attest:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [android, linux, windows, macos]
+    needs: [rust, flutter-test, android, linux, windows, macos]
     runs-on: ubuntu-latest
     permissions: { id-token: write, attestations: write, contents: read }
     steps:
