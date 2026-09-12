@@ -111,14 +111,18 @@ pub(crate) fn derive_kek(
     let block_count = params.block_count();
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     let mut kek = Zeroizing::new([0u8; 32]);
+    // Take the lock BEFORE allocating the block buffer: the point of §F.21 is
+    // one Argon2 allocation at a time per process, so the lock must bound peak
+    // memory, not only CPU — N concurrent opens with hostile headers would
+    // otherwise peak at N × 256 MiB before serialising (F4-1 review N1).
+    let _serialised = ARGON_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     // `argon2 0.6.0` never wipes its block buffer on drop (`Blocks::drop` only
     // deallocates), so the KEK stays recoverable from the freed 64 MiB until the
     // allocator reuses it (F2-2 review R2, pitfall §F.11). Own the memory in a
     // `Zeroizing` buffer and wipe it ourselves.
     let mut blocks = Zeroizing::new(vec![argon2::Block::new(); block_count]);
-    let _serialised = ARGON_LOCK
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
     argon2
         .hash_password_into_with_memory(password, salt, kek.as_mut(), blocks.as_mut_slice())
         .map_err(|_| CoreError::Corrupt)?;
@@ -150,8 +154,28 @@ pub fn wrap_store_key_with(
     salt: [u8; 16],
     nonce: [u8; 24],
 ) -> Result<Vec<u8>, CoreError> {
+    wrap_key_with(store_key, password, STORE_KEY_AAD, salt, nonce)
+}
+
+/// Inverse of [`wrap_store_key`]. A tag failure is `WrongPassword` — the AEAD
+/// cannot tell a wrong password from a tampered blob, and the password is the
+/// only input the user controls.
+pub fn unwrap_store_key(blob: &[u8], password: &[u8]) -> Result<Key32, CoreError> {
+    unwrap_key(blob, password, STORE_KEY_AAD)
+}
+
+/// The 0x10 construction for any 32-byte key: the `aad` names the key's role
+/// (`store-key` for the app lock, `vault-key` for the vault), so a blob
+/// wrapped for one role never unwraps as the other (F4-1 review N2).
+pub(crate) fn wrap_key_with(
+    key: &[u8; 32],
+    password: &[u8],
+    aad: &[u8],
+    salt: [u8; 16],
+    nonce: [u8; 24],
+) -> Result<Vec<u8>, CoreError> {
     let kek = derive_kek(password, &salt, ARGON2_PARAMS)?;
-    let ciphertext: [u8; WRAPPED_STORE_KEY_CT_LEN] = seal(&kek, &nonce, STORE_KEY_AAD, store_key)?
+    let ciphertext: [u8; WRAPPED_STORE_KEY_CT_LEN] = seal(&kek, &nonce, aad, key)?
         .try_into()
         .map_err(|_| CoreError::Internal)?;
     Ok(WrappedStoreKey {
@@ -163,14 +187,12 @@ pub fn wrap_store_key_with(
     .encode())
 }
 
-/// Inverse of [`wrap_store_key`]. A tag failure is `WrongPassword` — the AEAD
-/// cannot tell a wrong password from a tampered blob, and the password is the
-/// only input the user controls.
-pub fn unwrap_store_key(blob: &[u8], password: &[u8]) -> Result<Key32, CoreError> {
+/// Inverse of [`wrap_key_with`] under the same `aad`; tag failure is `WrongPassword`.
+pub(crate) fn unwrap_key(blob: &[u8], password: &[u8], aad: &[u8]) -> Result<Key32, CoreError> {
     let wrapped = WrappedStoreKey::decode(blob)?;
     let kek = derive_kek(password, &wrapped.salt, wrapped.params)?;
     let plain = Zeroizing::new(
-        open(&kek, &wrapped.nonce, STORE_KEY_AAD, &wrapped.ciphertext)
+        open(&kek, &wrapped.nonce, aad, &wrapped.ciphertext)
             .map_err(|_| CoreError::WrongPassword)?,
     );
     let mut store_key = Zeroizing::new([0u8; 32]);
