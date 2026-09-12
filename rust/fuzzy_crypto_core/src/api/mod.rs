@@ -4,3 +4,4 @@ pub mod health;
 pub mod local;
 pub mod messages;
 pub mod pairing;
+pub mod safety;

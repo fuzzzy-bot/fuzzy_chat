@@ -271,5 +271,34 @@ void main() {
         throwsA(CoreError.replay),
       );
     });
+
+    test('safety number is identical on both sides; markVerified round-trips',
+        () async {
+      // Nothing to compare before the pairing.
+      await expectLater(
+        a.safetyNumber(chatId: _chatId),
+        throwsA(CoreError.unknownChat),
+      );
+
+      final invitation = await a.createInvitation(chatId: _chatId);
+      final acceptance = await b.acceptInvitation(
+        chatId: _chatId,
+        invitation: invitation,
+      );
+      await a.completeHandshake(chatId: _chatId, acceptance: acceptance);
+
+      final onA = await a.safetyNumber(chatId: _chatId);
+      final onB = await b.safetyNumber(chatId: _chatId);
+      expect(onA, onB);
+      expect(onA, matches(RegExp(r'^\d{5}( \d{5}){11}$')));
+      expect(onA.replaceAll(' ', ''), hasLength(60));
+
+      expect(await a.isVerified(chatId: _chatId), isFalse);
+      await a.markVerified(chatId: _chatId, verified: true);
+      expect(await a.isVerified(chatId: _chatId), isTrue);
+      expect(await b.isVerified(chatId: _chatId), isFalse);
+      await a.markVerified(chatId: _chatId, verified: false);
+      expect(await a.isVerified(chatId: _chatId), isFalse);
+    });
   });
 }

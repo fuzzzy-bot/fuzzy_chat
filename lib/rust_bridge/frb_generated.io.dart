@@ -53,6 +53,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   BlobType dco_decode_blob_type(dynamic raw);
 
   @protected
+  bool dco_decode_bool(dynamic raw);
+
+  @protected
   ChatStatus dco_decode_chat_status(dynamic raw);
 
   @protected
@@ -103,6 +106,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   BlobType sse_decode_blob_type(SseDeserializer deserializer);
 
   @protected
+  bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
   ChatStatus sse_decode_chat_status(SseDeserializer deserializer);
 
   @protected
@@ -125,9 +131,6 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   BigInt sse_decode_usize(SseDeserializer deserializer);
-
-  @protected
-  bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
   void
@@ -156,6 +159,9 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
   void sse_encode_blob_type(BlobType self, SseSerializer serializer);
 
   @protected
+  void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
   void sse_encode_chat_status(ChatStatus self, SseSerializer serializer);
 
   @protected
@@ -179,9 +185,6 @@ abstract class FuzzyCryptoCoreLibApiImplPlatform
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer);
 }
 
 // Section: wire_class

@@ -73,7 +73,7 @@ class FuzzyCryptoCoreLib extends BaseEntrypoint<FuzzyCryptoCoreLibApi,
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1688376015;
+  int get rustContentHash => -282240655;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -118,8 +118,19 @@ abstract class FuzzyCryptoCoreLibApi extends BaseApi {
   Future<String> crateApiCoreCryptoCoreEncryptText(
       {required CryptoCore that, required String chatId, required String text});
 
+  Future<bool> crateApiCoreCryptoCoreIsVerified(
+      {required CryptoCore that, required String chatId});
+
+  Future<void> crateApiCoreCryptoCoreMarkVerified(
+      {required CryptoCore that,
+      required String chatId,
+      required bool verified});
+
   Future<Uint8List> crateApiCoreCryptoCoreOpenLocal(
       {required CryptoCore that, required List<int> blob});
+
+  Future<String> crateApiCoreCryptoCoreSafetyNumber(
+      {required CryptoCore that, required String chatId});
 
   Future<Uint8List> crateApiCoreCryptoCoreSealLocal(
       {required CryptoCore that, required List<int> bytes});
@@ -455,6 +466,65 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
       );
 
   @override
+  Future<bool> crateApiCoreCryptoCoreIsVerified(
+      {required CryptoCore that, required String chatId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+            that, serializer);
+        sse_encode_String(chatId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 11, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_core_error,
+      ),
+      constMeta: kCrateApiCoreCryptoCoreIsVerifiedConstMeta,
+      argValues: [that, chatId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCoreCryptoCoreIsVerifiedConstMeta =>
+      const TaskConstMeta(
+        debugName: "CryptoCore_is_verified",
+        argNames: ["that", "chatId"],
+      );
+
+  @override
+  Future<void> crateApiCoreCryptoCoreMarkVerified(
+      {required CryptoCore that,
+      required String chatId,
+      required bool verified}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+            that, serializer);
+        sse_encode_String(chatId, serializer);
+        sse_encode_bool(verified, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 12, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_core_error,
+      ),
+      constMeta: kCrateApiCoreCryptoCoreMarkVerifiedConstMeta,
+      argValues: [that, chatId, verified],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCoreCryptoCoreMarkVerifiedConstMeta =>
+      const TaskConstMeta(
+        debugName: "CryptoCore_mark_verified",
+        argNames: ["that", "chatId", "verified"],
+      );
+
+  @override
   Future<Uint8List> crateApiCoreCryptoCoreOpenLocal(
       {required CryptoCore that, required List<int> blob}) {
     return handler.executeNormal(NormalTask(
@@ -464,7 +534,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
             that, serializer);
         sse_encode_list_prim_u_8_loose(blob, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 11, port: port_);
+            funcId: 13, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -483,6 +553,34 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
       );
 
   @override
+  Future<String> crateApiCoreCryptoCoreSafetyNumber(
+      {required CryptoCore that, required String chatId}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
+            that, serializer);
+        sse_encode_String(chatId, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 14, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_core_error,
+      ),
+      constMeta: kCrateApiCoreCryptoCoreSafetyNumberConstMeta,
+      argValues: [that, chatId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCoreCryptoCoreSafetyNumberConstMeta =>
+      const TaskConstMeta(
+        debugName: "CryptoCore_safety_number",
+        argNames: ["that", "chatId"],
+      );
+
+  @override
   Future<Uint8List> crateApiCoreCryptoCoreSealLocal(
       {required CryptoCore that, required List<int> bytes}) {
     return handler.executeNormal(NormalTask(
@@ -492,7 +590,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
             that, serializer);
         sse_encode_list_prim_u_8_loose(bytes, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 12, port: port_);
+            funcId: 15, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -518,7 +616,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
             that, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 13, port: port_);
+            funcId: 16, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -542,7 +640,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(text, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_blob_type,
@@ -565,7 +663,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 15, port: port_);
+            funcId: 18, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -589,7 +687,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(password, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 16, port: port_);
+            funcId: 19, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -618,7 +716,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
         sse_encode_list_prim_u_8_loose(wrapped, serializer);
         sse_encode_String(password, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 17, port: port_);
+            funcId: 20, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData:
@@ -642,7 +740,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(text, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -671,7 +769,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
         sse_encode_String(oldPassword, serializer);
         sse_encode_String(newPassword, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 19, port: port_);
+            funcId: 22, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -695,7 +793,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_list_prim_u_8_loose(bytes, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 20, port: port_);
+            funcId: 23, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -762,6 +860,12 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   BlobType dco_decode_blob_type(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return BlobType.values[raw as int];
+  }
+
+  @protected
+  bool dco_decode_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as bool;
   }
 
   @protected
@@ -863,6 +967,12 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   }
 
   @protected
+  bool sse_decode_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
   ChatStatus sse_decode_chat_status(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
@@ -914,12 +1024,6 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   }
 
   @protected
-  bool sse_decode_bool(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getUint8() != 0;
-  }
-
-  @protected
   void
       sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
           CryptoCore self, SseSerializer serializer) {
@@ -965,6 +1069,12 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   void sse_encode_blob_type(BlobType self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self ? 1 : 0);
   }
 
   @protected
@@ -1017,12 +1127,6 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   void sse_encode_usize(BigInt self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putBigUint64(self);
-  }
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putUint8(self ? 1 : 0);
   }
 }
 
@@ -1117,10 +1221,31 @@ class CryptoCoreImpl extends RustOpaque implements CryptoCore {
       FuzzyCryptoCoreLib.instance.api.crateApiCoreCryptoCoreEncryptText(
           that: this, chatId: chatId, text: text);
 
+  /// The persisted flag; `false` for every chat until [`CryptoCore::mark_verified`].
+  Future<bool> isVerified({required String chatId}) =>
+      FuzzyCryptoCoreLib.instance.api
+          .crateApiCoreCryptoCoreIsVerified(that: this, chatId: chatId);
+
+  /// Persists whether the user compared the safety number with the peer. The
+  /// flag is on disk before this returns; a chat that is not paired yet is
+  /// `UnknownChat`.
+  Future<void> markVerified({required String chatId, required bool verified}) =>
+      FuzzyCryptoCoreLib.instance.api.crateApiCoreCryptoCoreMarkVerified(
+          that: this, chatId: chatId, verified: verified);
+
   /// Inverse of [`CryptoCore::seal_local`]; a tampered or foreign blob is `Corrupt`.
   Future<Uint8List> openLocal({required List<int> blob}) =>
       FuzzyCryptoCoreLib.instance.api
           .crateApiCoreCryptoCoreOpenLocal(that: this, blob: blob);
+
+  /// The chat's 60-digit safety number (`"12345 67890 …"`, 12 groups), derived
+  /// from both Ed25519 identity keys and the chat id (plan §B.3) — identical on
+  /// both sides of a pairing. `UnknownChat` for a chat the store does not know
+  /// or that is not paired yet. Nothing secret is involved; it stays async
+  /// like every other call on the handle.
+  Future<String> safetyNumber({required String chatId}) =>
+      FuzzyCryptoCoreLib.instance.api
+          .crateApiCoreCryptoCoreSafetyNumber(that: this, chatId: chatId);
 
   /// Seals `bytes` for local storage (message history, F2-8) under the
   /// HKDF-derived local key: a 0x20 blob with a fresh random nonce.

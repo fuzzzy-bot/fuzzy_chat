@@ -89,8 +89,23 @@ abstract class CryptoCore implements RustOpaqueInterface {
   /// chat id is `UnknownChat`.
   Future<String> encryptText({required String chatId, required String text});
 
+  /// The persisted flag; `false` for every chat until [`CryptoCore::mark_verified`].
+  Future<bool> isVerified({required String chatId});
+
+  /// Persists whether the user compared the safety number with the peer. The
+  /// flag is on disk before this returns; a chat that is not paired yet is
+  /// `UnknownChat`.
+  Future<void> markVerified({required String chatId, required bool verified});
+
   /// Inverse of [`CryptoCore::seal_local`]; a tampered or foreign blob is `Corrupt`.
   Future<Uint8List> openLocal({required List<int> blob});
+
+  /// The chat's 60-digit safety number (`"12345 67890 …"`, 12 groups), derived
+  /// from both Ed25519 identity keys and the chat id (plan §B.3) — identical on
+  /// both sides of a pairing. `UnknownChat` for a chat the store does not know
+  /// or that is not paired yet. Nothing secret is involved; it stays async
+  /// like every other call on the handle.
+  Future<String> safetyNumber({required String chatId});
 
   /// Seals `bytes` for local storage (message history, F2-8) under the
   /// HKDF-derived local key: a 0x20 blob with a fresh random nonce.

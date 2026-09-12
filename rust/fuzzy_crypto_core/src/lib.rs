@@ -9,5 +9,6 @@ pub mod formats;
 mod frb_generated;
 pub mod messages;
 pub mod pairing;
+pub mod safety;
 pub mod state;
 pub mod store;
