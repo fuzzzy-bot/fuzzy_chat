@@ -64,7 +64,7 @@ design is `HARDENING_2026.md` (F5-5). This document only says *what the bytes ar
 | **A, the inviter** | The device that creates a chat. It generates the Olm account and the one-time key, publishes the **invitation**, and later completes the handshake from the acceptance. Direction byte `0x00 = A→B`. |
 | **B, the accepter** | The device that pastes the invitation. It generates its own Olm account, creates the outbound session on A's one-time key, and publishes the **acceptance**. Direction byte `0x01 = B→A`. |
 | **Device / store** | One installation of the app. It owns exactly one *store*: a directory `<app support dir>/fuzzy_crypto_store/` ([`store.rs#L26`](../../rust/fuzzy_crypto_core/src/store.rs#L26)) of sealed state files and one 32-byte **store key**. A device is a store; the protocol has no other notion of identity. |
-| **chat_id** | A UUID v4 in its canonical lowercase text form, chosen by A's app when the chat is created. It names the chat on both devices and is a file-name component on disk, so it is validated by **shape** before any other use: exactly 36 bytes, `[0-9a-f]` everywhere except a `-` at offsets 8, 13, 18 and 23 ([`store.rs#L241`](../../rust/fuzzy_crypto_core/src/store.rs#L241)). The version and variant nibbles are *not* checked. Anything else is `Corrupt`. The wire codec itself only requires 1..=255 bytes of UTF-8; the shape check runs at every API entry that takes a chat id from Dart, and a chat id read out of a blob is only ever *compared* with an already-validated one, never used as a path. |
+| **chat_id** | A UUID v4 in its canonical lowercase text form, chosen by A's app when the chat is created. It names the chat on both devices and is a file-name component on disk, so it is validated by **shape** before any other use: exactly 36 bytes, `[0-9a-f]` everywhere except a `-` at offsets 8, 13, 18 and 23 ([`store.rs#L241`](../../rust/fuzzy_crypto_core/src/store.rs#L241)). The version and variant nibbles are *not* checked. Anything else is `Corrupt`. The wire codec itself only requires 1..=255 bytes of UTF-8; the shape check runs at every API entry that takes a chat id from Dart, and inside the crate a chat id read out of a blob is only ever *compared* with an already-validated one, never used as a path (the one function that hands a blob's chat id to Dart unvalidated, `peek_chat_id`, is discussed in §13). |
 | **Blob** | A binary message with the 6-byte envelope of §6.2, exchanged as `Fuzz/` text (§6.1). Types `0x01`–`0x05`. |
 | **Container** | A file with the `0x04` envelope (§9). Files are never turned into text. |
 | **Storage-only blobs** | Types `0x10` and `0x20` never travel: the paste decoder refuses them ([`formats.rs#L63`](../../rust/fuzzy_crypto_core/src/formats.rs#L63)). |
@@ -84,7 +84,7 @@ source in the crate) and never leaves it in the clear (§13).
 | **Message keys** | derived by the ratchet | one message | never stored beyond the ratchet's skipped-key store (§8.1); deleted on use. |
 | **File key** (32 random bytes) | sender, per file | one container | drawn per chat-mode file, sealed inside one Olm message in the container header (§9.4). |
 | **Store key** (32 random bytes) | one per device | for the life of the install | seals every state file and every local seal (§10). Exists only wrapped (§10.2) outside a running process. |
-| **Local key** | derived | per call | `HKDF-SHA256(ikm = store key, salt = none, info = "fuzzy-local-seal-v1")`, 32 bytes ([`store.rs#L45`](../../rust/fuzzy_crypto_core/src/store.rs#L45)). Separates the local seals (§10.4) from the state files, which use the store key directly. Vector: `local_key`. |
+| **Local key** | derived | per call | `HKDF-SHA256(ikm = store key, salt absent — RFC 5869's default of HashLen zero bytes, info = "fuzzy-local-seal-v1")`, 32 bytes ([`store.rs#L45`](../../rust/fuzzy_crypto_core/src/store.rs#L45)). Separates the local seals (§10.4) from the state files, which use the store key directly. Vector: `local_key`. |
 | **KEK** | derived | per unwrap | `Argon2id(password, salt, m, t, p)`, 32 bytes (§11). Wraps the store key and the vault master key; is the key of a password-sealed blob and of a password-mode file. |
 | **Vault master key** (32 random bytes) | one per vault | for the life of the vault | seals vault items (§10.6). Wrapped under the vault password exactly like the store key, in its own AAD domain. |
 
@@ -159,7 +159,7 @@ on B is `Internal` (B never re-accepts; recovery from a stale invitation is dele
    A_ed`, `direction = 0x01 (B→A)`, `counter = 0`, `content_type = 0x00 (handshake)`, empty body — 116 bytes
    for a 36-byte chat id. Vector: `inner_header_handshake`.
 3. `session.encrypt(header)` — necessarily a **pre-key message** on a fresh outbound session (anything else is
-   `Internal`). Its `to_bytes()` (282 bytes for the 116-byte plaintext: one 128-byte AES-CBC block plus Olm's
+   `Internal`). Its `to_bytes()` (282 bytes for the 116-byte plaintext: PKCS#7-padded to 128 bytes = eight AES-CBC blocks, plus Olm's
    envelope) goes into the signed `0x02` blob (§6.4).
 4. State: `{role: Accepter, session: Some, peer_curve25519: A_curve, peer_ed25519: A_ed, send_counter: 1,
    recv_highest: 0, recv_seen_bitmap: 0, last_acceptance: Some(blob)}`. **`send_counter` starts at 1** because
@@ -245,8 +245,12 @@ digest instead of two per-side ones. Vector: `safety_number` (chat id `6f1e9b2c-
 - **Symmetry.** The sort makes the argument order irrelevant, so A (who calls it with `(our, peer)`) and B (who
   calls it with the same two keys the other way round) get the same string.
 - **Strength.** 12 × log₂(100 000) ≈ 199 bits of the digest. An active attacker who substituted identity keys
-  on both legs of the pairing (§17) would need both devices to display the same 60 digits, i.e. a collision
-  over ~2¹⁹⁹ — infeasible. Substituting on one leg only changes the number on that side.
+  on both legs of the pairing (§17) must make both devices display the same 60 digits: A shows
+  `f(sort(A_ed, M_B))` and B shows `f(sort(M_A, B_ed))`, and the attacker chooses *both* `M_A` and `M_B`. That is a
+  birthday problem over two attacker-chosen key sets — with 2^k candidates for each substituted key a match is
+  expected once 2^(2k) ≈ 2^199, i.e. after **about 2^100 key generations plus SHA-512 evaluations** on each side
+  (not a 2^199 collision search). Still far beyond reach; the figure is stated as the birthday bound because the
+  threat model inherits it. Substituting on one leg only changes the number on that side.
 - **Binding.** The number commits to the identity keys only; but the signatures cover `a_curve25519 ‖
   a_one_time_key` and `b_curve25519 ‖ prekey_msg`, and the handshake header ties `b_ed25519` to the session
   — so the number transitively pins the 3DH inputs. It also commits to the chat id, so one chat's number
@@ -597,8 +601,12 @@ RustCrypto STREAM construction (`aead-stream` 0.6.0, `EncryptorBE32`/`DecryptorB
 
 Vectors: `file_container_password` (one 43-byte plaintext → one chunk sealed with the last flag; key =
 Argon2id(`pw`, salt `a0..af`)); `file_container_fixed_key` (65 541-byte plaintext, 64 KiB chunks → chunk 0
-with nonce `prefix ‖ 00000000 ‖ 00` and chunk 1 with `prefix ‖ 00000001 ‖ 01`; key `42×32` supplied directly,
-the benchmark path — no password opens it).
+with nonce `prefix ‖ 00000000 ‖ 00` and chunk 1 with `prefix ‖ 00000001 ‖ 01`; key `42×32` supplied directly —
+the benchmark path). The fixed-key container carries a **password-mode header** (`key_mode 0x02`, `chunk_size`
+65 536, prefix `90..a2`, salt `a0..af`, the production Argon2id parameters) whose KDF output is simply not used
+because the key was supplied, so no password opens it. Its plaintext is 65 541 bytes of xorshift64: state
+`x = 0x9e3779b97f4a7c15`; per byte `x ^= x << 13; x ^= x >> 7; x ^= x << 17` (wrapping 64-bit) and the low byte
+of the *new* `x` is emitted.
 
 ### 9.2 Decoding and what the tags detect
 
@@ -718,8 +726,8 @@ from a shape-validated chat id (§2) and is asserted to stay inside the director
 body)` ([`store.rs#L43`](../../rust/fuzzy_crypto_core/src/store.rs#L43), no separator — the chat id is fixed-length).
 Vector: `state_file` with its decrypted body in `state_file.body.json`.
 
-The body is JSON (serde) of `ChatState` ([`state.rs#L57`](../../rust/fuzzy_crypto_core/src/state.rs#L57)); JSON is
-used *only* here, never on the wire:
+The body is compact serde JSON of `ChatState` ([`state.rs#L57`](../../rust/fuzzy_crypto_core/src/state.rs#L57)) —
+fields in the table order below, no whitespace, no trailing newline; JSON is used *only* here, never on the wire:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -735,7 +743,10 @@ used *only* here, never on the wire:
 | `verified` | bool | §5 |
 | `last_invitation`, `last_acceptance` | bytes or `null` | the blob this side last produced, for re-display |
 
-The vodozemac pickles are stored as the plain serde structs vodozemac ships — **not** through
+The vodozemac pickles are stored as the plain serde structs vodozemac ships (their JSON shape —
+`signing_key.Normal`, `diffie_hellman_key`, `one_time_keys.{next_key_id, public_keys, private_keys}`,
+`fallback_keys`, and the session's chains — is vodozemac 0.10.0's serde form, reproduced verbatim in
+`state_file.body.json`; a vodozemac upgrade that changes it fails the vector check) — **not** through
 `AccountPickle::encrypt`/`SessionPickle::encrypt` (whose scheme uses a deterministic IV and an 8-byte MAC).
 One AEAD scheme with random nonces covers all local state. The JSON is produced into an exactly-sized buffer
 that is wiped after use ([`state.rs#L27`](../../rust/fuzzy_crypto_core/src/state.rs#L27)), so no partial copy of a
@@ -850,9 +861,11 @@ function; the KEK is a wiped 32-byte buffer; the AEAD object wipes its key on dr
   would have to be introduced with an explicit discriminator (a new prefix or a byte after the prefix) and
   documented here; a version-1 decoder fed base91 text refuses it at §6.1 step 3, because base91 uses
   characters outside the base64url alphabet — it can never be misread as base64url.
-- **Crate pins** (§15) are exact (`=`) in `Cargo.toml` and locked in `Cargo.lock`; CI builds `--locked`. A
-  dependency upgrade that changes bytes fails the vector check in `cargo test` (§Appendix A) and is therefore
-  a deliberate act, not an accident.
+- **Crate pins** (§15): the five cryptographic crates and the FFI crate are `=`-pinned in `Cargo.toml`; the
+  other nine dependencies are caret ranges. The effective pin for *every* crate is `Cargo.lock`, which CI builds
+  `--locked`, so no resolution can change without a lock-file commit. A dependency upgrade that changes bytes
+  additionally fails the vector check in `cargo test` (§Appendix A) and is therefore a deliberate act, not an
+  accident.
 
 ---
 
@@ -878,7 +891,9 @@ key), `FileJob` (a pause/cancel word, no secret) — and every function that tou
 ([`api/formats.rs#L22`](../../rust/fuzzy_crypto_core/src/api/formats.rs#L22), [`#L40`](../../rust/fuzzy_crypto_core/src/api/formats.rs#L40))
 and the three `FileJob` controls ([`api/files.rs#L85`](../../rust/fuzzy_crypto_core/src/api/files.rs#L85)) — none
 touches a key. `peek_chat_id` reads the chat id out of an `0x01`/`0x02` blob **without** verifying its
-signature and is documented as a routing hint only; every operation that acts on that id re-verifies (§4.1).
+signature and **without** the uuid shape check — Dart receives whatever 1..=255 bytes of UTF-8 the blob
+carries. It is a routing hint only: the Dart side validates the uuid shape before using the string as a key,
+path or query, and every crate operation that acts on that id re-validates it and re-verifies the blob (§4.1).
 
 **What the Dart side is trusted with** (and the threat model must account for): the clipboard (a blob on it
 is readable by any app that can read the clipboard), the database (§10.5), the platform secure storage for
@@ -886,8 +901,11 @@ the wrapped store key, the file system paths it passes in, and the screen. On ma
 flavour the wrapped store key is placed in the login keychain rather than the data-protection keychain, so
 unsigned developer builds can run; staging and production builds use the data-protection keychain.
 
-**Inside the crate:** every secret is a `Zeroizing` buffer or a `ZeroizeOnDrop` struct; nothing implements
-`Debug` or `Clone` for a key-holding type; there is no logging. Comparisons of secret-derived bytes against
+**Inside the crate:** every secret is a `Zeroizing` buffer or a `ZeroizeOnDrop` struct, wiped on drop; the
+crate's own key-holding structs (`ChatState`, `FileKeyBody`, `OpenStore`, the opaque handles) derive neither
+`Debug` nor `Clone` — note that the `Zeroizing<[u8; 32]>` / `Zeroizing<Vec<u8>>` buffers themselves do carry
+`zeroize`'s `Debug`/`Clone` impls, so the guarantee against a key ever being printed rests on the fact that
+there is no logging anywhere in the crate and no `format!` of a secret, not on the type system. Comparisons of secret-derived bytes against
 state use `subtle::ConstantTimeEq` (§4.4, §7.2). Public-data comparisons (magic bytes, chat-id strings) are
 ordinary comparisons on purpose. The crate never reads environment variables, files outside the store
 directory or the paths it is given, or the network (it has no network code at all).
@@ -897,7 +915,10 @@ directory or the paths it is given, or the network (it has no network code at al
 ## 14. The forward-secrecy argument
 
 **Claim.** A message blob (text or file) can be decrypted once, on the device it was addressed to, and never
-again by anyone — including that device after it has done so, and including the sender.
+again by anyone — including that device after it has done so, and including the sender. This is **forward
+secrecy** (past messages stay closed). The complementary property, **post-compromise security** (a copy of the
+state stops working), holds only after a DH ratchet round trip — point 3 below states exactly what a copy of
+the state file can read.
 
 1. **Per-message keys.** Every blob is an Olm message; Olm derives a fresh message key from the receiving
    chain for every chain index and, on a ratchet step, a fresh chain from a fresh Diffie-Hellman. This is
@@ -908,8 +929,14 @@ again by anyone — including that device after it has done so, and including th
    and `api::files::tests::forward_secrecy_for_files`.
 3. **The deletion is persisted before the plaintext is returned** (§10.3). A snapshot of the sealed state file
    taken *after* message N−1 was read cannot decrypt N−1 or anything earlier (their keys are already gone from
-   that snapshot); it can still decrypt N, which has not been read yet — that is not a forward-secrecy hole, it
-   is the crash window of §10.3, and it closes the moment N is read.
+   that snapshot) — forward secrecy holds for everything already read. **But the snapshot holds the receiving
+   chain key**, so, together with the store key (or the app-lock password that unwraps it), it decrypts N *and
+   every later message the peer generates on that same receiving chain* — reading it on the live device does not
+   close a *copy*. The copy stops working only at the next DH ratchet step, which needs a round trip: this device
+   sends, the peer receives that message (advancing its ratchet), and the peer's next message arrives on a new
+   chain the copy never had. Verified against the crate: a copy of B's state taken after reading one message
+   opened three messages A generated afterwards; after B replied and A had read the reply, the copy got
+   `Corrupt` on the next one. Post-compromise security is therefore "after a round trip", not "immediately".
 4. **The sender cannot decrypt its own output.** An Olm sender holds the sending chain only; feeding its own
    blob to its own session fails the MAC (`InvalidMAC`, mapped to `Corrupt`). This is why sent plaintext must
    be kept locally (§10.4).
@@ -918,20 +945,27 @@ again by anyone — including that device after it has done so, and including th
    chunks are useless without it.
 6. **The window limits how long a key waits** (§8): at most 40 skipped keys per chain, 5 chains, and never
    further than 63 counters behind the newest accepted message. A key that is evicted is gone; the blob it
-   protected is undecryptable forever. This bounds the exposure of a device seized while unread blobs are
-   outstanding to at most those windows.
+   protected is undecryptable forever. This bounds the exposure of a seized device to the *unread* blobs still
+   inside those windows — plus, per point 3, whatever the peer keeps sending on the current chain until a round
+   trip ratchets past the seized chain key.
 7. **What the argument does not cover.** The plaintext the app keeps locally (§10.4) is protected by the app
-   lock, not by the ratchet; a device attacker who has the unlocked store, or the password, reads history.
-   The identity keys of a chat are long-lived and their compromise lets an attacker impersonate that party in
-   *that* chat going forward (not read past messages). Both are the threat model's subject, not this
-   document's.
+   lock, not by the ratchet; a device attacker who has the unlocked store, or the password, reads history — and,
+   with a copy of the state, reads *forward* on the current receiving chain until the peer ratchets (point 3),
+   so the incremental exposure of a state copy over the history it already reveals is future messages, not
+   past ones. The identity keys of a chat are long-lived and their compromise lets an attacker impersonate that
+   party in *that* chat going forward (not read past messages). All of this is the threat model's subject, not
+   this document's.
 
 ---
 
 ## 15. Reference crates and versions
 
-All versions are exact pins in `rust/fuzzy_crypto_core/Cargo.toml` and resolved in `Cargo.lock`; CI builds
-`--locked`. Toolchain: Rust 1.98.1 (`rust-toolchain.toml`), Flutter 3.41.7 / Dart 3.11.5 (`.fvmrc`).
+In `rust/fuzzy_crypto_core/Cargo.toml` the cryptographic crates `vodozemac`, `chacha20poly1305`, `aead-stream`,
+`argon2` and the FFI crate `flutter_rust_bridge` are exact (`=`) pins; `hkdf`, `sha2`, `zeroize`, `getrandom`,
+`subtle`, `base64`, `serde`, `serde_json` and `thiserror` are caret ranges. **The real pin is `Cargo.lock`**,
+which resolves every crate to the version below, and CI builds `--locked`, so a different resolution cannot
+build without a lock-file change. Toolchain: Rust 1.98.1 (`rust-toolchain.toml`), Flutter 3.41.7 / Dart 3.11.5
+(`.fvmrc`).
 
 | Crate | Version | Role here | Audit / provenance |
 |---|---|---|---|
@@ -990,7 +1024,9 @@ Stated so a reviewer does not have to discover them.
    advanced — before the chunks are verified, because doing it the other way round would keep the message key
    alive while the file key sits outside the store. A damaged file must be re-sent; the app says so.
 6. **Olm's 8-byte MAC** (Olm v1 truncates HMAC-SHA256 to 8 bytes per message). There is no online oracle in a
-   paste-only protocol — every trial is a user pasting a blob — but the reviewer should know the tag length.
+   paste-only protocol — every trial is a user pasting a blob, every failed paste leaves the state file
+   byte-identical, and a forgery that passed the MAC would additionally have to decrypt to a valid inner header
+   carrying the right chat id and both 32-byte identity keys (§7.2) — but the reviewer should know the tag length.
 7. **Olm encoding malleability.** vodozemac re-encodes the protobuf-style Olm message it MACs, so a handful of
    non-canonical encodings (an unknown protobuf field, the high bit of an X25519 key, which curve25519-dalek
    masks) of the *same* message are accepted as that message. Same plaintext, same key consumption; not a
@@ -1006,6 +1042,11 @@ Stated so a reviewer does not have to discover them.
     keys (delete and re-pair instead).
 13. **An Ed25519 identity key is per chat for the life of that chat.** Its compromise allows impersonation in
     that chat from then on; it does not reveal past message keys (§14).
+14. **A copy of the sealed state plus the store key reads forward until the peer ratchets** (§14.3). Whoever
+    holds a `<chat_id>.state` file and the store key (or the app-lock password, which unwraps it) can decrypt every
+    message the peer sends on the current receiving chain after the copy was taken — not messages already read
+    (forward secrecy), but future ones, until this device sends and the peer's next message arrives on a fresh
+    chain. Post-compromise security needs that round trip; nothing in the protocol forces one.
 
 ---
 
