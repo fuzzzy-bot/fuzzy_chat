@@ -105,8 +105,7 @@ void main() {
       when(() => mockItemDS.getItem('nonexistent'))
           .thenAnswer((_) async => null);
 
-      final result =
-          await repository.moveItemToGroup('nonexistent', 'work');
+      final result = await repository.moveItemToGroup('nonexistent', 'work');
 
       expect(result, isA<VaultFailure>());
       expect(

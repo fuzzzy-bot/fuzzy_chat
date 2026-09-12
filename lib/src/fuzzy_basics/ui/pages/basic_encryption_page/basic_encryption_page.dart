@@ -71,13 +71,17 @@ class _ProvidedBasicEncryptionPageState
   void _processFiles() {
     final key = _keyController.text;
     if (key.isEmpty) {
-      FuzzzyToast.show(context,
-          message: context.fuzzyChatLocalizations.pleaseEnterAKey,);
+      FuzzzyToast.show(
+        context,
+        message: context.fuzzyChatLocalizations.pleaseEnterAKey,
+      );
       return;
     }
     if (_selectedFilePaths?.isNotEmpty != true) {
-      FuzzzyToast.show(context,
-          message: context.fuzzyChatLocalizations.pleaseSelectFilesToProcess,);
+      FuzzzyToast.show(
+        context,
+        message: context.fuzzyChatLocalizations.pleaseSelectFilesToProcess,
+      );
       return;
     }
 
@@ -141,9 +145,11 @@ class _ProvidedBasicEncryptionPageState
                 _resultText = state.result ?? '';
               });
             } else if (state.status.isFailed) {
-              FuzzzyToast.show(context,
-                  message:
-                      _localizeFailureMessage(context, state.failure?.message),);
+              FuzzzyToast.show(
+                context,
+                message:
+                    _localizeFailureMessage(context, state.failure?.message),
+              );
             }
           },
         ),

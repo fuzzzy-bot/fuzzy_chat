@@ -47,8 +47,10 @@ class BasicEncryptionCubit extends Cubit<BasicEncryptionState> {
     }
   }
 
-  Future<void> decryptText(
-      {required String encryptedText, required String key,}) async {
+  Future<void> decryptText({
+    required String encryptedText,
+    required String key,
+  }) async {
     if (encryptedText.isEmpty || key.isEmpty) {
       emit(
         state.copyWith(
@@ -74,7 +76,8 @@ class BasicEncryptionCubit extends Cubit<BasicEncryptionState> {
         state.copyWith(
           status: StateStatus.failed,
           failure: DefaultFailure(
-              message: 'decryptionFailedCheckYourKeyOrEncryptedText',),
+            message: 'decryptionFailedCheckYourKeyOrEncryptedText',
+          ),
         ),
       );
     }

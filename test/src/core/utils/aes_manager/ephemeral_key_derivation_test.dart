@@ -42,8 +42,11 @@ void main() {
     test('Deterministic for same mainKey and nonce', () {
       final key1 = testDeriveEphemeralKey(mainKey: mainKey, nonce: nonce);
       final key2 = testDeriveEphemeralKey(mainKey: mainKey, nonce: nonce);
-      expect(key1, equals(key2),
-          reason: 'Ephemeral keys should be identical for same input',);
+      expect(
+        key1,
+        equals(key2),
+        reason: 'Ephemeral keys should be identical for same input',
+      );
     });
 
     test('Different nonce leads to different ephemeral keys', () {
@@ -55,8 +58,11 @@ void main() {
       final key2 =
           testDeriveEphemeralKey(mainKey: mainKey, nonce: modifiedNonce);
 
-      expect(key1, isNot(equals(key2)),
-          reason: 'Different nonce should lead to different ephemeral key',);
+      expect(
+        key1,
+        isNot(equals(key2)),
+        reason: 'Different nonce should lead to different ephemeral key',
+      );
     });
 
     test('Performance test for key derivation', () {
@@ -72,9 +78,13 @@ void main() {
       final elapsedMs = stopwatch.elapsedMilliseconds;
       final avgTimePerKey = elapsedMs / iterations;
       print(
-          'Derived $iterations ephemeral keys in $elapsedMs ms ($avgTimePerKey ms/key)',);
-      expect(avgTimePerKey < 1, isTrue,
-          reason: 'Ephemeral key derivation should be extremely fast',);
+        'Derived $iterations ephemeral keys in $elapsedMs ms ($avgTimePerKey ms/key)',
+      );
+      expect(
+        avgTimePerKey < 1,
+        isTrue,
+        reason: 'Ephemeral key derivation should be extremely fast',
+      );
     });
 
     test('Unique keys for random nonces (statistical check)', () {
@@ -91,8 +101,11 @@ void main() {
       }
 
       // Expect that all keys are unique (very high probability with a good RNG).
-      expect(keysSet.length, equals(count),
-          reason: 'All ephemeral keys should be unique with random nonces',);
+      expect(
+        keysSet.length,
+        equals(count),
+        reason: 'All ephemeral keys should be unique with random nonces',
+      );
     });
   });
 }

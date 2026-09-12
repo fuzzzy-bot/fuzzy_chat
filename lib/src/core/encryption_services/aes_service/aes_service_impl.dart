@@ -37,7 +37,9 @@ class _AESServiceImpl {
 
     final salt = encryptedBytes.sublist(0, _saltByteLength);
     final nonce = encryptedBytes.sublist(
-        _saltByteLength, _saltByteLength + _nonceByteLength,);
+      _saltByteLength,
+      _saltByteLength + _nonceByteLength,
+    );
     final ciphertext =
         encryptedBytes.sublist(_saltByteLength + _nonceByteLength);
 
@@ -303,7 +305,8 @@ class _AESServiceImpl {
 
       if (processedLength > outputSize) {
         throw StateError(
-            'Cipher produced more bytes than even over-allocated size.',);
+          'Cipher produced more bytes than even over-allocated size.',
+        );
       }
 
       if (processedLength > 0) {
@@ -333,7 +336,8 @@ class _AESServiceImpl {
   }
 
   static Future<(Uint8List salt, Uint8List nonce)> _readSaltAndNonce(
-      RandomAccessFile raf,) async {
+    RandomAccessFile raf,
+  ) async {
     const totalLength = _saltByteLength + _nonceByteLength;
 
     final saltAndNonceBuffer = Uint8List(totalLength);

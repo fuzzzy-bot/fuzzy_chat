@@ -50,7 +50,7 @@ class ProvidedAcceptanceExportPage extends StatelessWidget {
           ),
           onFailure: () => FuzzyErrorPageBuilder(
             message:
-            state.failure?.message ?? localizations.failedToReadAcceptance,
+                state.failure?.message ?? localizations.failedToReadAcceptance,
           ),
         );
       },

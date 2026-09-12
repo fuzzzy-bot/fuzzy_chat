@@ -92,8 +92,7 @@ void main() {
       'emits [loading, failed] when repository returns VaultFailure',
       setUp: () {
         when(() => mockRepo.moveItemToGroup('item-1', 'work')).thenAnswer(
-          (_) async =>
-              const VaultFailure(VaultFailureType.itemNotFound),
+          (_) async => const VaultFailure(VaultFailureType.itemNotFound),
         );
       },
       build: buildCubit,

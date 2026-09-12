@@ -140,7 +140,8 @@ class _ProvidedChatInvitationPageState
                 child: FuzzzyEmptyState(
                   title: invitationState.failure?.message ??
                       localizations.failedToGenerateInvitation,
-                  message: localizations.unexpectedFailureOccuredPleaseContactUs,
+                  message:
+                      localizations.unexpectedFailureOccuredPleaseContactUs,
                 ),
               ),
             ),

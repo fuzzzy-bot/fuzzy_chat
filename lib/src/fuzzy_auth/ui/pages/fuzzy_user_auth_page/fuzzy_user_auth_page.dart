@@ -113,8 +113,9 @@ class _FuzzyUserAuthPageContentState extends State<_FuzzyUserAuthPageContent> {
     if (oldPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content:
-                Text(currentContextLocalization.chatAuthBiometricDescription),),
+          content:
+              Text(currentContextLocalization.chatAuthBiometricDescription),
+        ),
       );
       return;
     }
@@ -208,12 +209,15 @@ class _FuzzyUserAuthPageContentState extends State<_FuzzyUserAuthPageContent> {
               body: CustomScrollView(
                 slivers: [
                   SliverToBoxAdapter(
-                    child: FuzzzyAppBar(title: localizations.chatAuthSetupTitle),
+                    child:
+                        FuzzzyAppBar(title: localizations.chatAuthSetupTitle),
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8,),
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -255,7 +259,8 @@ class _FuzzyUserAuthPageContentState extends State<_FuzzyUserAuthPageContent> {
                             ),
                           const SizedBox(height: 32),
                           Divider(
-                              color: fuzzzyColors.focus.withOpacity(0.2),),
+                            color: fuzzzyColors.focus.withOpacity(0.2),
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             localizations.vaultAuthentication,
@@ -618,8 +623,7 @@ class _VaultBiometricSectionState extends State<_VaultBiometricSection> {
     if (canUse == false) {
       return Text(
         localizations.vaultBiometricUnavailable,
-        style: theme.textTheme.bodySmall
-            ?.copyWith(color: fuzzzyColors.inkMute),
+        style: theme.textTheme.bodySmall?.copyWith(color: fuzzzyColors.inkMute),
       );
     }
 
@@ -630,8 +634,7 @@ class _VaultBiometricSectionState extends State<_VaultBiometricSection> {
     if (!hasVault) {
       return Text(
         localizations.vaultNotCreated,
-        style: theme.textTheme.bodySmall
-            ?.copyWith(color: fuzzzyColors.inkMute),
+        style: theme.textTheme.bodySmall?.copyWith(color: fuzzzyColors.inkMute),
       );
     }
 

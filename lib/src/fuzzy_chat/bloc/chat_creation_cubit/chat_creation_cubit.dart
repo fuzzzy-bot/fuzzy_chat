@@ -72,7 +72,8 @@ class ChatCreationCubit extends Cubit<ChatCreationState> {
   }
 
   Future<ChatCreationFailureType?> checkChatNameRestrictions(
-      String chatName,) async {
+    String chatName,
+  ) async {
     final name = await chatGeneralDataListRepository.getChatByName(chatName);
 
     if (name != null) {

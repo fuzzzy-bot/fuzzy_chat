@@ -53,7 +53,8 @@ class DependencyInjection {
 
     sl.safeRegisterSingleton<UserAuthPreferencesRepository>(
       UserAuthPreferencesRepository(
-          localDataSource: UserAuthPreferencesLocalDataSource(isar: sl.get()),),
+        localDataSource: UserAuthPreferencesLocalDataSource(isar: sl.get()),
+      ),
     );
 
     sl.safeRegisterSingleton<ChatAuthRepository>(
@@ -63,7 +64,8 @@ class DependencyInjection {
     );
 
     sl.safeRegisterSingleton<BiometricAuthRepository>(
-        BiometricAuthRepository(),);
+      BiometricAuthRepository(),
+    );
 
     sl.safeRegisterSingleton<FuzzyAuthStore>(
       FuzzyAuthStore(
@@ -77,12 +79,14 @@ class DependencyInjection {
 
     sl.safeRegisterSingleton<ChatGeneralDataListRepository>(
       ChatGeneralDataListRepository(
-          localDataSource: ChatGeneralDataLocalDataSource(isar: sl.get()),),
+        localDataSource: ChatGeneralDataLocalDataSource(isar: sl.get()),
+      ),
     );
 
     sl.safeRegisterSingleton<MessageDataRepository>(
       MessageDataRepository(
-          localDataSource: MessageDataLocalDataSource(isar: sl.get()),),
+        localDataSource: MessageDataLocalDataSource(isar: sl.get()),
+      ),
     );
 
     sl.safeRegisterSingleton<FuzzyLinkHandler>(
@@ -95,11 +99,13 @@ class DependencyInjection {
 
     // Vault Dependencies
     sl.safeRegisterSingleton<PasswordStrengthService>(
-        PasswordStrengthService(),);
+      PasswordStrengthService(),
+    );
 
     sl.safeRegisterSingleton<VaultFileDataSource>(
       VaultFileDataSource(
-          vaultDirectoryPath: sl.get<AppDocumentsDirectory>().directory.path,),
+        vaultDirectoryPath: sl.get<AppDocumentsDirectory>().directory.path,
+      ),
     );
 
     await sl.get<VaultFileDataSource>().recoverStagedChangesIfNeeded();

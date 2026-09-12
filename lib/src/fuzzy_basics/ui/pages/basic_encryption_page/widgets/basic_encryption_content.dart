@@ -32,7 +32,8 @@ class BasicEncryptionContent extends StatelessWidget {
           child: Column(
             children: [
               FuzzzyAppBar(
-                  title: context.fuzzyChatLocalizations.basicEncryption,),
+                title: context.fuzzyChatLocalizations.basicEncryption,
+              ),
               const SizedBox(height: 24),
               AnimatedBuilder(
                 animation: keyController,
@@ -144,7 +145,9 @@ class BasicEncryptionContent extends StatelessWidget {
   }
 
   Widget _buildProcessedFilesList(
-      CustomFileProcessingState state, BuildContext context,) {
+    CustomFileProcessingState state,
+    BuildContext context,
+  ) {
     if (state.processedFiles.isEmpty && state.currentProcessingFile == null) {
       return const SizedBox.shrink();
     }
@@ -155,19 +158,26 @@ class BasicEncryptionContent extends StatelessWidget {
         if (state.currentProcessingFile != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Text(currentContextLocalization.processingFile(
+            child: Text(
+              currentContextLocalization.processingFile(
                 state.currentProcessingFile!.inputFilePath.split('/').last,
-                (state.progress * 100).toStringAsFixed(1),),),
+                (state.progress * 100).toStringAsFixed(1),
+              ),
+            ),
           ),
         ...state.processedFiles.map((file) {
           return ListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(file.inputFilePath.split('/').last,
-                maxLines: 1, overflow: TextOverflow.ellipsis,),
+            title: Text(
+              file.inputFilePath.split('/').last,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             subtitle: Text(
-                file.outputFilePath ??
-                    currentContextLocalization.processingFailed,
-                maxLines: 2,),
+              file.outputFilePath ??
+                  currentContextLocalization.processingFailed,
+              maxLines: 2,
+            ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -183,8 +193,10 @@ class BasicEncryptionContent extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.share),
                     onPressed: () {
-                      ShareHelper.shareXFiles([XFile(file.outputFilePath!)],
-                          context: context,);
+                      ShareHelper.shareXFiles(
+                        [XFile(file.outputFilePath!)],
+                        context: context,
+                      );
                     },
                   ),
                 ],

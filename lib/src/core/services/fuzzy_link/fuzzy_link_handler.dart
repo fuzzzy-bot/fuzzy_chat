@@ -55,19 +55,25 @@ class FuzzyLinkHandler {
     }
 
     if (!payload.isSupported) {
-      FuzzzyToast.show(navigatorKey.currentContext!,
-          message: _l10n.updateRequired,);
+      FuzzzyToast.show(
+        navigatorKey.currentContext!,
+        message: _l10n.updateRequired,
+      );
       return;
     }
 
     if (payload is InvitationLinkPayload && payload.isExpired) {
-      FuzzzyToast.show(navigatorKey.currentContext!,
-          message: _l10n.invitationLinkExpired,);
+      FuzzzyToast.show(
+        navigatorKey.currentContext!,
+        message: _l10n.invitationLinkExpired,
+      );
       return;
     }
     if (payload is AcceptanceLinkPayload && payload.isExpired) {
-      FuzzzyToast.show(navigatorKey.currentContext!,
-          message: _l10n.acceptanceLinkExpired,);
+      FuzzzyToast.show(
+        navigatorKey.currentContext!,
+        message: _l10n.acceptanceLinkExpired,
+      );
       return;
     }
 
@@ -98,7 +104,9 @@ class FuzzyLinkHandler {
   }
 
   Future<void> _handleInvitation(
-      GoRouter router, InvitationLinkPayload payload,) async {
+    GoRouter router,
+    InvitationLinkPayload payload,
+  ) async {
     try {
       final receivedInvitation =
           await HandshakeService.parseInvitation(payload.rawInvitationContent);
@@ -106,8 +114,10 @@ class FuzzyLinkHandler {
           await _chatRepository.getChatById(receivedInvitation.chatId);
 
       if (existingChat != null) {
-        FuzzzyToast.show(navigatorKey.currentContext!,
-            message: _l10n.cantAcceptOwnInvitation,);
+        FuzzzyToast.show(
+          navigatorKey.currentContext!,
+          message: _l10n.cantAcceptOwnInvitation,
+        );
         return;
       }
     } catch (_) {
@@ -122,7 +132,9 @@ class FuzzyLinkHandler {
   }
 
   Future<void> _handleAcceptance(
-      GoRouter router, AcceptanceLinkPayload payload,) async {
+    GoRouter router,
+    AcceptanceLinkPayload payload,
+  ) async {
     try {
       final acceptance =
           await HandshakeService.parseAcceptance(payload.rawAcceptanceContent);
@@ -130,14 +142,18 @@ class FuzzyLinkHandler {
       final chat = await _chatRepository.getChatById(chatId);
 
       if (chat == null) {
-        FuzzzyToast.show(navigatorKey.currentContext!,
-            message: _l10n.chatNotFoundForAcceptance,);
+        FuzzzyToast.show(
+          navigatorKey.currentContext!,
+          message: _l10n.chatNotFoundForAcceptance,
+        );
         return;
       }
 
       if (chat.setupStatus == ChatSetupStatus.connected) {
-        FuzzzyToast.show(navigatorKey.currentContext!,
-            message: _l10n.alreadyConnected,);
+        FuzzzyToast.show(
+          navigatorKey.currentContext!,
+          message: _l10n.alreadyConnected,
+        );
         return;
       }
 
@@ -151,19 +167,25 @@ class FuzzyLinkHandler {
         ),
       );
     } catch (_) {
-      FuzzzyToast.show(navigatorKey.currentContext!,
-          message: _l10n.failedToProcessAcceptance,);
+      FuzzzyToast.show(
+        navigatorKey.currentContext!,
+        message: _l10n.failedToProcessAcceptance,
+      );
     }
   }
 
   Future<void> _handleFuzzMessage(
-      GoRouter router, FuzzMessageLinkPayload payload,) async {
+    GoRouter router,
+    FuzzMessageLinkPayload payload,
+  ) async {
     try {
       final chat = await _chatRepository.getChatById(payload.chatId);
 
       if (chat == null) {
-        FuzzzyToast.show(navigatorKey.currentContext!,
-            message: _l10n.chatNotFoundForMessage,);
+        FuzzzyToast.show(
+          navigatorKey.currentContext!,
+          message: _l10n.chatNotFoundForMessage,
+        );
         return;
       }
 
@@ -176,8 +198,10 @@ class FuzzyLinkHandler {
         ),
       );
     } catch (_) {
-      FuzzzyToast.show(navigatorKey.currentContext!,
-          message: _l10n.failedToProcessMessage,);
+      FuzzzyToast.show(
+        navigatorKey.currentContext!,
+        message: _l10n.failedToProcessMessage,
+      );
     }
   }
 
