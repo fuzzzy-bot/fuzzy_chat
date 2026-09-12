@@ -473,5 +473,13 @@
   "chatAuthEnterPassword": "გთხოვთ შეიყვანოთ მიმდინარე პაროლი",
   "@chatAuthEnterPassword": {},
   "vaultFileSaveWarning": "⚠️ ორიგინალი ფაილი არ იშლება ავტომატურად. შენახვის შემდეგ ფაილი რჩება მოწყობილობაზე. გთხოვთ წაშალოთ ის უსაფრთხოების მიზნით.",
-  "@vaultFileSaveWarning": {}
+  "@vaultFileSaveWarning": {},
+  "invitationAlreadyUsed": "ეს მოწვევა უკვე გამოყენებულია.",
+  "@invitationAlreadyUsed": {},
+  "invalidInvitation": "ეს მოწვევა არასწორია ან დაზიანებულია.",
+  "@invalidInvitation": {},
+  "invalidAcceptance": "ეს მიღება არასწორია ან დაზიანებულია.",
+  "@invalidAcceptance": {},
+  "wrongChatBlob": "ეს კოდი სხვა ჩატს ეკუთვნის.",
+  "@wrongChatBlob": {}
 }

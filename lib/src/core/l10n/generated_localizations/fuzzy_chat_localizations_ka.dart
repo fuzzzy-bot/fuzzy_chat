@@ -751,4 +751,16 @@ class FuzzyChatLocalizationsKa extends FuzzyChatLocalizations {
   @override
   String get vaultFileSaveWarning =>
       '⚠️ ორიგინალი ფაილი არ იშლება ავტომატურად. შენახვის შემდეგ ფაილი რჩება მოწყობილობაზე. გთხოვთ წაშალოთ ის უსაფრთხოების მიზნით.';
+
+  @override
+  String get invitationAlreadyUsed => 'ეს მოწვევა უკვე გამოყენებულია.';
+
+  @override
+  String get invalidInvitation => 'ეს მოწვევა არასწორია ან დაზიანებულია.';
+
+  @override
+  String get invalidAcceptance => 'ეს მიღება არასწორია ან დაზიანებულია.';
+
+  @override
+  String get wrongChatBlob => 'ეს კოდი სხვა ჩატს ეკუთვნის.';
 }

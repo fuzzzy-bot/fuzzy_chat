@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:fuzzy_chat/lib.dart';
 import 'package:fuzzy_chat/rust_bridge/api/core.dart' as rust_core;
+import 'package:fuzzy_chat/rust_bridge/api/formats.dart' as rust_formats;
 import 'package:fuzzy_chat/rust_bridge/error.dart';
 
 export 'components/components.dart';
@@ -12,6 +13,12 @@ class CryptoCoreService {
   CryptoCoreService({
     required String storeDirectoryPath,
   }) : _storeDirectoryPath = storeDirectoryPath;
+
+  /// uuid-v4 shape, as `store::validate_chat_id` demands — a blob's chat id
+  /// is a path component on the Rust side and must never be trusted before
+  /// this check.
+  static final _chatIdShape =
+      RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$');
 
   final String _storeDirectoryPath;
 
@@ -76,6 +83,96 @@ class CryptoCoreService {
     core.dispose();
   }
 
+  /// The chat id a pasted invitation or acceptance names — a routing hint
+  /// only: nothing is authenticated until [acceptInvitation] /
+  /// [completeHandshake] verify the signature against it.
+  CryptoCoreResponse<String> peekChatId(String text) {
+    final chatIdRes = _guardedSync(() => rust_formats.peekChatId(text: text));
+    if (chatIdRes is CryptoCoreSuccess<String> &&
+        !_chatIdShape.hasMatch(chatIdRes.data)) {
+      return const CryptoCoreFailure(CryptoCoreFailureType.corrupt);
+    }
+    return chatIdRes;
+  }
+
+  /// A (inviter): the chat's Olm account and its signed invitation. A
+  /// pending chat regenerates; a connected one is `internal`.
+  Future<CryptoCoreResponse<CryptoCoreInvitation>> createInvitation(
+    String chatId,
+  ) {
+    return _withCore((core) async {
+      final content = await core.createInvitation(chatId: chatId);
+      return CryptoCoreInvitation(chatId: chatId, content: content);
+    });
+  }
+
+  Future<CryptoCoreResponse<CryptoCoreInvitation>> currentInvitation(
+    String chatId,
+  ) {
+    return _withCore((core) async {
+      final content = await core.currentInvitation(chatId: chatId);
+      return CryptoCoreInvitation(chatId: chatId, content: content);
+    });
+  }
+
+  /// B (accepter): verifies [invitation], establishes the session and
+  /// returns the signed acceptance. [chatId] must be the id the invitation
+  /// names (`wrongChat` otherwise); a chat that already has state is
+  /// `internal`.
+  Future<CryptoCoreResponse<CryptoCoreAcceptance>> acceptInvitation({
+    required String chatId,
+    required String invitation,
+  }) {
+    return _withCore((core) async {
+      final content = await core.acceptInvitation(
+        chatId: chatId,
+        invitation: invitation,
+      );
+      return CryptoCoreAcceptance(chatId: chatId, content: content);
+    });
+  }
+
+  Future<CryptoCoreResponse<CryptoCoreAcceptance>> currentAcceptance(
+    String chatId,
+  ) {
+    return _withCore((core) async {
+      final content = await core.currentAcceptance(chatId: chatId);
+      return CryptoCoreAcceptance(chatId: chatId, content: content);
+    });
+  }
+
+  /// A (inviter): verifies [acceptance] and completes the handshake. The
+  /// one-time key is consumed exactly once, so a second acceptance of the
+  /// same invitation is `invitationAlreadyUsed`.
+  Future<CryptoCoreResponse<void>> completeHandshake({
+    required String chatId,
+    required String acceptance,
+  }) {
+    return _withCore(
+      (core) => core.completeHandshake(chatId: chatId, acceptance: acceptance),
+    );
+  }
+
+  /// Zeroises and unlinks the chat's state; a chat the store never had is
+  /// not an error.
+  Future<CryptoCoreResponse<void>> deleteChat(String chatId) {
+    return _withCore((core) => core.deleteChat(chatId: chatId));
+  }
+
+  /// Every chat call: no Argon2, so nothing to queue; a closed store answers
+  /// `storeLocked` instead of reaching a null handle.
+  Future<CryptoCoreResponse<T>> _withCore<T>(
+    Future<T> Function(rust_core.CryptoCore core) call,
+  ) {
+    final core = _core;
+    if (core == null) {
+      return Future.value(
+        const CryptoCoreFailure(CryptoCoreFailureType.storeLocked),
+      );
+    }
+    return _guarded(() => call(core));
+  }
+
   Future<CryptoCoreResponse<T>> _serialized<T>(Future<T> Function() call) {
     final result = _argon2Queue.then((_) => _guarded(call));
     _argon2Queue = result.then((_) {});
@@ -85,6 +182,17 @@ class CryptoCoreService {
   Future<CryptoCoreResponse<T>> _guarded<T>(Future<T> Function() call) async {
     try {
       return CryptoCoreSuccess(await call());
+    } on CoreError catch (error) {
+      return CryptoCoreFailure(_failureTypeOf(error));
+    } catch (ex) {
+      logger.e('ERROR: $ex');
+      return const CryptoCoreFailure(CryptoCoreFailureType.internal);
+    }
+  }
+
+  CryptoCoreResponse<T> _guardedSync<T>(T Function() call) {
+    try {
+      return CryptoCoreSuccess(call());
     } on CoreError catch (error) {
       return CryptoCoreFailure(_failureTypeOf(error));
     } catch (ex) {

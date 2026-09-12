@@ -1469,6 +1469,30 @@ abstract class FuzzyChatLocalizations {
   /// In en, this message translates to:
   /// **'⚠️ The original file is NOT auto-deleted. After a successful save, the user\'s source file remains on disk untouched. The app currently doesn\'t warn about this.'**
   String get vaultFileSaveWarning;
+
+  /// No description provided for @invitationAlreadyUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation was already used.'**
+  String get invitationAlreadyUsed;
+
+  /// No description provided for @invalidInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation is invalid or damaged.'**
+  String get invalidInvitation;
+
+  /// No description provided for @invalidAcceptance.
+  ///
+  /// In en, this message translates to:
+  /// **'This acceptance is invalid or damaged.'**
+  String get invalidAcceptance;
+
+  /// No description provided for @wrongChatBlob.
+  ///
+  /// In en, this message translates to:
+  /// **'This code belongs to a different chat.'**
+  String get wrongChatBlob;
 }
 
 class _FuzzyChatLocalizationsDelegate

@@ -110,6 +110,7 @@ class DependencyInjection {
         linkService: sl.get<FuzzyLinkService>(),
         chatRepository: sl.get<ChatGeneralDataListRepository>(),
         authStore: sl.get<FuzzyAuthStore>(),
+        cryptoCoreService: sl.get<CryptoCoreService>(),
       ),
     );
 

@@ -9,13 +9,16 @@ class FuzzyLinkHandler {
     required FuzzyLinkService linkService,
     required ChatGeneralDataListRepository chatRepository,
     required FuzzyAuthStore authStore,
+    required CryptoCoreService cryptoCoreService,
   })  : _linkService = linkService,
         _chatRepository = chatRepository,
-        _authStore = authStore;
+        _authStore = authStore,
+        _cryptoCoreService = cryptoCoreService;
 
   final FuzzyLinkService _linkService;
   final ChatGeneralDataListRepository _chatRepository;
   final FuzzyAuthStore _authStore;
+  final CryptoCoreService _cryptoCoreService;
 
   StreamSubscription<Uri>? _subscription;
   FuzzyLinkPayload? _pendingPayload;
@@ -108,17 +111,18 @@ class FuzzyLinkHandler {
     InvitationLinkPayload payload,
   ) async {
     try {
-      final receivedInvitation =
-          await HandshakeService.parseInvitation(payload.rawInvitationContent);
-      final existingChat =
-          await _chatRepository.getChatById(receivedInvitation.chatId);
+      final chatIdRes =
+          _cryptoCoreService.peekChatId(payload.rawInvitationContent);
+      if (chatIdRes is CryptoCoreSuccess<String>) {
+        final existingChat = await _chatRepository.getChatById(chatIdRes.data);
 
-      if (existingChat != null) {
-        FuzzzyToast.show(
-          navigatorKey.currentContext!,
-          message: _l10n.cantAcceptOwnInvitation,
-        );
-        return;
+        if (existingChat != null) {
+          FuzzzyToast.show(
+            navigatorKey.currentContext!,
+            message: _l10n.cantAcceptOwnInvitation,
+          );
+          return;
+        }
       }
     } catch (_) {
       // Let the acceptance page handle parsing errors downstream.
@@ -136,9 +140,16 @@ class FuzzyLinkHandler {
     AcceptanceLinkPayload payload,
   ) async {
     try {
-      final acceptance =
-          await HandshakeService.parseAcceptance(payload.rawAcceptanceContent);
-      final chatId = acceptance.chatId;
+      final chatIdRes =
+          _cryptoCoreService.peekChatId(payload.rawAcceptanceContent);
+      if (chatIdRes is CryptoCoreFailure) {
+        FuzzzyToast.show(
+          navigatorKey.currentContext!,
+          message: _l10n.failedToProcessAcceptance,
+        );
+        return;
+      }
+      final chatId = (chatIdRes as CryptoCoreSuccess<String>).data;
       final chat = await _chatRepository.getChatById(chatId);
 
       if (chat == null) {

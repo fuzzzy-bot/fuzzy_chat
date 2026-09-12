@@ -742,4 +742,16 @@ class FuzzyChatLocalizationsEn extends FuzzyChatLocalizations {
   @override
   String get vaultFileSaveWarning =>
       '⚠️ The original file is NOT auto-deleted. After a successful save, the user\'s source file remains on disk untouched. The app currently doesn\'t warn about this.';
+
+  @override
+  String get invitationAlreadyUsed => 'This invitation was already used.';
+
+  @override
+  String get invalidInvitation => 'This invitation is invalid or damaged.';
+
+  @override
+  String get invalidAcceptance => 'This acceptance is invalid or damaged.';
+
+  @override
+  String get wrongChatBlob => 'This code belongs to a different chat.';
 }

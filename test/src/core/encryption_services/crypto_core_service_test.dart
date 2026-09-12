@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -19,6 +20,22 @@ class MockKeyStorageRepository extends Mock implements KeyStorageRepository {}
 
 Uint8List? _blobOf(CryptoCoreResponse<Uint8List?> readRes) =>
     (readRes as CryptoCoreSuccess<Uint8List?>).data;
+
+CryptoCoreFailureType _failureOf(CryptoCoreResponse<dynamic> res) =>
+    (res as CryptoCoreFailure).type;
+
+const _chatId = '6f1e9b2c-3d4a-4f5b-8c6d-7e8f9a0b1c2d';
+
+/// A hand-built 0x01 envelope naming [chatId]; only `peekChatId` reads it.
+String _invitationNaming(String chatId) {
+  final blob = [
+    0x46, 0x55, 0x5A, 0x5A, 0x01, 0x01, // FUZZ · v1 · invitation
+    chatId.length,
+    ...utf8.encode(chatId),
+    ...List.filled(32 * 3 + 64, 0x11),
+  ];
+  return 'Fuzz/${base64Url.encode(blob).replaceAll('=', '')}';
+}
 
 void main() {
   setUpAll(initCryptoCoreForTests);
@@ -302,6 +319,207 @@ void main() {
       verify(
         () => userAuthPreferencesRepository.updateUserAuthPreferences(any()),
       ).called(1);
+    });
+  });
+
+  group('pairing through the service (real library, two stores)', () {
+    late Directory bDir;
+    late CryptoCoreService b;
+
+    Future<void> openWithoutPassword(
+      CryptoCoreService service,
+      CryptoStoreKeyRepository repository,
+    ) async {
+      await repository.ensureStoreKey('');
+      await service.openStore(
+        wrapped: _blobOf(await repository.read())!,
+        password: '',
+      );
+    }
+
+    setUp(() async {
+      bDir = Directory.systemTemp.createTempSync('fuzzy_crypto_core_b_');
+      b = CryptoCoreService(storeDirectoryPath: bDir.path);
+      await openWithoutPassword(service, storeKeyRepository);
+      // B's blob replaces A's in the mock secure storage; A is already open.
+      await openWithoutPassword(
+        b,
+        CryptoStoreKeyRepository(cryptoCoreService: b),
+      );
+    });
+
+    tearDown(() async {
+      await b.close();
+      if (bDir.existsSync()) bDir.deleteSync(recursive: true);
+    });
+
+    test(
+        'A invites → B accepts → A completes; re-display; second acceptance '
+        'is invitationAlreadyUsed', () async {
+      final invitationRes = await service.createInvitation(_chatId);
+      final invitation =
+          (invitationRes as CryptoCoreSuccess<CryptoCoreInvitation>).data;
+      expect(invitation.chatId, _chatId);
+      expect(invitation.content, startsWith('Fuzz/'));
+
+      final peeked = service.peekChatId(invitation.content);
+      expect((peeked as CryptoCoreSuccess<String>).data, _chatId);
+
+      final acceptanceRes = await b.acceptInvitation(
+        chatId: _chatId,
+        invitation: invitation.content,
+      );
+      final acceptance =
+          (acceptanceRes as CryptoCoreSuccess<CryptoCoreAcceptance>).data;
+      expect(acceptance.chatId, _chatId);
+      expect(
+        (b.peekChatId(acceptance.content) as CryptoCoreSuccess<String>).data,
+        _chatId,
+      );
+
+      expect(
+        await service.completeHandshake(
+          chatId: _chatId,
+          acceptance: acceptance.content,
+        ),
+        isA<CryptoCoreSuccess<void>>(),
+      );
+
+      final current = await service.currentInvitation(_chatId);
+      expect(
+        (current as CryptoCoreSuccess<CryptoCoreInvitation>).data.content,
+        invitation.content,
+      );
+      final currentAcc = await b.currentAcceptance(_chatId);
+      expect(
+        (currentAcc as CryptoCoreSuccess<CryptoCoreAcceptance>).data.content,
+        acceptance.content,
+      );
+
+      expect(
+        _failureOf(
+          await service.completeHandshake(
+            chatId: _chatId,
+            acceptance: acceptance.content,
+          ),
+        ),
+        CryptoCoreFailureType.invitationAlreadyUsed,
+      );
+
+      // B accepting again is `internal` on the core; the cubit pre-empts it.
+      expect(
+        _failureOf(
+          await b.acceptInvitation(
+            chatId: _chatId,
+            invitation: invitation.content,
+          ),
+        ),
+        CryptoCoreFailureType.internal,
+      );
+      expect(await b.deleteChat(_chatId), isA<CryptoCoreSuccess<void>>());
+      expect(
+        await b.acceptInvitation(
+          chatId: _chatId,
+          invitation: invitation.content,
+        ),
+        isA<CryptoCoreSuccess<CryptoCoreAcceptance>>(),
+      );
+    });
+
+    test('tampered, foreign and garbage blobs map to the failure types',
+        () async {
+      final invitation = ((await service.createInvitation(_chatId))
+              as CryptoCoreSuccess<CryptoCoreInvitation>)
+          .data
+          .content;
+
+      final tampered = invitation.replaceRange(
+        invitation.length - 5,
+        invitation.length - 4,
+        invitation[invitation.length - 5] == 'A' ? 'B' : 'A',
+      );
+      expect(
+        _failureOf(
+          await b.acceptInvitation(chatId: _chatId, invitation: tampered),
+        ),
+        CryptoCoreFailureType.invalidSignature,
+      );
+
+      const other = '00000000-0000-4000-8000-000000000000';
+      expect(
+        _failureOf(
+          await b.acceptInvitation(chatId: other, invitation: invitation),
+        ),
+        CryptoCoreFailureType.wrongChat,
+      );
+
+      expect(
+        _failureOf(service.peekChatId('not a blob')),
+        CryptoCoreFailureType.unsupportedFormat,
+      );
+      expect(
+        _failureOf(
+          await service.completeHandshake(
+            chatId: _chatId,
+            acceptance: 'not a blob',
+          ),
+        ),
+        CryptoCoreFailureType.unsupportedFormat,
+      );
+      expect(
+        _failureOf(
+          await service.completeHandshake(
+            chatId: _chatId,
+            acceptance: invitation,
+          ),
+        ),
+        CryptoCoreFailureType.unsupportedFormat,
+        reason: 'an invitation pasted as an acceptance',
+      );
+      expect(
+        await service.currentAcceptance(_chatId),
+        isA<CryptoCoreFailure<CryptoCoreAcceptance>>(),
+      );
+      expect(
+        _failureOf(await service.currentInvitation(other)),
+        CryptoCoreFailureType.unknownChat,
+      );
+    });
+
+    test('peekChatId refuses a chat id that is not uuid-v4 shaped', () {
+      expect(
+        (service.peekChatId(_invitationNaming(_chatId))
+                as CryptoCoreSuccess<String>)
+            .data,
+        _chatId,
+      );
+      for (final bad in ['x', '../../etc', _chatId.toUpperCase()]) {
+        expect(
+          _failureOf(service.peekChatId(_invitationNaming(bad))),
+          CryptoCoreFailureType.corrupt,
+          reason: bad,
+        );
+      }
+    });
+
+    test('a closed store answers storeLocked; deleteChat is idempotent',
+        () async {
+      expect(await service.deleteChat(_chatId), isA<CryptoCoreSuccess<void>>());
+      await service.close();
+      expect(
+        _failureOf(await service.createInvitation(_chatId)),
+        CryptoCoreFailureType.storeLocked,
+      );
+      expect(
+        _failureOf(await service.deleteChat(_chatId)),
+        CryptoCoreFailureType.storeLocked,
+      );
+      expect(
+        _failureOf(
+          await service.completeHandshake(chatId: _chatId, acceptance: 'x'),
+        ),
+        CryptoCoreFailureType.storeLocked,
+      );
     });
   });
 }

@@ -473,5 +473,13 @@
   "chatAuthEnterPassword": "Please enter your current password",
   "@chatAuthEnterPassword": {},
   "vaultFileSaveWarning": "⚠️ The original file is NOT auto-deleted. After a successful save, the user's source file remains on disk untouched. The app currently doesn't warn about this.",
-  "@vaultFileSaveWarning": {}
+  "@vaultFileSaveWarning": {},
+  "invitationAlreadyUsed": "This invitation was already used.",
+  "@invitationAlreadyUsed": {},
+  "invalidInvitation": "This invitation is invalid or damaged.",
+  "@invalidInvitation": {},
+  "invalidAcceptance": "This acceptance is invalid or damaged.",
+  "@invalidAcceptance": {},
+  "wrongChatBlob": "This code belongs to a different chat.",
+  "@wrongChatBlob": {}
 }

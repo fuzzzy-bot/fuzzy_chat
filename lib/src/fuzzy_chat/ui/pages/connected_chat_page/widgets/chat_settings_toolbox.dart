@@ -25,7 +25,7 @@ class _SettingsToolboxState extends State<SettingsToolbox> {
     required FuzzyChatLocalizations localizations,
   }) {
     final acceptanceReaderCubit = AcceptanceReaderCubit(
-      keyStorageRepository: sl.get<KeyStorageRepository>(),
+      cryptoCoreService: sl.get<CryptoCoreService>(),
     );
 
     acceptanceReaderCubit
@@ -34,7 +34,7 @@ class _SettingsToolboxState extends State<SettingsToolbox> {
       if (acceptanceReaderCubit.state.status.isSuccess) {
         _copyAcceptance(
           acceptanceContent:
-              acceptanceReaderCubit.state.acceptance?.acceptanceContent ?? '',
+              acceptanceReaderCubit.state.acceptance?.content ?? '',
           localizations: localizations,
         );
       } else {
