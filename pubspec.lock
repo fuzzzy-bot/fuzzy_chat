@@ -408,8 +408,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: f66d663b248c8dc87c93b54429247540a4343f87
-      resolved-ref: f66d663b248c8dc87c93b54429247540a4343f87
+      ref: "6ad980211cdaece6e7764f0ea379e86a98c56b4a"
+      resolved-ref: "6ad980211cdaece6e7764f0ea379e86a98c56b4a"
       url: "https://github.com/fuzzzy-bot/fuzzy_design.git"
     source: git
     version: "0.1.0"

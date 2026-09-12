@@ -25,7 +25,7 @@ dependencies:
   fuzzzy_ui_kit:
     git:
       url: https://github.com/fuzzzy-bot/fuzzy_design.git
-      ref: f66d663b248c8dc87c93b54429247540a4343f87
+      ref: 6ad980211cdaece6e7764f0ea379e86a98c56b4a
   get_it: ^8.0.0
   go_router: ^13.0.1
   isar: ^3.1.0+1
