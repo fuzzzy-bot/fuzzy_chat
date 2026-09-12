@@ -3,9 +3,11 @@
 // every invitation/acceptance signature would silently pass (F2-3 review nit 5).
 
 pub mod api;
+mod counters;
 pub mod error;
 pub mod formats;
 mod frb_generated;
+pub mod messages;
 pub mod pairing;
 pub mod state;
 pub mod store;

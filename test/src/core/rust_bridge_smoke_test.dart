@@ -246,5 +246,30 @@ void main() {
         throwsA(CoreError.unknownChat),
       );
     });
+
+    test('text messages round-trip A→B and B→A; a replay throws', () async {
+      final invitation = await a.createInvitation(chatId: _chatId);
+      final acceptance = await b.acceptInvitation(
+        chatId: _chatId,
+        invitation: invitation,
+      );
+      await a.completeHandshake(chatId: _chatId, acceptance: acceptance);
+
+      // A → B.
+      final aBlob = await a.encryptText(chatId: _chatId, text: 'hi from a');
+      expect(aBlob, startsWith('Fuzz/'));
+      expect(blobTypeOf(text: aBlob), BlobType.message);
+      expect(await b.decryptText(chatId: _chatId, blob: aBlob), 'hi from a');
+
+      // B → A.
+      final bBlob = await b.encryptText(chatId: _chatId, text: 'hi from b');
+      expect(await a.decryptText(chatId: _chatId, blob: bBlob), 'hi from b');
+
+      // Re-pasting a consumed blob throws Replay across the FFI.
+      await expectLater(
+        b.decryptText(chatId: _chatId, blob: aBlob),
+        throwsA(CoreError.replay),
+      );
+    });
   });
 }

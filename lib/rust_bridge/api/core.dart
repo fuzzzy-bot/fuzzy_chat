@@ -70,9 +70,24 @@ abstract class CryptoCore implements RustOpaqueInterface {
   /// The invitation this chat last produced, for re-display.
   Future<String> currentInvitation({required String chatId});
 
+  /// Decrypts a pasted message blob against `chat_id`'s session, checking the
+  /// inner header and the replay/ordering window in the fixed order of plan
+  /// §B.4. On any failure nothing is persisted — the state file is untouched,
+  /// so the message key stays available for a re-paste (plan §B.6). Replay →
+  /// `Replay`, a gap beyond Olm's window → `TooOld`, a blob for another chat or
+  /// with the wrong identities → `WrongChat`, anything malformed → `Corrupt`.
+  Future<String> decryptText({required String chatId, required String blob});
+
   /// Overwrites the chat's state file with zeros (best effort), unlinks it
   /// and forgets the cached state.
   Future<void> deleteChat({required String chatId});
+
+  /// Encrypts `text` on `chat_id`'s live Olm session and returns the `Fuzz/`
+  /// message blob. The ratcheted session and the incremented send counter are
+  /// persisted before the blob is returned, so a counter is never reused even
+  /// across a crash. A chat that is not connected is `Internal`; an unknown
+  /// chat id is `UnknownChat`.
+  Future<String> encryptText({required String chatId, required String text});
 
   /// Inverse of [`CryptoCore::seal_local`]; a tampered or foreign blob is `Corrupt`.
   Future<Uint8List> openLocal({required List<int> blob});
