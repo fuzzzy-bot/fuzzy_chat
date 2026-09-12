@@ -11,7 +11,9 @@ Once you link up with someone, within the app 'fuzz' (encrypt) messages and file
 
 ## 🚀 Get Fuzzy Chat!
 
-Ready to start fuzzing? Grab the latest version here:
+Ready to start fuzzing? Fuzzy Chat runs on **Android, Windows, macOS and Linux**. (The web build is
+unsupported — the encryption core is native code. iOS builds from this repo but is not in the App Store.)
+Grab the latest version here:
 
 <!-- [TODO: add app build and link them] -->
 
@@ -113,7 +115,10 @@ Repeat as many times as your secret-sharing heart desires!
 ## Want to Dive Deeper into the Rabbit Hole?
 
 - 🎬 **Watch the Quick Mission Briefing (Video Guide):** [//TODO video guide link]
-- 📖 **For Gadget Q-Branch Types ([Technical Details](documents/technical_documentation.md)):**
+- 📖 **For Gadget Q-Branch Types ([Technical Details](documents/security/PROTOCOL.md)):** the protocol
+  specification; also the [threat model](documents/security/THREAT_MODEL.md), the
+  [2026 hardening write-up](documents/security/HARDENING_2026.md) and, for building the app yourself,
+  the [developer notes](documents/technical_documentation.md).
 - 🐛 **Spotted a Gremlin? Got Ideas for a New Gadget?** Report to HQ (GitHub Issues): [https://github.com/fuzzzer/fuzzy_chat/issues]
 
 Happy (and secure) scheming with Fuzzy Chat! 🛡️

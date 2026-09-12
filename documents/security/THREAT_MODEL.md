@@ -177,10 +177,20 @@ message link adds in the clear.
 
 ### 2.8 OS and cloud backups
 
-Nothing in the app opts out of platform backups, and the wrapped store key is stored with
-`flutter_secure_storage` 9.2.4's platform **defaults** (the repository passes only the macOS options:
-`crypto_store_key_repository.dart:17`). What a backup carries and what a restore can do with it therefore
-differs per platform — stated per platform because the consequences are opposite:
+**Fixed in `6ecd9f1`** (`fix(platform): exclude the crypto store and local db from OS backups`): the app now
+opts out of platform backups everywhere, and the keychain items are `ThisDeviceOnly`. Concretely —
+Android: `android:allowBackup="false"` plus `res/xml/backup_rules.xml` (`fullBackupContent`, API ≤ 30)
+and `res/xml/data_extraction_rules.xml` (`dataExtractionRules`, API 31+, both `<cloud-backup>` and
+`<device-transfer>`) excluding every domain (`root`, `file`, `database`, `sharedpref`, `external`);
+iOS / macOS: `NSURLIsExcludedFromBackupKey` set at launch on the Application Support directory that
+holds `fuzzy_crypto_store/` and the Isar database (`ios/Runner/AppDelegate.swift`,
+`macos/Runner/MainFlutterWindow.swift`); and `IOSOptions` / `MacOsOptions` accessibility
+`kSecAttrAccessibleWhenUnlockedThisDeviceOnly` on both `FlutterSecureStorage` instances
+(`default_constants.dart`; `biometric_storage` already wrote `WhenPasscodeSetThisDeviceOnly`). Pinned by
+`test/platform/backup_opt_out_test.dart` and `test/src/core/constants/default_constants_test.dart`.
+The per-platform analysis below describes the state **before** that commit and remains the reason for the
+fix; what a restore could do with a backup taken before it is stated per platform because the consequences
+were opposite:
 
 - **Android.** `AndroidManifest.xml` sets neither `android:allowBackup` nor `android:dataExtractionRules`,
   so Auto Backup copies `files/` (the store directory and the Isar database) and shared preferences to the
@@ -215,11 +225,13 @@ In every case the **metadata non-goal extends to the backup provider and to anyo
 (§7.4, T24): the Isar database leaves the device in the clear wherever a backup exists. The vault's `0x10`
 row is a column of that database, so every backup above also carries the wrapped vault master key.
 
-The code fix — opt out on every platform (`allowBackup="false"` + `dataExtractionRules` excluding the store
-and the database on Android; the backup-exclusion attribute on the store directory and `ThisDeviceOnly`
-accessibility on darwin) — is bound to F5-5's pre-step (owner decision D-8) and is **pending in this
-release**; until it lands, R34 stands. Once it lands, the availability corollary is uniform: a restore
-cannot recover history, on top of "a new device cannot re-read old blobs" (§8).
+With the fix in `6ecd9f1` the availability corollary is uniform: an OS backup no longer carries the store,
+the database or (on darwin) a migratable key item, so a restore cannot recover history — on top of "a new
+device cannot re-read old blobs" (§8). What remains (R34): Linux and Windows have no platform backup to opt
+out of, so a user's own full-profile backup still carries the store directory and the database; and the
+exclusion attribute on darwin is set on the directory at launch, so a backup taken before the first launch
+of `6ecd9f1` or later may still hold the older files. If the owner wants history in a cloud backup later,
+that is a new feature (an encrypted export, F2-10), not a return to OS backups.
 
 ---
 
@@ -335,8 +347,8 @@ An adversary who controls the victim's OS is not on this list (§7.1).
   the lock, or changing the vault password only *re-wraps* the same 32-byte store key or vault master key
   (`PROTOCOL.md` §10.2 "nothing else is keyed by the password", §10.6 "items are never re-encrypted"); no
   re-key path exists in the crate or the app. So a copy of the `0x10` blob taken while the lock was **off**
-  (empty-string wrap — an iOS backup, a macOS development-flavour keychain read, a Linux/Windows
-  user-profile backup; §2.8) stays openable forever: enabling
+  (empty-string wrap — an iOS backup made before `6ecd9f1`, a macOS development-flavour keychain read, a
+  Linux/Windows user-profile backup; §2.8) stays openable forever: enabling
   the lock later protects nothing that already left the device. The same holds for the vault's `0x10` row,
   which travels with any copy of the database, plus the vault password. The only remedy is to delete every
   chat and the vault (or wipe the app) — R33.
@@ -497,7 +509,7 @@ Findings F-1 … F-9 are the nine defects the hardening brief opened (§6).
 | T21 | Wrong-type / wrong-role blob accepted under the right password | AAD domains: `store-key` vs `vault-key` for `0x10`; `chat-state ‖ chat_id`, `local-seal`, `vault-item` for `0x20`; the first 31 bytes for `0x05`; storage-only types refused on paste | §6.7–6.9, §10 | — | Tests: `vault::tests::store_key_and_vault_key_domains_are_separate`, `formats::tests::pasted_rejects_storage_only_kinds`, `store::tests::corrupt_missing_and_foreign_files` |
 | T22 | Post-quantum adversary records pairing blobs and messages | none in this version | §17.12 | — | **Non-goal** (§7.9); hybrid ML-KEM is the next protocol project (R22) |
 | T23 | A dependency, toolchain or CI runner ships different bytes than reviewed | `Cargo.lock` + `--locked`, committed vectors fail on any byte change, two-runner reproducible Rust core, `SHA256SUMS` + provenance attestation, SBOM drift gates | §12, §15, Appendix A; [`RELEASE.md`](RELEASE.md) | — | Flutter AOT not reproducible; as of `v1.0.0-rc.1` the Android APK's core differs from the reproduced library by one linker flag's `.hash` section (`RELEASE.md` §5, §9.2 — matched byte-for-byte after the tag with cargokit's link flags plus the packaging strip; `attest` gates both shipped cores against the rebuild from the next tag), and rc.1's compare gate was inert (evidence = the two `rust-repro-*` artifacts + review); macOS unsigned (D-3); Android CI key is a throwaway (D-6); a build with `--cfg fuzzing` would silently disable signature checks (§9.4) |
-| T24 | OS / cloud backup carries the store, the plaintext metadata and (per platform) the wrapped key off the device | none in this release — no backup opt-out on any platform; the sealed layers stay ciphertext, the metadata does not | §10.5; §2.8 here | — | Metadata readable by the backup provider / account holder on every platform. **Android:** the key entry is Keystore-bound and never restores usable — history lost (A11), no key copy. **iOS** (and macOS development flavour): the key item restores, even to a new device — with the lock off a backup is a permanent usable copy (R33) and history restores with it. Fix (opt out everywhere) pending in F5-5's pre-step, D-8 (R34) |
+| T24 | OS / cloud backup carries the store, the plaintext metadata and (per platform) the wrapped key off the device | Opted out everywhere since `6ecd9f1`: Android `allowBackup="false"` + `fullBackupContent` + `dataExtractionRules` (cloud backup and device transfer) excluding every domain; darwin `NSURLIsExcludedFromBackupKey` on Application Support at launch + `ThisDeviceOnly` keychain items | §10.5; §2.8 here; `test/platform/backup_opt_out_test.dart` | manifest + rules + darwin-source assertions; merged manifest checked with `aapt2` | Before the fix: metadata readable by the backup provider on every platform; on **iOS** (and the macOS development flavour) the key item restored even to a new device (R33 copy case). After it: no platform backup carries the store, the database or the key; Linux/Windows have no platform backup to opt out of (a user's own profile backup still carries the store directory — R34) |
 
 ---
 
@@ -549,8 +561,9 @@ or time out the clipboard.
 The database is not encrypted as a whole (§2.4, `PROTOCOL.md` §10.5). Chat names, chat ids, timestamps,
 message ordering and counts, file names and sizes, the ciphertext blobs, vault item titles, tags, group and
 type are plaintext on disk. A thief without the password learns *who* (as named by the user), *when* and
-*how much*, never *what* — and so does whoever holds the user's OS/cloud backup, since nothing opts the
-database out of it (§2.8, R34). Sealing chat names and vault titles is the same `seal_local` call on more columns —
+*how much*, never *what* — and so did whoever held an OS/cloud backup made before `6ecd9f1`, which opts the
+database out of platform backups (§2.8, R34; a user's own Linux/Windows profile backup still carries it).
+Sealing chat names and vault titles is the same `seal_local` call on more columns —
 a documented follow-up, not this build (R11).
 
 Also in the clear, at the app layer only: a **"Copy as link"** message link
@@ -829,9 +842,9 @@ studio's flow directory; the review ids below are those records).
 | R29 | **Disclosure surface incomplete:** GitHub private vulnerability reporting not yet enabled; `security@` route not yet confirmed (`contact@` is the working address); `security.txt` not yet served on the website. | D-5; `SECURITY.md` | owner / ops |
 | R30 | **Two processes on one store** are unsupported; `.part` files survive a process kill. | `PROTOCOL.md` §17.10–17.11 | none (documented) |
 | R31 | **Pairing has no timeout**: a pending chat keeps its account and one-time key until accepted, regenerated or deleted; the link-level `exp` is a hint the core never checks. | `PROTOCOL.md` §4.6 | product |
-| R32 | **No post-compromise security until the peer ratchets.** A copied state file (thief with the password, malware on an unlocked device, an OS backup) holds the current receiving chain key of each chat and decrypts every message the peer generates on that chain until this device sends a message carrying a new ratchet key and the peer has received it — the peer's next message is then on a chain the copy lacks; no victim read is required, and messages the peer generated before receiving it stay readable by the copy. Nothing forces the victim to send. Past messages stay protected (forward secrecy). No mitigation in scope; candidates (forcing a ratchet step on every send, or re-keying on unlock) are a protocol change for a later version. | `PROTOCOL.md` §8.1, §14 point 3 (verified against the crate: a copy of B's state opened three messages A generated afterwards, and got `Corrupt` on A's first message after A had received B's reply), §17.14; F5-1 security audit finding M1 | planner (format v2 candidate); product copy |
-| R33 | **No store or vault re-key; a leaked key outlives every password change.** `rewrap_store_key` and `vault_rewrap` re-wrap the *same* 32-byte key; nothing is re-sealed, no re-key path exists. A store key or vault master key read from the unlocked process, or a copy of the `""`-wrapped `0x10` blob taken while the lock was off — an iOS backup, a macOS development-flavour login-keychain read or Time Machine copy, a Linux/Windows user-profile backup (§2.8; **not** an Android backup, whose entry is Keystore-bound) — opens every present and future state file, local seal and vault item after any password change, lock enable or re-pair. Remedy today: delete every chat and the vault, or wipe the app. Format v2 candidate: re-key = re-seal all state under a fresh store key. | `PROTOCOL.md` §10.2, §10.6; F4-1 review ("the master key never changes"), F4-2 review §2; §4.3, §4.5 | planner (format v2); product copy |
-| R34 | **OS / cloud backups are not opted out** on any platform: sealed state and the Isar database with its plaintext metadata leave the device by default everywhere, and the wrapped store key does too — Keystore-bound and unusable after restore on **Android** (history lost), restorable and usable even on a new device on **iOS** (the R33 copy case; history restores with it), login-keychain-restorable in the macOS development flavour. Fix = `allowBackup="false"` + `dataExtractionRules` on Android; on darwin the backup-exclusion attribute on the store directory and `ThisDeviceOnly` accessibility for the key item — **pending in this release**, bound to F5-5's pre-step (D-8). | §2.8; T24; `AndroidManifest.xml` (no `allowBackup`/`dataExtractionRules`); owner decision D-8 | developer (F5-5 pre-step); product copy |
+| R32 | **No post-compromise security until the peer ratchets.** A copied state file (thief with the password, malware on an unlocked device, a user-made backup of the store directory) holds the current receiving chain key of each chat and decrypts every message the peer generates on that chain until this device sends a message carrying a new ratchet key and the peer has received it — the peer's next message is then on a chain the copy lacks; no victim read is required, and messages the peer generated before receiving it stay readable by the copy. Nothing forces the victim to send. Past messages stay protected (forward secrecy). No mitigation in scope; candidates (forcing a ratchet step on every send, or re-keying on unlock) are a protocol change for a later version. | `PROTOCOL.md` §8.1, §14 point 3 (verified against the crate: a copy of B's state opened three messages A generated afterwards, and got `Corrupt` on A's first message after A had received B's reply), §17.14; F5-1 security audit finding M1 | planner (format v2 candidate); product copy |
+| R33 | **No store or vault re-key; a leaked key outlives every password change.** `rewrap_store_key` and `vault_rewrap` re-wrap the *same* 32-byte key; nothing is re-sealed, no re-key path exists. A store key or vault master key read from the unlocked process, or a copy of the `""`-wrapped `0x10` blob taken while the lock was off — an iOS backup made before `6ecd9f1`, a macOS development-flavour login-keychain read, a Linux/Windows user-profile backup (§2.8; **not** an Android backup, whose entry is Keystore-bound; since `6ecd9f1` no platform backup carries the item) — opens every present and future state file, local seal and vault item after any password change, lock enable or re-pair. Remedy today: delete every chat and the vault, or wipe the app. Format v2 candidate: re-key = re-seal all state under a fresh store key. | `PROTOCOL.md` §10.2, §10.6; F4-1 review ("the master key never changes"), F4-2 review §2; §4.3, §4.5 | planner (format v2); product copy |
+| R34 | **OS / cloud backups — fixed in `6ecd9f1`** (`allowBackup="false"` + `fullBackupContent` + `dataExtractionRules` on Android; `NSURLIsExcludedFromBackupKey` on Application Support and `ThisDeviceOnly` keychain items on darwin). Residual: Linux and Windows have no platform backup to opt out of, so a user's own full-profile backup still carries the store directory and the database (the key stays in the login keyring / DPAPI store); on darwin the exclusion is applied to the directory at launch, so a backup made before the first launch of a build ≥ `6ecd9f1` may still hold the older files; and the product copy that says "a backup cannot restore history" (§8, R10) is still owed. | §2.8; T24; `AndroidManifest.xml`, `res/xml/*.xml`, `AppDelegate.swift`, `MainFlutterWindow.swift`, `default_constants.dart`; owner decision D-8 | product copy (F2-11) |
 
 ---
 
@@ -868,8 +881,8 @@ places where a fresh pair of eyes changes the risk.
 7. **Zeroization on the Rust side** — including the exact-size serialisation of pickles (`state.rs`) and
    the wiped Argon2 buffer — and an honest statement of what the Dart side cannot wipe (R19).
 8. **Metadata and what leaves the device (§7.4, §2.8, R5, R12, R33, R34)** — whether the plaintext columns,
-   the chat id in message links, default-on backups and the absence of any re-key are acceptable for the
-   product's threat population.
+   the chat id in message links, the residual backup paths after the opt-out and the absence of any re-key
+   are acceptable for the product's threat population.
 9. **The windows (§7.7)** — whether 40 / 5 / 2000 / 63 match how people will actually use a paste-based
    product, and whether `TooOld` and `Replay` are surfaced clearly enough that a user does not mistake a
    window limit for tampering.
