@@ -424,6 +424,26 @@
   "@chatAuthentication": {},
   "chatAuthenticationDescription": "ჩატის პაროლით დაცვის მართვა",
   "@chatAuthenticationDescription": {},
+  "benchmarkFileEncryption": "ფაილის დაშიფვრის ბენჩმარკი (dev)",
+  "@benchmarkFileEncryption": {},
+  "benchmarkFileEncryptionDescription": "ფაზავს და ხსნის 64 MiB დროებით ფაილს და აჩვენებს MB/s-ს",
+  "@benchmarkFileEncryptionDescription": {},
+  "benchmarkResult": "ბენჩმარკის შედეგი",
+  "@benchmarkResult": {},
+  "benchmarkResultSummary": "დაშიფვრა: {encrypt} MB/s · გაშიფვრა: {decrypt} MB/s ({sizeMiB} MiB)\nArgon2id: {encryptKdf} წმ / {decryptKdf} წმ (MB/s-ში არ შედის)\n{device} · {buildMode} ბილდი",
+  "@benchmarkResultSummary": {
+    "placeholders": {
+      "encrypt": {},
+      "decrypt": {},
+      "sizeMiB": {},
+      "encryptKdf": {},
+      "decryptKdf": {},
+      "device": {},
+      "buildMode": {}
+    }
+  },
+  "close": "დახურვა",
+  "@close": {},
   "chatAuthBiometricUnlock": "განბლოკვა ბიომეტრიით",
   "@chatAuthBiometricUnlock": {},
   "chatAuthBiometricEnable": "ბიომეტრიული განბლოკვის ჩართვა",

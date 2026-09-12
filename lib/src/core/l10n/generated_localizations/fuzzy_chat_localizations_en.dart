@@ -661,6 +661,25 @@ class FuzzyChatLocalizationsEn extends FuzzyChatLocalizations {
   String get chatAuthenticationDescription => 'Manage chat password protection';
 
   @override
+  String get benchmarkFileEncryption => 'Benchmark file encryption (dev)';
+
+  @override
+  String get benchmarkFileEncryptionDescription =>
+      'Fuzzes and unfuzzes a 64 MiB temp file and reports MB/s';
+
+  @override
+  String get benchmarkResult => 'Benchmark result';
+
+  @override
+  String benchmarkResultSummary(Object encrypt, Object decrypt, Object sizeMiB,
+      Object encryptKdf, Object decryptKdf, Object device, Object buildMode) {
+    return 'Encrypt: $encrypt MB/s · Decrypt: $decrypt MB/s ($sizeMiB MiB)\nArgon2id: $encryptKdf s / $decryptKdf s (not in the MB/s)\n$device · $buildMode build';
+  }
+
+  @override
+  String get close => 'Close';
+
+  @override
   String get chatAuthBiometricUnlock => 'Unlock with biometrics';
 
   @override

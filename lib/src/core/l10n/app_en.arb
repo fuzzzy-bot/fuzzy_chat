@@ -424,6 +424,26 @@
   "@chatAuthentication": {},
   "chatAuthenticationDescription": "Manage chat password protection",
   "@chatAuthenticationDescription": {},
+  "benchmarkFileEncryption": "Benchmark file encryption (dev)",
+  "@benchmarkFileEncryption": {},
+  "benchmarkFileEncryptionDescription": "Fuzzes and unfuzzes a 64 MiB temp file and reports MB/s",
+  "@benchmarkFileEncryptionDescription": {},
+  "benchmarkResult": "Benchmark result",
+  "@benchmarkResult": {},
+  "benchmarkResultSummary": "Encrypt: {encrypt} MB/s · Decrypt: {decrypt} MB/s ({sizeMiB} MiB)\nArgon2id: {encryptKdf} s / {decryptKdf} s (not in the MB/s)\n{device} · {buildMode} build",
+  "@benchmarkResultSummary": {
+    "placeholders": {
+      "encrypt": {},
+      "decrypt": {},
+      "sizeMiB": {},
+      "encryptKdf": {},
+      "decryptKdf": {},
+      "device": {},
+      "buildMode": {}
+    }
+  },
+  "close": "Close",
+  "@close": {},
   "chatAuthBiometricUnlock": "Unlock with biometrics",
   "@chatAuthBiometricUnlock": {},
   "chatAuthBiometricEnable": "Enable Biometric Unlock",

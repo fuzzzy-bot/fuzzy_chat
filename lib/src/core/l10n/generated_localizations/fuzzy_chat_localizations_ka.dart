@@ -668,6 +668,25 @@ class FuzzyChatLocalizationsKa extends FuzzyChatLocalizations {
   String get chatAuthenticationDescription => 'ჩატის პაროლით დაცვის მართვა';
 
   @override
+  String get benchmarkFileEncryption => 'ფაილის დაშიფვრის ბენჩმარკი (dev)';
+
+  @override
+  String get benchmarkFileEncryptionDescription =>
+      'ფაზავს და ხსნის 64 MiB დროებით ფაილს და აჩვენებს MB/s-ს';
+
+  @override
+  String get benchmarkResult => 'ბენჩმარკის შედეგი';
+
+  @override
+  String benchmarkResultSummary(Object encrypt, Object decrypt, Object sizeMiB,
+      Object encryptKdf, Object decryptKdf, Object device, Object buildMode) {
+    return 'დაშიფვრა: $encrypt MB/s · გაშიფვრა: $decrypt MB/s ($sizeMiB MiB)\nArgon2id: $encryptKdf წმ / $decryptKdf წმ (MB/s-ში არ შედის)\n$device · $buildMode ბილდი';
+  }
+
+  @override
+  String get close => 'დახურვა';
+
+  @override
   String get chatAuthBiometricUnlock => 'განბლოკვა ბიომეტრიით';
 
   @override

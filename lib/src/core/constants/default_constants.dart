@@ -28,3 +28,9 @@ final fuzzVersionInfo = Uint8List.fromList(<int>[
 const secureStorageMacOsOptions = MacOsOptions(
   useDataProtectionKeyChain: appFlavor != 'development',
 );
+
+/// The settings tile that benchmarks the file path exists in the development
+/// flavor only; staging and production builds never carry it. Not tied to
+/// `kDebugMode` on purpose: a debug build ships the crate's dev profile, so
+/// only a `--profile`/`--release` development build measures the real core.
+const isFileBenchmarkEnabled = appFlavor == 'development';

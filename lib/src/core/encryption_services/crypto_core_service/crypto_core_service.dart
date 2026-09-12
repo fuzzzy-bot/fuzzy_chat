@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:fuzzy_chat/lib.dart';
 import 'package:fuzzy_chat/rust_bridge/api/core.dart' as rust_core;
@@ -28,6 +30,11 @@ class CryptoCoreService {
   /// this check.
   static final _chatIdShape =
       RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$');
+
+  /// The benchmark's file is written and checked in 1 MiB blocks — one
+  /// container chunk each — under a password that protects nothing.
+  static const _benchmarkBlockSize = 1024 * 1024;
+  static const _benchmarkPassword = 'fuzzy-bench';
 
   final String _storeDirectoryPath;
 
@@ -326,6 +333,131 @@ class CryptoCoreService {
       resume: job.resume,
       cancel: job.cancel,
     );
+  }
+
+  /// Development-flavor benchmark behind the settings tile: [sizeMiB] (≥ 2)
+  /// of random bytes under [directoryPath] go through the password-mode
+  /// container and back under a throwaway password, the round trip is
+  /// checked byte for byte and the three files are deleted. Each rate counts
+  /// the chunk stream only — first chunk event to terminal event, over the
+  /// bytes those chunks carry — so the Argon2id run before the first chunk is
+  /// reported on its own (one chunk's share taken off). Any failure, the
+  /// core's or the disk's, is `internal`: nothing here is a user error.
+  Future<CryptoCoreResponse<FileBenchmarkResult>> benchmarkFiles({
+    required String directoryPath,
+    int sizeMiB = 64,
+  }) {
+    return _guarded(() async {
+      final inputPath = path.join(directoryPath, 'fuzzy_bench.bin');
+      final fuzzedPath = '$inputPath.$fuzzedFileIdentificator';
+      final restoredPath = '$inputPath.unfuzzed';
+      final random = Random.secure();
+      final block = Uint8List.fromList(
+        List<int>.generate(_benchmarkBlockSize, (_) => random.nextInt(256)),
+      );
+      final sizeBytes = sizeMiB * _benchmarkBlockSize;
+      try {
+        // Flushed to disk before the clock starts, so the input's writeback
+        // never competes with the encrypt job it feeds.
+        final input = await File(inputPath).open(mode: FileMode.write);
+        for (var i = 0; i < sizeMiB; i++) {
+          await input.writeFrom(block);
+        }
+        await input.flush();
+        await input.close();
+
+        final encrypt = await _timeFileJob(
+          sizeBytes,
+          (job) => rust_files.encryptFile(
+            password: _benchmarkPassword,
+            input: inputPath,
+            output: fuzzedPath,
+            job: job,
+          ),
+        );
+        final decrypt = await _timeFileJob(
+          sizeBytes,
+          (job) => rust_files.decryptFile(
+            password: _benchmarkPassword,
+            input: fuzzedPath,
+            output: restoredPath,
+            job: job,
+          ),
+        );
+        if (!await _isRepetitionOf(block, restoredPath, sizeMiB)) {
+          throw StateError('benchmark round trip mismatch');
+        }
+
+        return FileBenchmarkResult(
+          sizeBytes: sizeBytes,
+          encryptMbPerSecond: encrypt.mbPerSecond,
+          decryptMbPerSecond: decrypt.mbPerSecond,
+          encryptKeyDerivation: encrypt.keyDerivation,
+          decryptKeyDerivation: decrypt.keyDerivation,
+        );
+      } finally {
+        for (final filePath in [inputPath, fuzzedPath, restoredPath]) {
+          final file = File(filePath);
+          if (file.existsSync()) file.deleteSync();
+        }
+      }
+    });
+  }
+
+  /// Runs one file job to its terminal event and splits the wall time at
+  /// the first chunk event: what follows it is chunks (and the commit)
+  /// only; what precedes it is Argon2id plus one chunk. MB/s is bytes per
+  /// microsecond.
+  Future<({double mbPerSecond, Duration keyDerivation})> _timeFileJob(
+    int sizeBytes,
+    Stream<rust_files.FileProgress> Function(rust_files.FileJob job) start,
+  ) async {
+    final handler = await _startFileJob(start);
+    final stopwatch = Stopwatch()..start();
+    Duration? firstChunkAt;
+    var firstChunkProgress = 0.0;
+    await for (final event in handler.progressStream) {
+      if (event.errorMessage != null) {
+        throw StateError('benchmark job failed: ${event.errorMessage}');
+      }
+      if (firstChunkAt == null && event.progress > 0) {
+        firstChunkAt = stopwatch.elapsed;
+        firstChunkProgress = event.progress;
+      }
+      if (event.isComplete) break;
+    }
+    if (firstChunkAt == null || firstChunkProgress >= 1) {
+      throw StateError('benchmark needs at least two chunks');
+    }
+    final streamed = stopwatch.elapsed - firstChunkAt;
+    final streamedBytes = sizeBytes * (1 - firstChunkProgress);
+    final chunkShare =
+        streamed * (firstChunkProgress / (1 - firstChunkProgress));
+    return (
+      mbPerSecond: streamedBytes / streamed.inMicroseconds,
+      keyDerivation: firstChunkAt - chunkShare,
+    );
+  }
+
+  /// Whether the file at [filePath] is exactly [count] copies of [block].
+  Future<bool> _isRepetitionOf(
+    Uint8List block,
+    String filePath,
+    int count,
+  ) async {
+    final file = await File(filePath).open();
+    try {
+      if (await file.length() != block.length * count) return false;
+      for (var i = 0; i < count; i++) {
+        final read = await file.read(block.length);
+        for (var j = 0; j < block.length; j++) {
+          if (read[j] != block[j]) return false;
+        }
+      }
+      return true;
+    } finally {
+      await file.close();
+    }
   }
 
   /// Seals [bytes] under the store-derived local key (0x20 blob) for

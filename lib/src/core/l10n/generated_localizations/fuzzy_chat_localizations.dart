@@ -1320,6 +1320,37 @@ abstract class FuzzyChatLocalizations {
   /// **'Manage chat password protection'**
   String get chatAuthenticationDescription;
 
+  /// No description provided for @benchmarkFileEncryption.
+  ///
+  /// In en, this message translates to:
+  /// **'Benchmark file encryption (dev)'**
+  String get benchmarkFileEncryption;
+
+  /// No description provided for @benchmarkFileEncryptionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Fuzzes and unfuzzes a 64 MiB temp file and reports MB/s'**
+  String get benchmarkFileEncryptionDescription;
+
+  /// No description provided for @benchmarkResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Benchmark result'**
+  String get benchmarkResult;
+
+  /// No description provided for @benchmarkResultSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypt: {encrypt} MB/s · Decrypt: {decrypt} MB/s ({sizeMiB} MiB)\nArgon2id: {encryptKdf} s / {decryptKdf} s (not in the MB/s)\n{device} · {buildMode} build'**
+  String benchmarkResultSummary(Object encrypt, Object decrypt, Object sizeMiB,
+      Object encryptKdf, Object decryptKdf, Object device, Object buildMode);
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
   /// No description provided for @chatAuthBiometricUnlock.
   ///
   /// In en, this message translates to:
