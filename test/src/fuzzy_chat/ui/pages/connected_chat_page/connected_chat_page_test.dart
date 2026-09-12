@@ -1,6 +1,11 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuzzy_chat/lib.dart';
+import 'package:fuzzzy_ui_kit/fuzzzy_ui_kit.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -111,6 +116,86 @@ void main() {
       expect(shouldToastFailure(idle, failed), isTrue);
       expect(shouldToastFailure(failed, failedAgain), isFalse);
       expect(shouldToastFailure(failed, idle), isFalse);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // openSafetyNumber (the inviter's entry point after the handshake)
+  // -----------------------------------------------------------------------
+  group('openSafetyNumber', () {
+    testWidgets(
+        'pushes the safety-number page over the chat and reloads the shield '
+        'cubit when it pops', (tester) async {
+      SharedPreferences.setMockInitialValues({'has_completed_tutorial': true});
+      sl.safeRegisterSingleton<PreferencesService>(
+        PreferencesService(await SharedPreferences.getInstance()),
+      );
+      sl.safeRegisterSingleton<MessageDataRepository>(mockRepo);
+      sl.safeRegisterSingleton<CryptoCoreService>(mockService);
+      when(() => mockService.safetyNumber(_chatId))
+          .thenAnswer((_) async => const CryptoCoreSuccess('12345 67890'));
+      when(() => mockService.isVerified(_chatId))
+          .thenAnswer((_) async => const CryptoCoreSuccess(false));
+
+      final chat = ChatGeneralData(
+        chatId: _chatId,
+        chatName: 'Alice',
+        setupStatus: ChatSetupStatus.connected,
+        didAcceptInvitation: false,
+      );
+      final router = GoRouter(
+        initialLocation: AppRouter.chatConnected,
+        routes: [
+          GoRoute(
+            path: AppRouter.chatConnected,
+            builder: (_, __) => ConnectedChatPage(
+              payload: ConnectedChatPagePayload(
+                chatGeneralData: chat,
+                openSafetyNumber: true,
+              ),
+            ),
+          ),
+          GoRoute(
+            path: AppRouter.chatVerify,
+            builder: (_, __) => const Scaffold(body: Text('verify page')),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<FileProcessingCubit<FileEncryptionOption>>(
+              create: (_) => FileProcessingCubit<FileEncryptionOption>(
+                processingOption: const FileEncryptionOption(),
+                cryptoCoreService: mockService,
+              ),
+            ),
+            BlocProvider<FileProcessingCubit<FileDecryptionOption>>(
+              create: (_) => FileProcessingCubit<FileDecryptionOption>(
+                processingOption: const FileDecryptionOption(),
+                cryptoCoreService: mockService,
+              ),
+            ),
+          ],
+          child: MaterialApp.router(
+            theme: FuzzzyTheme.build(inkPack, FuzzzySkin.night),
+            localizationsDelegates:
+                FuzzyChatLocalizations.localizationsDelegates,
+            supportedLocales: FuzzyChatLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('verify page'), findsOneWidget);
+      verify(() => mockService.isVerified(_chatId)).called(1);
+
+      router.pop();
+      await tester.pumpAndSettle();
+
+      expect(find.text('verify page'), findsNothing);
+      verify(() => mockService.isVerified(_chatId)).called(1);
     });
   });
 }

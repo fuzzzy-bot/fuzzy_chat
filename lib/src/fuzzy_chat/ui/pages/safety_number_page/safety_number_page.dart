@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fuzzy_chat/lib.dart';
@@ -31,7 +33,7 @@ class ProvidedSafetyNumberPage extends StatelessWidget {
     final groups = safetyNumber.split(' ');
     final rows = <String>[];
     for (var i = 0; i < groups.length; i += 3) {
-      rows.add(groups.sublist(i, i + 3).join(' '));
+      rows.add(groups.sublist(i, math.min(i + 3, groups.length)).join(' '));
     }
     return rows.join('\n');
   }

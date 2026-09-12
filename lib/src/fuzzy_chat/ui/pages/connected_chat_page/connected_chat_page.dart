@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fuzzy_chat/lib.dart';
 import 'package:fuzzzy_ui_kit/fuzzzy_ui_kit.dart';
+import 'package:go_router/go_router.dart';
 
 export 'components/components.dart';
 export 'widgets/widgets.dart';
@@ -86,6 +87,20 @@ class _ProvidedConnectedChatPageState extends State<ProvidedConnectedChatPage> {
             '$fuzzIdentificator${widget.payload.prefillEncryptedMessage}';
       });
     }
+
+    // The safety number sits on top of the chat (back lands here); the
+    // header's shield reloads when it pops, as it does from the header.
+    if (widget.payload.openSafetyNumber) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openSafetyNumber());
+    }
+  }
+
+  Future<void> _openSafetyNumber() async {
+    await context.push(
+      AppRouter.chatVerify,
+      extra: widget.payload.chatGeneralData,
+    );
+    if (mounted) await context.read<SafetyNumberCubit>().load();
   }
 
   void _onMessageUpdated() {

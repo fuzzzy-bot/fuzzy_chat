@@ -111,10 +111,9 @@ class _ProvidedChatInvitationPageState
                 AppRouter.chatConnected,
                 extra: ConnectedChatPagePayload(
                   chatGeneralData: state.chatData!,
+                  openSafetyNumber: true,
                 ),
               );
-              // The safety number sits on top of the chat: back lands in it.
-              context.push(AppRouter.chatVerify, extra: state.chatData);
             } else if (state.status.isFailed) {
               FuzzzyToast.show(
                 context,
