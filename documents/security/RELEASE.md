@@ -100,13 +100,15 @@ what we promise:
    cd rust/fuzzy_crypto_core
    export RUSTFLAGS="--remap-path-prefix=$HOME/.cargo/registry/src=/cargo/registry/src"
    cargo build --release --locked --target x86_64-unknown-linux-gnu             # the linux-bundle core
-   cargo ndk -t arm64-v8a -P 24 build --release --locked                         # the Android core, NDK 28.2.13676358
+   RUSTFLAGS="$RUSTFLAGS -C link-arg=-Wl,--hash-style=both -C link-arg=-Wl,-z,max-page-size=16384" \
+     cargo ndk -t arm64-v8a -P 24 build --release --locked                       # the Android core, NDK 28.2.13676358
    sha256sum target/x86_64-unknown-linux-gnu/release/libfuzzy_crypto_core.so \
              target/aarch64-linux-android/release/libfuzzy_crypto_core.so
    ```
    and compare with the `rust-repro-1` artifact's `SHA256SUMS` of the tag run (`-P 24` is Flutter's default
-   `minSdkVersion`, which cargokit passes; cargo-ndk alone would default to 21 and link `pthread_atfork`
-   instead of `__register_atfork`). (Cargo's portable `[profile.release] trim-paths` would replace the
+   `minSdkVersion`, which cargokit passes — cargo-ndk alone would default to 21 and link `pthread_atfork`
+   instead of `__register_atfork` — and the two `link-arg`s are cargokit's Android link flags, which cargo-ndk
+   4.1.2 does not add on NDK 28). (Cargo's portable `[profile.release] trim-paths` would replace the
    remap; it is nightly-only on 1.98.1.)
    Known limits, both measured: **the host matters** — rebuilding the Android core from a macOS host with the
    same NDK, cargo-ndk and rustc gives a different binary (§5), so reproduce on a Linux x86_64 host, which is
@@ -142,16 +144,21 @@ Rust core at this tag (unchanged since the measurement run
   cargokit inside `flutter build linux`, is byte-identical to the standalone rebuild above
   (`b13462d8…`), and was already that hash on the previous commit's run — so the attested Linux bundle
   carries a core anyone can rebuild and match.
-- **Android: the shipped core is not byte-identical to the standalone rebuild.** The APK's
+- **Android at the tag: the shipped core differs from the `rust-repro` core by one linker flag.** The APK's
   `lib/arm64-v8a/libfuzzy_crypto_core.so` (`ad625a3a876d1cd3b76d19d368827b0309e12f1fe9f3b28a5f380346d80f2dd3`,
-  1,394,568 B) and the rebuild (`b8e30d0c…`, 1,393,664 B) have identical code-segment sizes and the same
-  imports, but a different relocation/dynamic-section layout: cargokit and cargo-ndk pass different linker
-  flags (cargokit: `--hash-style=both`, a libgcc→libunwind search path, its own linker wrapper). Matching the
-  exact link line is a follow-up; until then the Android claim is "the core rebuilds identically on two
-  machines", not "the byte-identical core is inside the APK".
+  1,394,568 B) and the tag run's rebuild (`b8e30d0c…`, 1,393,664 B) differ only by a SysV `.hash` section (0x340 B)
+  plus its `DT_HASH` entry and the page padding after it — cargokit links with `--hash-style=both`, cargo-ndk 4.1.2
+  does not; `.text`, `.rodata`, both relocation tables, `.dynsym`, imports and `.comment` are otherwise equal (the
+  remaining `.text` byte differences are GOT-relative immediates shifted by the extra section). The `rust-repro` job
+  passes cargokit's exact link flags from the commit after the tag; see the note below this table for the result.
+- **rc.1 evidence caveat.** On the tag run the `rust-repro-compare` step's `diff` was `&&`-chained to an `echo`, which
+  exempts it from `set -e` — the step could not have failed on a mismatch. The rc.1 hashes above are therefore
+  established by the two `rust-repro-1` / `rust-repro-2` artifacts of the tag run (identical `SHA256SUMS`, `cmp` of the
+  Android `.so` = 0 bytes), re-verified by an independent reviewer, not by the gate; the gate is fixed on the commit
+  after the tag (`echo` on its own line; mismatch → exit 1 verified with the step script).
 - **No runner path in any shipped core**: 0 occurrences of `/home/runner`, `/Users/runner` or `runneradmin`
   in the Android, Linux, Windows and macOS cores of the run; the remapped `/cargo/registry/src` prefix
-  appears 87 / 87 / 52 / 334 times respectively.
+  appears 88 / 87 / 89 / 334 times respectively (`strings -a`).
 - **Host dependence (measured):** the same Android build from a macOS arm64 host (same NDK 28.2.13676358,
   cargo-ndk 4.1.2, rustc 1.98.1, same `RUSTFLAGS` remap) differed from the CI binary in 17,159 bytes
   spread over `.text`/`.rodata`/`.eh_frame`/`.gcc_except_table` at identical section sizes, plus an extra

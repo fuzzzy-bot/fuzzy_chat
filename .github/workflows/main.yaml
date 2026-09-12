@@ -189,6 +189,9 @@ jobs:
         working-directory: ${{ env.CRATE }}
       - run: ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358 cargo ndk -t arm64-v8a -P 24 build --release --locked
         working-directory: ${{ env.CRATE }}
+        # cargokit's arm64 link flags (android_environment.dart `_libGccWorkaround`), so the result is byte-comparable
+        # with the core inside the APK; RUSTFLAGS replaces .cargo/config.toml's list, hence the remap is repeated.
+        env: { RUSTFLAGS: "--remap-path-prefix=/home/runner/.cargo/registry/src=/cargo/registry/src -C link-arg=-Wl,--hash-style=both -C link-arg=-Wl,-z,max-page-size=16384" }
       - name: hashes
         run: |
           set -euo pipefail
@@ -208,7 +211,8 @@ jobs:
           set -euo pipefail
           echo "## run 1"; cat rust-repro-1/SHA256SUMS
           echo "## run 2"; cat rust-repro-2/SHA256SUMS
-          diff rust-repro-1/SHA256SUMS rust-repro-2/SHA256SUMS && echo "IDENTICAL"
+          diff rust-repro-1/SHA256SUMS rust-repro-2/SHA256SUMS   # a mismatch fails the step (own line: `&&` would exempt it from -e)
+          echo IDENTICAL
           # The remap must have taken effect: no runner-specific path may survive in the built code.
           if grep -aq /home/runner rust-repro-1/host/libfuzzy_crypto_core.so rust-repro-1/android/libfuzzy_crypto_core.so; then
             echo "runner path embedded: .cargo/config.toml remap not applied"; exit 1
@@ -228,6 +232,8 @@ jobs:
           sha256sum android-apk/app-production-release.apk windows-bundle/fuzzy_chat.exe linux-bundle/fuzzy_chat \
             macos-app/fuzzy_chat-macos.zip linux-bundle/lib/libfuzzy_crypto_core.so windows-bundle/fuzzy_crypto_core.dll \
             | tee SHA256SUMS
+          # No build-machine path may survive in a shipped core (.cargo/config.toml remap).
+          ! grep -aqE '/home/runner|/Users/runner|runneradmin' linux-bundle/lib/libfuzzy_crypto_core.so windows-bundle/fuzzy_crypto_core.dll
       - uses: actions/upload-artifact@v7
         with: { name: sha256sums, path: SHA256SUMS }
       - uses: actions/attest-build-provenance@v4
