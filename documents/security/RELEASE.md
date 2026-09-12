@@ -102,13 +102,18 @@ what we promise:
    cargo build --release --locked --target x86_64-unknown-linux-gnu             # the linux-bundle core
    RUSTFLAGS="$RUSTFLAGS -C link-arg=-Wl,--hash-style=both -C link-arg=-Wl,-z,max-page-size=16384" \
      cargo ndk -t arm64-v8a -P 24 build --release --locked                       # the Android core, NDK 28.2.13676358
+   $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip --strip-debug \
+     target/aarch64-linux-android/release/libfuzzy_crypto_core.so                # what AGP does before packaging
    sha256sum target/x86_64-unknown-linux-gnu/release/libfuzzy_crypto_core.so \
              target/aarch64-linux-android/release/libfuzzy_crypto_core.so
    ```
-   and compare with the `rust-repro-1` artifact's `SHA256SUMS` of the tag run (`-P 24` is Flutter's default
+   and compare with the `rust-repro-1` artifact's `SHA256SUMS` of the tag run — and directly with the cores
+   inside the release: `linux-bundle/lib/libfuzzy_crypto_core.so` and the APK's
+   `lib/arm64-v8a/libfuzzy_crypto_core.so` (`unzip` it) are the same bytes. (`-P 24` is Flutter's default
    `minSdkVersion`, which cargokit passes — cargo-ndk alone would default to 21 and link `pthread_atfork`
-   instead of `__register_atfork` — and the two `link-arg`s are cargokit's Android link flags, which cargo-ndk
-   4.1.2 does not add on NDK 28). (Cargo's portable `[profile.release] trim-paths` would replace the
+   instead of `__register_atfork`; the two `link-arg`s are cargokit's Android link flags, which cargo-ndk
+   4.1.2 does not add on NDK 28; the `llvm-strip --strip-debug` is the Android Gradle plugin's packaging
+   strip, which only rewrites the section-name table.) (Cargo's portable `[profile.release] trim-paths` would replace the
    remap; it is nightly-only on 1.98.1.)
    Known limits, both measured: **the host matters** — rebuilding the Android core from a macOS host with the
    same NDK, cargo-ndk and rustc gives a different binary (§5), so reproduce on a Linux x86_64 host, which is
@@ -121,9 +126,10 @@ what we promise:
 **What we do not promise:** the Flutter AOT output (`libapp.so`, the desktop executables, the app
 bundles) is not bit-for-bit reproducible today — it embeds build paths and ids
 (dart-lang/sdk#52506; F-Droid rebuilds Flutter apps only by pinning the exact absolute build path). The
-Rust core *inside* the shipped bundles is built by cargokit with its own target directory and linker
-flags, so its hash is listed in `SHA256SUMS` for inspection but is **not** claimed equal to the
-`rust-repro` hash; the measured relation for each release is recorded in the release notes.
+Rust core *inside* the shipped Linux bundle and the APK **is** the `rust-repro` build: the `attest` job
+extracts both and fails the tag run unless their SHA-256 appear in `rust-repro-1/SHA256SUMS` (the Windows
+and macOS cores are attested and path-clean but not gated against a rebuild). The measured relation for
+each release is recorded in §5.
 
 The measured result for the first attested tag, `v1.0.0-rc.1`, is in §5.
 
@@ -144,13 +150,19 @@ Rust core at this tag (unchanged since the measurement run
   cargokit inside `flutter build linux`, is byte-identical to the standalone rebuild above
   (`b13462d8…`), and was already that hash on the previous commit's run — so the attested Linux bundle
   carries a core anyone can rebuild and match.
-- **Android at the tag: the shipped core differs from the `rust-repro` core by one linker flag.** The APK's
-  `lib/arm64-v8a/libfuzzy_crypto_core.so` (`ad625a3a876d1cd3b76d19d368827b0309e12f1fe9f3b28a5f380346d80f2dd3`,
-  1,394,568 B) and the tag run's rebuild (`b8e30d0c…`, 1,393,664 B) differ only by a SysV `.hash` section (0x340 B)
-  plus its `DT_HASH` entry and the page padding after it — cargokit links with `--hash-style=both`, cargo-ndk 4.1.2
-  does not; `.text`, `.rodata`, both relocation tables, `.dynsym`, imports and `.comment` are otherwise equal (the
-  remaining `.text` byte differences are GOT-relative immediates shifted by the extra section). The `rust-repro` job
-  passes cargokit's exact link flags from the commit after the tag; see the note below this table for the result.
+- **Android: the shipped core is the reproducible core too — established after the tag.** At the tag the
+  APK's `lib/arm64-v8a/libfuzzy_crypto_core.so` (`ad625a3a876d1cd3b76d19d368827b0309e12f1fe9f3b28a5f380346d80f2dd3`,
+  1,394,568 B) differed from the `rust-repro` rebuild (`b8e30d0c…`, 1,393,664 B) only by a SysV `.hash` section
+  (0x340 B) plus its `DT_HASH` entry — cargokit links with `--hash-style=both`, cargo-ndk 4.1.2 does not; `.text`,
+  `.rodata`, both relocation tables, `.dynsym`, imports and `.comment` were otherwise equal. With cargokit's link
+  flags the rebuild (`626b7041a645beb5317f04c521d227eda5fc97b206508b81d7fa2b84fcb9a85a`, 1,394,576 B) matched the
+  APK core in every loaded byte and differed only in the non-loaded section-name table (`.shstrtab` 0xff vs
+  0xf4 B, and the section-header offset that follows it): the Android Gradle plugin passes every packaged `.so`
+  through `llvm-strip --strip-debug`, which rewrites that table. `llvm-strip --strip-debug` on the rebuild →
+  **`ad625a3a…` — byte-identical to the APK core** (verified on run
+  <https://github.com/fuzzzy-bot/fuzzy_chat/actions/runs/34721691080>, the first commit after the tag; the
+  `rust-repro` job now applies the same strip, and `attest` gates both shipped cores against the rebuild from
+  the next tag on).
 - **rc.1 evidence caveat.** On the tag run the `rust-repro-compare` step's `diff` was `&&`-chained to an `echo`, which
   exempts it from `set -e` — the step could not have failed on a mismatch. The rc.1 hashes above are therefore
   established by the two `rust-repro-1` / `rust-repro-2` artifacts of the tag run (identical `SHA256SUMS`, `cmp` of the
