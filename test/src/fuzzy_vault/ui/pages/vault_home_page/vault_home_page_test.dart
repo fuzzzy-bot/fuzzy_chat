@@ -73,7 +73,7 @@ void main() {
     for (final label in [
       l10n.vaultPasswords,
       l10n.vaultNotes,
-      l10n.vaultFiles
+      l10n.vaultFiles,
     ]) {
       final text = tester.widget<Text>(find.text(label));
       expect(text.overflow, isNull);

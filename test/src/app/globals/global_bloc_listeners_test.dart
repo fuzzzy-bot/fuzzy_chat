@@ -113,7 +113,9 @@ void main() {
   }
 
   Future<void> inject(
-      WidgetTester tester, List<FileProcessingData> files) async {
+    WidgetTester tester,
+    List<FileProcessingData> files,
+  ) async {
     await injector.injectProcessedFile(
       processedFiles: files,
       filesAreEncrypted: false,
@@ -137,7 +139,8 @@ void main() {
     expect(find.byType(SnackBar), findsOneWidget);
     expect(
       find.textContaining(
-          '${l10n.failedToProcessFiles}: [a.fuzz (${l10n.fileCorrupt})]'),
+        '${l10n.failedToProcessFiles}: [a.fuzz (${l10n.fileCorrupt})]',
+      ),
       findsOneWidget,
     );
     await dismissSnackBar(tester);
