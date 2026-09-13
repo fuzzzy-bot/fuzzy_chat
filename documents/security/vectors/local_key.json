@@ -1,4 +1,0 @@
-{
-  "hkdf": "HKDF-SHA256, salt = none, info = \"fuzzy-local-seal-v1\", 32 bytes",
-  "store_key": "3333333333333333333333333333333333333333333333333333333333333333"
-}

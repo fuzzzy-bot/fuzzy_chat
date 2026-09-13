@@ -460,15 +460,23 @@ class CryptoCoreService {
     }
   }
 
-  /// Seals [bytes] under the store-derived local key (0x20 blob) for
-  /// at-rest storage on this device only.
-  Future<CryptoCoreResponse<Uint8List>> sealLocal(Uint8List bytes) {
-    return _withCore((core) => core.sealLocal(bytes: bytes));
+  /// Seals [bytes] of [chatId]'s message history under that chat's own
+  /// history key (0x20 blob) for at-rest storage on this device only; a
+  /// chat the store does not know is `unknownChat`.
+  Future<CryptoCoreResponse<Uint8List>> sealLocal({
+    required String chatId,
+    required Uint8List bytes,
+  }) {
+    return _withCore((core) => core.sealLocal(chatId: chatId, bytes: bytes));
   }
 
-  /// Inverse of [sealLocal]; a tampered or foreign blob is `corrupt`.
-  Future<CryptoCoreResponse<Uint8List>> openLocal(Uint8List blob) {
-    return _withCore((core) => core.openLocal(blob: blob));
+  /// Inverse of [sealLocal] for the same chat; a tampered blob or another
+  /// chat's is `corrupt`, a deleted chat's is `unknownChat`.
+  Future<CryptoCoreResponse<Uint8List>> openLocal({
+    required String chatId,
+    required Uint8List blob,
+  }) {
+    return _withCore((core) => core.openLocal(chatId: chatId, blob: blob));
   }
 
   /// The chat's 60-digit safety number (12 groups of 5, space-separated) —

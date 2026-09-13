@@ -71,11 +71,22 @@ pub struct ChatState {
     pub verified: bool,
     pub last_invitation: Option<Vec<u8>>,
     pub last_acceptance: Option<Vec<u8>>,
+    /// Seals this chat's message history (owner decision D-1, F2-12): 32 random
+    /// bytes drawn when the chat's own key material is created, never derived
+    /// from the store key, so one chat's key opens no other chat's history.
+    /// Wiped with the rest of the state; lives only inside the sealed file.
+    pub history_key: [u8; 32],
 }
 
 impl ChatState {
     /// A freshly created chat: no session, no peer, nothing sent or received.
-    pub fn new(role: Role, chat_id: String, account: AccountPickle, our_ed25519: [u8; 32]) -> Self {
+    pub fn new(
+        role: Role,
+        chat_id: String,
+        account: AccountPickle,
+        our_ed25519: [u8; 32],
+        history_key: [u8; 32],
+    ) -> Self {
         Self {
             format_version: STATE_FORMAT_VERSION,
             role,
@@ -91,6 +102,7 @@ impl ChatState {
             verified: false,
             last_invitation: None,
             last_acceptance: None,
+            history_key,
         }
     }
 
@@ -133,7 +145,13 @@ mod tests {
     fn account_serialises_into_an_exactly_sized_buffer() {
         let account = Account::new();
         let our_ed25519 = *account.ed25519_key().as_bytes();
-        let state = ChatState::new(Role::Inviter, CHAT_ID.into(), account.pickle(), our_ed25519);
+        let state = ChatState::new(
+            Role::Inviter,
+            CHAT_ID.into(),
+            account.pickle(),
+            our_ed25519,
+            [0x55; 32],
+        );
 
         let body = serialize_exact(&state.account).unwrap();
         assert!(

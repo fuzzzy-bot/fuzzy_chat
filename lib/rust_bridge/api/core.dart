@@ -98,8 +98,10 @@ abstract class CryptoCore implements RustOpaqueInterface {
   /// `UnknownChat`.
   Future<void> markVerified({required String chatId, required bool verified});
 
-  /// Inverse of [`CryptoCore::seal_local`]; a tampered or foreign blob is `Corrupt`.
-  Future<Uint8List> openLocal({required List<int> blob});
+  /// Inverse of [`CryptoCore::seal_local`] for the same chat; a tampered
+  /// blob or another chat's is `Corrupt`, a deleted chat's is `UnknownChat`.
+  Future<Uint8List> openLocal(
+      {required String chatId, required List<int> blob});
 
   /// Step one of receiving the chat-mode container at `input` on `chat_id`:
   /// reads the header (a header-only or truncated container is `Corrupt`
@@ -131,9 +133,12 @@ abstract class CryptoCore implements RustOpaqueInterface {
   /// like every other call on the handle.
   Future<String> safetyNumber({required String chatId});
 
-  /// Seals `bytes` for local storage (message history, F2-8) under the
-  /// HKDF-derived local key: a 0x20 blob with a fresh random nonce.
-  Future<Uint8List> sealLocal({required List<int> bytes});
+  /// Seals `bytes` of `chat_id`'s message history (F2-8) under that chat's
+  /// own history key (owner decision D-1, F2-12): a 0x20 blob with a fresh
+  /// random nonce and AAD `local-seal` ‖ chat id. A chat the store does not
+  /// know is `UnknownChat`.
+  Future<Uint8List> sealLocal(
+      {required String chatId, required List<int> bytes});
 
   /// The directory the store was opened with (for tests).
   Future<String> storeDir();

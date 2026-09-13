@@ -234,8 +234,9 @@ mod tests {
             CoreError::Corrupt,
             "another key"
         );
-        // A local seal (same 0x20 envelope, AAD `local-seal`) is not a vault item.
-        let local = store::seal_local(&MASTER, b"item").unwrap();
+        // A history seal (same 0x20 envelope, AAD `local-seal` ‖ chat id) is not a vault item.
+        let local =
+            store::seal_local(&MASTER, "6f1e9b2c-3d4a-4f5b-8c6d-7e8f9a0b1c2d", b"item").unwrap();
         assert_eq!(open_item(&MASTER, &local).unwrap_err(), CoreError::Corrupt);
         // A 0x10 blob is the wrong kind for this call.
         let (_, wrapped) = init(b"").unwrap();

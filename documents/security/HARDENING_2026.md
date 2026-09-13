@@ -54,7 +54,7 @@ that never sees a key. The primitives are all audited third-party crates, `=`-pi
 | Pairing, ratchet, per-message keys | `vodozemac` 0.10.0 — Olm double ratchet, unmodified (`SessionConfig::version_1()`) | Least Authority audit, March 2022, no significant findings; powers Matrix/Element; Apache-2.0 |
 | Every AEAD use (files, local state, password blobs, vault) | `chacha20poly1305` 0.11.0 (XChaCha20-Poly1305) + `aead-stream` 0.6.0 (STREAM, BE32) | RustCrypto; NCC Group audit 2020, no significant findings |
 | Password → key | `argon2` 0.6.0 (Argon2id, m = 64 MiB, t = 4, p = 1) | RustCrypto; RFC 9106 |
-| Fingerprints, local key derivation | `sha2` / `hkdf` | RustCrypto |
+| Fingerprints (safety number) | `sha2` (`hkdf` 0.13 stays pinned but has no caller since the per-chat history key of D-1 replaced the store-derived local key; removal is a dependency chore) | RustCrypto |
 | Constant-time comparison, wiping, randomness | `subtle`, `zeroize`, `getrandom` | dalek / RustCrypto / rust-random |
 
 Nothing cryptographic was written by hand: no primitive, no KDF, no MAC, no protocol. The Olm session is used
@@ -126,17 +126,25 @@ real device or the Mac (owner decision D-9), and the overlay says "Re-securing y
 The brief reserved one decision for the owner and the build surfaced a few more. They are quoted here as they
 stand on 2026-09-13; the build never waited silently on any of them.
 
-**D-1 · Plaintext at rest (the forward-secrecy trade-off) — pending.** The ratchet makes every blob single-use:
+**D-1 · Plaintext at rest (the forward-secrecy trade-off) — decided 2026-09-13: (a) + per-chat key.** The ratchet makes every blob single-use:
 decrypt once, on one device, never again. That is F-1 closed, and it collides with how people use this app —
 they keep blobs in their inbox and paste an old one to read it again. Sent messages *must* be stored locally
 regardless (an Olm sender cannot decrypt its own output). Two options were put to the owner: **(a)** store
 received plaintext too, sealed with XChaCha20-Poly1305 under a per-install key protected by the app-lock
 password (Isar 3 is not encrypted on its own — verified), plus the skipped-key window, a password-protected
 archive export and plain UI copy that a new device cannot re-read old blobs; **(b)** received messages stay
-ciphertext-only and history shows "unfuzzed once" placeholders. **Implemented default: (a)**, per the brief's
-own recommendation — history is readable on the device that decrypted it, sealed under the app-lock key
-(`PROTOCOL.md` §10.4). The archive export and the trade-off copy on onboarding/chat creation (backlog items
-F2-10 / F2-11) are **not built** pending the answer. The owner's answer: _pending_ (asked 2026-09-11).
+ciphertext-only and history shows "unfuzzed once" placeholders. **The owner's answer (2026-09-13): GO on (a),
+with each chat's history sealed under a key that belongs to that chat** — "derived from that chat's initial key
+material, not the app-wide local key", as defence in depth, the app-lock password staying the outer gate.
+Implemented as F2-12: a 32-byte history key is drawn from the CSPRNG together with the chat's Olm account
+(`create_invitation` / `accept_invitation`), stored only inside that chat's sealed state file, and seals that
+chat's rows with AAD `local-seal` ‖ chat id (`PROTOCOL.md` §3, §10.4). It is random-with-the-account rather
+than HKDF-derived from the identity secret because vodozemac 0.10.0 exposes no accessor for that secret; the
+effect the owner asked for — one chat's key opens no other chat's history, and A's and B's keys for one chat are
+unrelated — holds. Stated plainly in `THREAT_MODEL.md` §4.3/§8/T13/R33: the per-chat key bounds a *history-key*
+leak to one chat; a captured *store key* (or the app-lock password) still opens every state file and therefore
+every history key, so the app lock remains the gate that matters. The archive export and the trade-off copy
+(F2-10 / F2-11) are unblocked by this answer and follow.
 
 **D-2 · Safety number instead of vodozemac's emoji SAS — pending, build proceeds with the safety number.**
 vodozemac's `Sas` holds an in-memory ephemeral secret with no serialisation, so an inviter cannot keep it across
@@ -286,7 +294,7 @@ emulator; covered by a router test).
 | **Olm's 8-byte MAC** | vodozemac's `SessionConfig::version_2()` (32-byte MAC) is behind its `experimental-session-config` feature and off by default; no forgery oracle exists here (every decrypt is a human paste). Listed as an audit question. | `THREAT_MODEL.md` §7.5, R6, R23 |
 | **Olm-parity replay window** | The 63-behind counter rule is stricter than Olm's 40-skipped-keys-per-chain store; whether to widen it is a product decision, and the stricter rule is the safer default. | `THREAT_MODEL.md` §7.7; `PROTOCOL.md` §8.2 |
 | **Multi-device, groups, key rotation, transport** | Out of the product's shape: one chat is one pair of devices, blobs move by hand. | `THREAT_MODEL.md` §7.12 |
-| **Archive export (F2-10) and the trade-off copy (F2-11)** | Gated on owner decision D-1 (§5). | `THREAT_MODEL.md` R10 |
+| **Archive export (F2-10) and the trade-off copy (F2-11)** | Unblocked by owner decision D-1 (§5, answered 2026-09-13); built after the per-chat history key (F2-12). | `THREAT_MODEL.md` R10 |
 | **The store key re-key path** | Would let a password change actually rotate keys; deliberately not built for this version — the honest statement is in §6. | `THREAT_MODEL.md` R33 |
 
 ---
@@ -295,7 +303,7 @@ emulator; covered by a router test).
 
 | Id | What is needed | Blocks |
 |---|---|---|
-| **D-1** | The plaintext-at-rest answer (§5). Default (a) is implemented. | the archive export and the user-facing trade-off copy |
+| **D-1** | **Answered 2026-09-13** — (a) with a per-chat history key, implemented (F2-12, §5). Nothing further needed. | — (F2-10 / F2-11 unblocked) |
 | **D-2** | Confirm the safety number over emoji SAS (§5) — or ask for the add-on. | nothing; reversible |
 | **D-3** | An Apple Development certificate/profile for the build Mac or as a CI secret, or a decision to ship macOS unsigned/ad-hoc for now. | a signed, notarized macOS artifact |
 | **D-5** | Enable GitHub private vulnerability reporting on the repository; confirm the `security@fuzzzycore.com` mail route; serve `security.txt` at `/.well-known/` on the website. `SECURITY.md` and `security.txt` work without them (contact address is the working one). | the preferred disclosure channel |

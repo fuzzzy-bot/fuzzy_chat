@@ -19,6 +19,7 @@ use crate::formats::{
     encode_text, Acceptance, ContentType, Direction, InnerHeader, Invitation, SIGNATURE_LEN,
 };
 use crate::state::{ChatState, Role};
+use crate::store;
 
 /// The bytes an invitation or acceptance signature covers: everything but the trailer.
 fn signed_part(blob: &[u8]) -> Result<&[u8], CoreError> {
@@ -69,7 +70,8 @@ pub(crate) fn invitation_blob(
 }
 
 /// A (inviter): a brand-new account, one published one-time key, the signed
-/// invitation. Returns the pending state and the `Fuzz/` text.
+/// invitation, and the chat's history key drawn alongside (owner decision D-1).
+/// Returns the pending state and the `Fuzz/` text.
 pub fn create_invitation(chat_id: &str) -> Result<(ChatState, String), CoreError> {
     let (account, one_time_key) = account_with_one_time_key()?;
     let blob = invitation_blob(&account, chat_id, one_time_key)?;
@@ -79,6 +81,7 @@ pub fn create_invitation(chat_id: &str) -> Result<(ChatState, String), CoreError
         chat_id.to_string(),
         account.pickle(),
         *account.ed25519_key().as_bytes(),
+        store::random_array()?,
     );
     state.last_invitation = Some(blob);
     Ok((state, text))
@@ -100,8 +103,9 @@ pub fn verify_invitation(chat_id: &str, blob: &[u8]) -> Result<Invitation, CoreE
 }
 
 /// B (accepter): a brand-new account, the outbound session on A's one-time
-/// key, the handshake pre-key message inside the signed acceptance. Returns
-/// the connected state and the `Fuzz/` text.
+/// key, the handshake pre-key message inside the signed acceptance, and the
+/// chat's history key drawn alongside (owner decision D-1). Returns the
+/// connected state and the `Fuzz/` text.
 pub fn accept_invitation(
     chat_id: &str,
     invitation: &Invitation,
@@ -144,6 +148,7 @@ pub fn accept_invitation(
         chat_id.to_string(),
         account.pickle(),
         *account.ed25519_key().as_bytes(),
+        store::random_array()?,
     );
     state.session = Some(session.pickle());
     state.peer_curve25519 = Some(invitation.a_curve25519);

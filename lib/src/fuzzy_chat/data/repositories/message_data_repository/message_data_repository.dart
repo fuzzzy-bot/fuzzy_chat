@@ -16,9 +16,10 @@ class MessageDataRepository {
     required this.cryptoCoreService,
   });
 
-  /// A text message's plaintext is sealed locally (0x20) before the row is
-  /// written: under the ratchet a blob decrypts once and a sender can never
-  /// decrypt its own output, so the seal is the only readable copy.
+  /// A text message's plaintext is sealed locally (0x20) under the chat's
+  /// own history key before the row is written: under the ratchet a blob
+  /// decrypts once and a sender can never decrypt its own output, so the
+  /// seal is the only readable copy.
   Future<int> addMessage(
     MessageData message, {
     bool notifyListeners = false,
@@ -79,7 +80,8 @@ class MessageDataRepository {
     if (!message.type.isText) return null;
 
     final sealRes = await cryptoCoreService.sealLocal(
-      Uint8List.fromList(utf8.encode(message.decryptedMessage)),
+      chatId: message.chatId,
+      bytes: Uint8List.fromList(utf8.encode(message.decryptedMessage)),
     );
 
     if (sealRes is CryptoCoreFailure<Uint8List>) {
@@ -119,7 +121,10 @@ class MessageDataRepository {
       return '';
     }
 
-    final openRes = await cryptoCoreService.openLocal(sealed);
+    final openRes = await cryptoCoreService.openLocal(
+      chatId: stored.chatId,
+      blob: sealed,
+    );
 
     if (openRes is CryptoCoreFailure<Uint8List>) {
       logger.w('Failed to open message ${stored.id}: ${openRes.type}');

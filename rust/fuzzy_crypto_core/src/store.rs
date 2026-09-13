@@ -1,6 +1,7 @@
 //! Key hygiene — the wrapped store key, the sealed per-chat state files and the
-//! local seal (plan §A.2, §B.6, §D). Every secret lives in a `Zeroizing` buffer
-//! or a `ZeroizeOnDrop` struct; nothing here returns key bytes.
+//! per-chat local seal of message history (plan §A.2, §B.6, §D; owner decision
+//! D-1). Every secret lives in a `Zeroizing` buffer or a `ZeroizeOnDrop` struct;
+//! nothing here returns key bytes.
 //!
 //! Layouts are the codec's (`formats::WrappedStoreKey` 0x10, `formats::LocalSeal`
 //! 0x20); this module only adds the crypto around them.
@@ -14,8 +15,6 @@ use std::sync::Mutex;
 use argon2::{Algorithm, Argon2, Params, Version};
 use chacha20poly1305::aead::{Aead, Payload};
 use chacha20poly1305::{KeyInit, XChaCha20Poly1305};
-use hkdf::Hkdf;
-use sha2::Sha256;
 use zeroize::{ZeroizeOnDrop, Zeroizing};
 
 use crate::error::CoreError;
@@ -41,8 +40,7 @@ const MAX_ARGON2_T_COST: u32 = 16;
 
 const STORE_KEY_AAD: &[u8] = b"store-key";
 const STATE_AAD_PREFIX: &[u8] = b"chat-state";
-const LOCAL_SEAL_AAD: &[u8] = b"local-seal";
-const LOCAL_SEAL_INFO: &[u8] = b"fuzzy-local-seal-v1";
+const LOCAL_SEAL_AAD_PREFIX: &[u8] = b"local-seal";
 const STATE_EXTENSION: &str = "state";
 const STATE_TMP_EXTENSION: &str = "state.tmp";
 
@@ -129,15 +127,6 @@ pub(crate) fn derive_kek(
     Ok(kek)
 }
 
-/// `local_key = HKDF-SHA256(ikm = store_key, salt = none, info = "fuzzy-local-seal-v1")`.
-pub(crate) fn local_key(store_key: &[u8; 32]) -> Result<Key32, CoreError> {
-    let mut key = Zeroizing::new([0u8; 32]);
-    Hkdf::<Sha256>::new(None, store_key)
-        .expand(LOCAL_SEAL_INFO, key.as_mut())
-        .map_err(|_| CoreError::Internal)?;
-    Ok(key)
-}
-
 // ---------------------------------------------------------------------------
 // Wrapped store key (0x10)
 // ---------------------------------------------------------------------------
@@ -204,30 +193,58 @@ pub(crate) fn unwrap_key(blob: &[u8], password: &[u8], aad: &[u8]) -> Result<Key
 }
 
 // ---------------------------------------------------------------------------
-// Local seal (0x20)
+// Local seal (0x20) — one chat's message history under that chat's history key
 // ---------------------------------------------------------------------------
 
-/// Seals `bytes` under the HKDF-derived local key with a random nonce.
-pub fn seal_local(store_key: &[u8; 32], bytes: &[u8]) -> Result<Vec<u8>, CoreError> {
-    seal_local_with(store_key, bytes, random_array()?)
+/// `prefix ‖ chat_id` (no separator — the chat id is fixed-length): the AAD of
+/// a state file (`chat-state`) or of a history seal (`local-seal`).
+fn chat_aad(prefix: &[u8], chat_id: &str) -> Vec<u8> {
+    let mut aad = Vec::with_capacity(prefix.len() + chat_id.len());
+    aad.extend_from_slice(prefix);
+    aad.extend_from_slice(chat_id.as_bytes());
+    aad
+}
+
+/// Seals `bytes` of `chat_id`'s history under that chat's `history_key` with a
+/// random nonce (owner decision D-1: a per-chat key, not the store key).
+pub fn seal_local(
+    history_key: &[u8; 32],
+    chat_id: &str,
+    bytes: &[u8],
+) -> Result<Vec<u8>, CoreError> {
+    seal_local_with(history_key, chat_id, bytes, random_array()?)
 }
 
 /// [`seal_local`] with the nonce supplied — the test vectors pin its output.
 pub(crate) fn seal_local_with(
-    store_key: &[u8; 32],
+    history_key: &[u8; 32],
+    chat_id: &str,
     bytes: &[u8],
     nonce: [u8; 24],
 ) -> Result<Vec<u8>, CoreError> {
-    let key = local_key(store_key)?;
-    let ciphertext = seal(&key, &nonce, LOCAL_SEAL_AAD, bytes)?;
+    let ciphertext = seal(
+        history_key,
+        &nonce,
+        &chat_aad(LOCAL_SEAL_AAD_PREFIX, chat_id),
+        bytes,
+    )?;
     Ok(LocalSeal { nonce, ciphertext }.encode())
 }
 
-/// Inverse of [`seal_local`]; a tag failure is `Corrupt`.
-pub fn open_local(store_key: &[u8; 32], blob: &[u8]) -> Result<Vec<u8>, CoreError> {
+/// Inverse of [`seal_local`]; a tag failure — another chat's key or id, or a
+/// tampered blob — is `Corrupt`.
+pub fn open_local(
+    history_key: &[u8; 32],
+    chat_id: &str,
+    blob: &[u8],
+) -> Result<Vec<u8>, CoreError> {
     let sealed = LocalSeal::decode(blob)?;
-    let key = local_key(store_key)?;
-    open(&key, &sealed.nonce, LOCAL_SEAL_AAD, &sealed.ciphertext)
+    open(
+        history_key,
+        &sealed.nonce,
+        &chat_aad(LOCAL_SEAL_AAD_PREFIX, chat_id),
+        &sealed.ciphertext,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -255,13 +272,6 @@ pub fn validate_chat_id(chat_id: &str) -> Result<(), CoreError> {
     }
 }
 
-fn state_aad(chat_id: &str) -> Vec<u8> {
-    let mut aad = Vec::with_capacity(STATE_AAD_PREFIX.len() + chat_id.len());
-    aad.extend_from_slice(STATE_AAD_PREFIX);
-    aad.extend_from_slice(chat_id.as_bytes());
-    aad
-}
-
 fn seal_state(store_key: &[u8; 32], state: &ChatState) -> Result<Vec<u8>, CoreError> {
     seal_state_with(store_key, state, random_array()?)
 }
@@ -277,7 +287,12 @@ pub(crate) fn seal_state_with(
     // and any `Vec` growth leaks an unwiped copy of the Olm state (pitfall §F.11,
     // F2-2 review R1).
     let body = serialize_exact(state)?;
-    let ciphertext = seal(store_key, &nonce, &state_aad(&state.chat_id), &body)?;
+    let ciphertext = seal(
+        store_key,
+        &nonce,
+        &chat_aad(STATE_AAD_PREFIX, &state.chat_id),
+        &body,
+    )?;
     Ok(LocalSeal { nonce, ciphertext }.encode())
 }
 
@@ -286,7 +301,7 @@ fn open_state(store_key: &[u8; 32], chat_id: &str, file: &[u8]) -> Result<ChatSt
     let body = Zeroizing::new(open(
         store_key,
         &sealed.nonce,
-        &state_aad(chat_id),
+        &chat_aad(STATE_AAD_PREFIX, chat_id),
         &sealed.ciphertext,
     )?);
     let state: ChatState = serde_json::from_slice(&body).map_err(|_| CoreError::Corrupt)?;
@@ -445,12 +460,26 @@ impl OpenStore {
         fs::remove_file(&path).map_err(|_| CoreError::Io)
     }
 
-    pub fn seal_local(&self, bytes: &[u8]) -> Result<Vec<u8>, CoreError> {
-        seal_local(&self.store_key, bytes)
+    /// `chat_id`'s history key — from the cache when the state is loaded, else
+    /// read from disk (`UnknownChat` when the chat does not exist). The state's
+    /// copy is wiped with the state; this one with the returned `Key32`.
+    fn history_key(&self, chat_id: &str) -> Result<Key32, CoreError> {
+        let key = match self.cache.get(chat_id) {
+            Some(state) => Zeroizing::new(state.history_key),
+            None => Zeroizing::new(self.load_state(chat_id)?.history_key),
+        };
+        Ok(key)
     }
 
-    pub fn open_local(&self, blob: &[u8]) -> Result<Vec<u8>, CoreError> {
-        open_local(&self.store_key, blob)
+    /// Seals `bytes` of `chat_id`'s message history under that chat's key.
+    pub fn seal_local(&self, chat_id: &str, bytes: &[u8]) -> Result<Vec<u8>, CoreError> {
+        seal_local(&*self.history_key(chat_id)?, chat_id, bytes)
+    }
+
+    /// Inverse of [`OpenStore::seal_local`] for the same chat; another chat's
+    /// blob is `Corrupt`, a deleted chat's is `UnknownChat`.
+    pub fn open_local(&self, chat_id: &str, blob: &[u8]) -> Result<Vec<u8>, CoreError> {
+        open_local(&*self.history_key(chat_id)?, chat_id, blob)
     }
 
     #[cfg(test)]
@@ -489,7 +518,8 @@ pub(crate) mod test_support {
         }
     }
 
-    /// The minimal state F2-3 will fill: an unpaired inviter with a fresh Olm account.
+    /// The minimal state F2-3 will fill: an unpaired inviter with a fresh Olm
+    /// account and its own history key.
     pub fn fresh_state(chat_id: &str) -> ChatState {
         let account = Account::new();
         let our_ed25519 = *account.ed25519_key().as_bytes();
@@ -498,6 +528,7 @@ pub(crate) mod test_support {
             chat_id.to_string(),
             account.pickle(),
             our_ed25519,
+            super::random_array().expect("os rng"),
         )
     }
 }
@@ -508,6 +539,8 @@ mod tests {
 
     const PASSWORD: &[u8] = b"pw";
     const STORE_KEY: [u8; 32] = [0x33; 32];
+    const HISTORY_KEY: [u8; 32] = [0x55; 32];
+    const LOCAL_CHAT_ID: &str = "6f1e9b2c-3d4a-4f5b-8c6d-7e8f9a0b1c2d";
 
     mod store_key {
         use super::*;
@@ -600,7 +633,7 @@ mod tests {
         fn foreign_or_broken_blobs_are_errors_not_panics() {
             let blob = wrap_store_key(&STORE_KEY, PASSWORD).unwrap();
 
-            let local = seal_local(&STORE_KEY, b"x").unwrap();
+            let local = seal_local(&HISTORY_KEY, LOCAL_CHAT_ID, b"x").unwrap();
             assert_eq!(
                 unwrap_store_key(&local, PASSWORD).unwrap_err(),
                 CoreError::UnsupportedFormat
@@ -689,6 +722,7 @@ mod tests {
             state.last_invitation = Some(vec![1, 2, 3]);
             let account_json = serde_json::to_string(&state.account).unwrap();
             let our_ed25519 = state.our_ed25519;
+            let history_key = state.history_key;
             store.put_state(state).unwrap();
 
             let reopened = open_store(&dir, STORE_KEY);
@@ -703,6 +737,7 @@ mod tests {
             );
             assert!(loaded.session.is_none());
             assert_eq!(loaded.our_ed25519, our_ed25519);
+            assert_eq!(loaded.history_key, history_key);
             assert_eq!(loaded.send_counter, 7);
             assert!(loaded.verified);
             assert_eq!(loaded.last_invitation, Some(vec![1, 2, 3]));
@@ -986,60 +1021,78 @@ mod tests {
     mod local {
         use super::*;
 
+        const OTHER_CHAT_ID: &str = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d";
+
         #[test]
         fn seal_open_round_trip() {
             for message in [&b""[..], b"hi", &[0u8; 4096]] {
-                let blob = seal_local(&STORE_KEY, message).unwrap();
+                let blob = seal_local(&HISTORY_KEY, LOCAL_CHAT_ID, message).unwrap();
                 assert_eq!(&blob[..6], b"FUZZ\x01\x20");
                 assert_eq!(blob.len(), 6 + 24 + message.len() + 16);
-                assert_eq!(open_local(&STORE_KEY, &blob).unwrap(), message);
+                assert_eq!(
+                    open_local(&HISTORY_KEY, LOCAL_CHAT_ID, &blob).unwrap(),
+                    message
+                );
             }
 
-            let first = seal_local(&STORE_KEY, b"same").unwrap();
-            let second = seal_local(&STORE_KEY, b"same").unwrap();
+            let first = seal_local(&HISTORY_KEY, LOCAL_CHAT_ID, b"same").unwrap();
+            let second = seal_local(&HISTORY_KEY, LOCAL_CHAT_ID, b"same").unwrap();
             assert_ne!(first[6..30], second[6..30], "fresh nonce per seal");
         }
 
         #[test]
         fn tamper_detected() {
-            let blob = seal_local(&STORE_KEY, b"history entry").unwrap();
+            let blob = seal_local(&HISTORY_KEY, LOCAL_CHAT_ID, b"history entry").unwrap();
 
             for index in 6..blob.len() {
                 let mut tampered = blob.clone();
                 tampered[index] ^= 0x01;
                 assert_eq!(
-                    open_local(&STORE_KEY, &tampered).unwrap_err(),
+                    open_local(&HISTORY_KEY, LOCAL_CHAT_ID, &tampered).unwrap_err(),
                     CoreError::Corrupt,
                     "byte {index}"
                 );
             }
+            // Another chat's key, and the right key under another chat's id (the AAD).
             assert_eq!(
-                open_local(&[0x44; 32], &blob).unwrap_err(),
+                open_local(&[0x44; 32], LOCAL_CHAT_ID, &blob).unwrap_err(),
                 CoreError::Corrupt
             );
             assert_eq!(
-                open_local(&STORE_KEY, &blob[..blob.len() - 1]).unwrap_err(),
+                open_local(&HISTORY_KEY, OTHER_CHAT_ID, &blob).unwrap_err(),
+                CoreError::Corrupt
+            );
+            assert_eq!(
+                open_local(&HISTORY_KEY, LOCAL_CHAT_ID, &blob[..blob.len() - 1]).unwrap_err(),
                 CoreError::Corrupt
             );
             let wrapped = wrap_store_key(&STORE_KEY, PASSWORD).unwrap();
             assert_eq!(
-                open_local(&STORE_KEY, &wrapped).unwrap_err(),
+                open_local(&HISTORY_KEY, LOCAL_CHAT_ID, &wrapped).unwrap_err(),
                 CoreError::UnsupportedFormat
             );
         }
 
         #[test]
         fn opens_the_golden_blob() {
-            // HKDF-SHA256(store_key 0x33*32, no salt, "fuzzy-local-seal-v1") + XChaCha20-Poly1305
-            // with AAD "local-seal", computed with pycryptodome from the spec (log §2).
+            // XChaCha20-Poly1305(history key 0x55*32, nonce 0x44*24, AAD "local-seal" ‖ chat id,
+            // "hello"), computed with pycryptodome from the spec (F2-12 log §2) — the
+            // `local_seal_chat` vector.
             let golden = hex(concat!(
                 "46555a5a0120",
                 "444444444444444444444444444444444444444444444444",
-                "bdb7ba2dad",
-                "f086ea5a7bfe6363058bc0843dfae116",
+                "a5610b8a8e",
+                "42655bf221e8d97fd32a97051c968bda",
             ));
 
-            assert_eq!(open_local(&STORE_KEY, &golden).unwrap(), b"hello");
+            assert_eq!(
+                open_local(&HISTORY_KEY, LOCAL_CHAT_ID, &golden).unwrap(),
+                b"hello"
+            );
+            assert_eq!(
+                seal_local_with(&HISTORY_KEY, LOCAL_CHAT_ID, b"hello", [0x44; 24]).unwrap(),
+                golden
+            );
         }
     }
 

@@ -130,7 +130,9 @@ abstract class FuzzyCryptoCoreLibApi extends BaseApi {
       required bool verified});
 
   Future<Uint8List> crateApiCoreCryptoCoreOpenLocal(
-      {required CryptoCore that, required List<int> blob});
+      {required CryptoCore that,
+      required String chatId,
+      required List<int> blob});
 
   Future<FileTicket> crateApiCoreCryptoCorePrepareFileReceive(
       {required CryptoCore that,
@@ -146,7 +148,9 @@ abstract class FuzzyCryptoCoreLibApi extends BaseApi {
       {required CryptoCore that, required String chatId});
 
   Future<Uint8List> crateApiCoreCryptoCoreSealLocal(
-      {required CryptoCore that, required List<int> bytes});
+      {required CryptoCore that,
+      required String chatId,
+      required List<int> bytes});
 
   Future<String> crateApiCoreCryptoCoreStoreDir({required CryptoCore that});
 
@@ -619,12 +623,15 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
 
   @override
   Future<Uint8List> crateApiCoreCryptoCoreOpenLocal(
-      {required CryptoCore that, required List<int> blob}) {
+      {required CryptoCore that,
+      required String chatId,
+      required List<int> blob}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
             that, serializer);
+        sse_encode_String(chatId, serializer);
         sse_encode_list_prim_u_8_loose(blob, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 13, port: port_);
@@ -634,7 +641,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
         decodeErrorData: sse_decode_core_error,
       ),
       constMeta: kCrateApiCoreCryptoCoreOpenLocalConstMeta,
-      argValues: [that, blob],
+      argValues: [that, chatId, blob],
       apiImpl: this,
     ));
   }
@@ -642,7 +649,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   TaskConstMeta get kCrateApiCoreCryptoCoreOpenLocalConstMeta =>
       const TaskConstMeta(
         debugName: "CryptoCore_open_local",
-        argNames: ["that", "blob"],
+        argNames: ["that", "chatId", "blob"],
       );
 
   @override
@@ -739,12 +746,15 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
 
   @override
   Future<Uint8List> crateApiCoreCryptoCoreSealLocal(
-      {required CryptoCore that, required List<int> bytes}) {
+      {required CryptoCore that,
+      required String chatId,
+      required List<int> bytes}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCryptoCore(
             that, serializer);
+        sse_encode_String(chatId, serializer);
         sse_encode_list_prim_u_8_loose(bytes, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 17, port: port_);
@@ -754,7 +764,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
         decodeErrorData: sse_decode_core_error,
       ),
       constMeta: kCrateApiCoreCryptoCoreSealLocalConstMeta,
-      argValues: [that, bytes],
+      argValues: [that, chatId, bytes],
       apiImpl: this,
     ));
   }
@@ -762,7 +772,7 @@ class FuzzyCryptoCoreLibApiImpl extends FuzzyCryptoCoreLibApiImplPlatform
   TaskConstMeta get kCrateApiCoreCryptoCoreSealLocalConstMeta =>
       const TaskConstMeta(
         debugName: "CryptoCore_seal_local",
-        argNames: ["that", "bytes"],
+        argNames: ["that", "chatId", "bytes"],
       );
 
   @override
@@ -2356,10 +2366,12 @@ class CryptoCoreImpl extends RustOpaque implements CryptoCore {
       FuzzyCryptoCoreLib.instance.api.crateApiCoreCryptoCoreMarkVerified(
           that: this, chatId: chatId, verified: verified);
 
-  /// Inverse of [`CryptoCore::seal_local`]; a tampered or foreign blob is `Corrupt`.
-  Future<Uint8List> openLocal({required List<int> blob}) =>
-      FuzzyCryptoCoreLib.instance.api
-          .crateApiCoreCryptoCoreOpenLocal(that: this, blob: blob);
+  /// Inverse of [`CryptoCore::seal_local`] for the same chat; a tampered
+  /// blob or another chat's is `Corrupt`, a deleted chat's is `UnknownChat`.
+  Future<Uint8List> openLocal(
+          {required String chatId, required List<int> blob}) =>
+      FuzzyCryptoCoreLib.instance.api.crateApiCoreCryptoCoreOpenLocal(
+          that: this, chatId: chatId, blob: blob);
 
   /// Step one of receiving the chat-mode container at `input` on `chat_id`:
   /// reads the header (a header-only or truncated container is `Corrupt`
@@ -2397,11 +2409,14 @@ class CryptoCoreImpl extends RustOpaque implements CryptoCore {
       FuzzyCryptoCoreLib.instance.api
           .crateApiCoreCryptoCoreSafetyNumber(that: this, chatId: chatId);
 
-  /// Seals `bytes` for local storage (message history, F2-8) under the
-  /// HKDF-derived local key: a 0x20 blob with a fresh random nonce.
-  Future<Uint8List> sealLocal({required List<int> bytes}) =>
-      FuzzyCryptoCoreLib.instance.api
-          .crateApiCoreCryptoCoreSealLocal(that: this, bytes: bytes);
+  /// Seals `bytes` of `chat_id`'s message history (F2-8) under that chat's
+  /// own history key (owner decision D-1, F2-12): a 0x20 blob with a fresh
+  /// random nonce and AAD `local-seal` ‖ chat id. A chat the store does not
+  /// know is `UnknownChat`.
+  Future<Uint8List> sealLocal(
+          {required String chatId, required List<int> bytes}) =>
+      FuzzyCryptoCoreLib.instance.api.crateApiCoreCryptoCoreSealLocal(
+          that: this, chatId: chatId, bytes: bytes);
 
   /// The directory the store was opened with (for tests).
   Future<String> storeDir() =>

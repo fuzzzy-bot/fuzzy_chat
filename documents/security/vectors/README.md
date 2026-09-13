@@ -29,6 +29,7 @@ which rewrites every file and asserts that a second generation is byte-identical
 | Argon2id | `m = 65536` KiB, `t = 4`, `p = 1`, 32-byte output, version 0x13 |
 | salt / nonce (blobs) | `11×16` / `22×24` |
 | store key = vault master key | `33×32` |
+| history key (per-chat, F2-12) | `55×32` |
 | local-seal nonce | `44×24` |
 | file key (fixed-key container), file-key body | `42×32` |
 | file nonce prefix / file salt | `90 91 … a2` (19 bytes) / `a0 a1 … af` (16 bytes) |
@@ -47,11 +48,10 @@ which rewrites every file and asserts that a second generation is byte-identical
 | `argon2id_kek` | Argon2id(`pw`, `11×16`, production parameters) | 32 | F5-1: `argon2-cffi` 25.1 `hash_secret_raw(type=ID, version=19)` |
 | `wrapped_store_key` | 0x10, AAD `store-key`: header ‖ ct ‖ tag `0343f644…` | 103 | F2-2 reviewer (`audit_golden_f22.py`: argon2-cffi + pycryptodome 3.23) — byte-identical; negative controls (AAD `store-key\0`, t=3, p=4) differ |
 | `wrapped_vault_key` | 0x10, AAD `vault-key`: same header and ciphertext, tag `47a1848d…` | 103 | F4-1 reviewer's primitives (`review_golden_f41.py`) recomputed for the `fd0850e` AAD change — byte-identical |
-| `local_key` | HKDF-SHA256(store key, no salt, `fuzzy-local-seal-v1`) | 32 | F5-1: pycryptodome `HKDF` |
-| `local_seal` | 0x20 of `hello` under the local key, AAD `local-seal` | 51 | F2-2 reviewer — byte-identical |
+| `local_seal_chat` | 0x20 of `hello` under the chat's history key `55×32`, AAD `local-seal` ‖ chat id (F2-12; replaced `local_key` + `local_seal`, whose store-derived key no longer exists) | 51 | F2-12: pycryptodome `ChaCha20_Poly1305` from the §10.4 rule — byte-identical; AAD without the chat id differs (negative control) |
 | `vault_item` | 0x20 of `item` under the master key directly, AAD `vault-item` | 50 | F4-1 reviewer — byte-identical |
 | `password_sealed_text` | 0x05 of `hello`, AAD = its own first 31 bytes; plus the text form | 76 | F4-1 reviewer (`review_golden_f41.py`) — byte-identical; AAD readings B–E (with nonce / without salt / envelope only / none) all differ |
-| `state_file` | the sealed state file of A's freshly invited chat: AAD `chat-state` ‖ chat id, key = store key, body = `state_file.body.json` | 1550 | F5-1: pycryptodome over the committed body |
+| `state_file` | the sealed state file of A's freshly invited chat: AAD `chat-state` ‖ chat id, key = store key, body = `state_file.body.json` | 1662 | F5-1: pycryptodome over the committed body (re-run for F2-12 after the `history_key` field was added) |
 | `file_header_password` | 0x04 header, key mode 0x02, 1 MiB chunk size | 55 | F2-1 reviewer; F3-1 `golden_header` |
 | `file_header_chat` | 0x04 header, key mode 0x01, placeholder Olm body `f1f2f3` | 36 | F2-1 reviewer |
 | `file_container_password` | one-chunk container (43-byte plaintext) with a real Argon2id file key; nonce `prefix ‖ 00000000 ‖ 01`, AAD `header ‖ 00000000` | 114 | F5-1: argon2-cffi + pycryptodome from PROTOCOL §9.1 |

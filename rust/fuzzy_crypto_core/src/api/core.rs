@@ -131,7 +131,8 @@ mod tests {
     fn rewrap_round_trip_at_the_api() {
         let dir = temp_dir();
         let (mut core, old_blob) = opened(&dir);
-        let sealed = core.seal_local(b"before".to_vec()).unwrap();
+        core.create_invitation(CHAT_ID.into()).unwrap();
+        let sealed = core.seal_local(CHAT_ID.into(), b"before".to_vec()).unwrap();
         core.close();
 
         let new_blob = rewrap_store_key(old_blob.clone(), "pw".into(), "new".into()).unwrap();
@@ -143,7 +144,10 @@ mod tests {
         // The same store key comes back under the new password: the old seal still opens.
         let dir_text = dir.to_string_lossy().into_owned();
         let reopened = open_store(dir_text.clone(), new_blob.clone(), "new".into()).unwrap();
-        assert_eq!(reopened.open_local(sealed).unwrap(), b"before");
+        assert_eq!(
+            reopened.open_local(CHAT_ID.into(), sealed).unwrap(),
+            b"before"
+        );
         assert_eq!(
             err_of(open_store(dir_text.clone(), new_blob, "pw".into())),
             CoreError::WrongPassword
@@ -189,11 +193,11 @@ mod tests {
 
         assert_eq!(err_of(core.opened()), CoreError::StoreLocked);
         assert_eq!(
-            core.seal_local(b"x".to_vec()).unwrap_err(),
+            core.seal_local(CHAT_ID.into(), b"x".to_vec()).unwrap_err(),
             CoreError::StoreLocked
         );
         assert_eq!(
-            core.open_local(vec![0; 60]).unwrap_err(),
+            core.open_local(CHAT_ID.into(), vec![0; 60]).unwrap_err(),
             CoreError::StoreLocked
         );
         assert_eq!(

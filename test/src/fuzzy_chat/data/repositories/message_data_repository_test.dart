@@ -47,10 +47,16 @@ Uint8List? _blobOf(CryptoCoreResponse<Uint8List?> readRes) =>
     (readRes as CryptoCoreSuccess<Uint8List?>).data;
 
 const _chatId = '6f1e9b2c-3d4a-4f5b-8c6d-7e8f9a0b1c2d';
+const _otherChatId = '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
 
-MessageData _text(String plaintext, {required bool isSent}) => MessageData(
+MessageData _text(
+  String plaintext, {
+  required bool isSent,
+  String chatId = _chatId,
+}) =>
+    MessageData(
       id: 0,
-      chatId: _chatId,
+      chatId: chatId,
       type: MessageType.text,
       encryptedMessage: 'blob-of-$plaintext',
       decryptedMessage: plaintext,
@@ -78,6 +84,15 @@ void main() {
     );
   }
 
+  /// History is sealed under the chat's own key, which exists from the
+  /// moment the chat's key material does — an invitation is enough.
+  Future<void> invite(CryptoCoreService on, String chatId) async {
+    expect(
+      await on.createInvitation(chatId),
+      isA<CryptoCoreSuccess<CryptoCoreInvitation>>(),
+    );
+  }
+
   setUp(() async {
     FlutterSecureStorage.setMockInitialValues({});
     storeDir = Directory.systemTemp.createTempSync('fuzzy_message_repo_');
@@ -89,6 +104,7 @@ void main() {
       cryptoCoreService: service,
     );
     await openStore();
+    await invite(service, _chatId);
   });
 
   tearDown(() async {
@@ -174,8 +190,10 @@ void main() {
         wrapped: _blobOf(await otherKeys.read())!,
         password: '',
       );
+      await invite(other, _chatId);
       final foreignSeal = await other.sealLocal(
-        Uint8List.fromList(utf8.encode('hello')),
+        chatId: _chatId,
+        bytes: Uint8List.fromList(utf8.encode('hello')),
       );
       row.sealedPlaintext =
           base64Encode((foreignSeal as CryptoCoreSuccess<Uint8List>).data);
@@ -194,6 +212,47 @@ void main() {
       row.sealedPlaintext = 'not base64 at all!';
       expect(
         (await repository.getMessagesForChat(_chatId)).single.decryptedMessage,
+        '',
+      );
+    });
+
+    test(
+        'the seal is per chat: sealed in chat A, opens in A, and reads as '
+        'empty (corrupt) in chat B on the same device', () async {
+      await invite(service, _otherChatId);
+      await repository.addMessage(_text('only for A', isSent: false));
+      final row = dataSource.rows.single;
+      expect(
+        (await repository.getMessagesForChat(_chatId)).single.decryptedMessage,
+        'only for A',
+      );
+
+      final sealed = base64Decode(row.sealedPlaintext!);
+      expect(
+        await service.openLocal(chatId: _otherChatId, blob: sealed),
+        isA<CryptoCoreFailure<Uint8List>>().having(
+          (failure) => failure.type,
+          'type',
+          CryptoCoreFailureType.corrupt,
+        ),
+      );
+
+      // The same seal filed under chat B's row reads as empty, never throws.
+      row.chatId = _otherChatId;
+      expect(
+        (await repository.getMessagesForChat(_otherChatId))
+            .single
+            .decryptedMessage,
+        '',
+      );
+      expect(await repository.getMessagesForChat(_chatId), isEmpty);
+
+      // A chat the store does not know cannot open a seal either.
+      row.chatId = 'ffffffff-0000-4000-8000-000000000000';
+      expect(
+        (await repository.getMessagesForChat(row.chatId))
+            .single
+            .decryptedMessage,
         '',
       );
     });

@@ -49,6 +49,8 @@ const SALT_11: [u8; 16] = [0x11; 16];
 const NONCE_22: [u8; 24] = [0x22; 24];
 const NONCE_44: [u8; 24] = [0x44; 24];
 const STORE_KEY_33: [u8; 32] = [0x33; 32];
+/// A chat's history key (F2-12) — random in production, fixed here.
+const HISTORY_KEY_55: [u8; 32] = [0x55; 32];
 const FILE_KEY_42: [u8; 32] = [0x42; 32];
 const NONCE_PREFIX_90: [u8; 19] = [
     0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f,
@@ -387,22 +389,13 @@ fn all_vectors() -> Vec<Vector> {
     ));
 
     vectors.push(Vector::bytes(
-        "local_key",
-        store::local_key(&STORE_KEY_33).expect("local key").to_vec(),
+        "local_seal_chat",
+        store::seal_local_with(&HISTORY_KEY_55, CHAT_ID, b"hello", NONCE_44).expect("history seal"),
         json!({
-            "store_key": hex(&STORE_KEY_33),
-            "hkdf": "HKDF-SHA256, salt = none, info = \"fuzzy-local-seal-v1\", 32 bytes",
-        }),
-    ));
-
-    vectors.push(Vector::bytes(
-        "local_seal",
-        store::seal_local_with(&STORE_KEY_33, b"hello", NONCE_44).expect("local seal"),
-        json!({
-            "store_key": hex(&STORE_KEY_33),
-            "key": "local_key.hex",
+            "history_key": hex(&HISTORY_KEY_55),
+            "chat_id": CHAT_ID,
             "nonce": hex(&NONCE_44),
-            "aad": "local-seal",
+            "aad": format!("local-seal{CHAT_ID}"),
             "plaintext": "hello",
         }),
     ));
@@ -435,7 +428,13 @@ fn all_vectors() -> Vec<Vector> {
 
     // --- state file ---------------------------------------------------------
 
-    let mut state = ChatState::new(Role::Inviter, CHAT_ID.to_string(), a.pickle(), a_ed);
+    let mut state = ChatState::new(
+        Role::Inviter,
+        CHAT_ID.to_string(),
+        a.pickle(),
+        a_ed,
+        HISTORY_KEY_55,
+    );
     state.last_invitation = Some(invitation);
     let body = serialize_exact(&state).expect("state body");
     vectors.push(Vector {
@@ -447,6 +446,7 @@ fn all_vectors() -> Vec<Vector> {
             "nonce": hex(&NONCE_44),
             "aad": format!("chat-state{CHAT_ID}"),
             "state": "a freshly invited chat on A's fixed account (invitation.hex), no session",
+            "history_key": hex(&HISTORY_KEY_55),
             "plaintext": "state_file.body.json",
         }),
         extra: Some(("state_file.body.json".to_string(), body.to_vec())),

@@ -115,19 +115,31 @@ void main() {
         isTrue,
       );
 
-      final sealed = await core.sealLocal(bytes: utf8.encode('history'));
+      // History is sealed per chat: the chat's key exists from its invitation.
+      await expectLater(
+        core.sealLocal(chatId: _chatId, bytes: utf8.encode('history')),
+        throwsA(CoreError.unknownChat),
+      );
+      await core.createInvitation(chatId: _chatId);
+      final sealed = await core.sealLocal(
+        chatId: _chatId,
+        bytes: utf8.encode('history'),
+      );
       expect(sealed.sublist(0, 6), [0x46, 0x55, 0x5A, 0x5A, 0x01, 0x20]);
-      expect(utf8.decode(await core.openLocal(blob: sealed)), 'history');
+      expect(
+        utf8.decode(await core.openLocal(chatId: _chatId, blob: sealed)),
+        'history',
+      );
 
       final tampered = List<int>.of(sealed)..[40] ^= 1;
       await expectLater(
-        core.openLocal(blob: tampered),
+        core.openLocal(chatId: _chatId, blob: tampered),
         throwsA(CoreError.corrupt),
       );
 
       await core.close();
       await expectLater(
-        core.sealLocal(bytes: [1]),
+        core.sealLocal(chatId: _chatId, bytes: [1]),
         throwsA(CoreError.storeLocked),
       );
       await expectLater(

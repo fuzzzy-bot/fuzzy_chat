@@ -715,6 +715,7 @@ fn wire__crate__api__core__CryptoCore_open_local_impl(
             let api_that = <RustOpaqueMoi<
                 flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CryptoCore>,
             >>::sse_decode(&mut deserializer);
+            let api_chat_id = <String>::sse_decode(&mut deserializer);
             let api_blob = <Vec<u8>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
@@ -733,8 +734,11 @@ fn wire__crate__api__core__CryptoCore_open_local_impl(
                         }
                     }
                     let api_that_guard = api_that_guard.unwrap();
-                    let output_ok =
-                        crate::api::core::CryptoCore::open_local(&*api_that_guard, api_blob)?;
+                    let output_ok = crate::api::core::CryptoCore::open_local(
+                        &*api_that_guard,
+                        api_chat_id,
+                        api_blob,
+                    )?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -927,6 +931,7 @@ fn wire__crate__api__core__CryptoCore_seal_local_impl(
             let api_that = <RustOpaqueMoi<
                 flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CryptoCore>,
             >>::sse_decode(&mut deserializer);
+            let api_chat_id = <String>::sse_decode(&mut deserializer);
             let api_bytes = <Vec<u8>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
@@ -945,8 +950,11 @@ fn wire__crate__api__core__CryptoCore_seal_local_impl(
                         }
                     }
                     let api_that_guard = api_that_guard.unwrap();
-                    let output_ok =
-                        crate::api::core::CryptoCore::seal_local(&*api_that_guard, api_bytes)?;
+                    let output_ok = crate::api::core::CryptoCore::seal_local(
+                        &*api_that_guard,
+                        api_chat_id,
+                        api_bytes,
+                    )?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
