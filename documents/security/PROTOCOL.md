@@ -684,6 +684,32 @@ file again. Preparing is therefore only done on a complete local file. A ticket 
 `Internal`); an unrun receive ticket has still consumed the message; the key inside the ticket is wiped on
 drop either way.
 
+### 9.5 Chat archive export (per chat)
+
+The app can write one chat's history to a file the user keeps. The archive is an ordinary **password-mode
+`0x04` container** (§6.6 `key_mode 0x02`: fresh 16-byte salt, Argon2id m = 65 536 KiB, t = 4, p = 1; chunks
+as §9.1) whose plaintext is UTF-8 **JSON lines**, one object per message row in the chat's stored order:
+`chatId`, `chatName`, `direction` (`sent` | `received`), `sentAt` (UTC ISO-8601), `type` (`text` | `file`),
+then exactly one of `text` (the row's opened local seal, §10.4), `fileName` (the base name of the stored
+file — **never file bytes**; the file itself is a plain file on the device, §10.5) or `"unreadable": true`
+(a text row whose local seal did not open: absent, malformed, or `Corrupt` / `UnknownChat` / `StoreLocked`
+at the core). The crate sees nothing but a password-mode file job: the lines are produced by the app
+(`lib/src/fuzzy_chat/data/repositories/chat_archive_repository/`), so no vector covers them — the container
+is the `0x04` of §9.1 and the JSON is application data. The archive opens in Basics → file decryption under
+the same password. **No import path exists** and none is planned: it is a human-readable backup, not a
+state transfer, and a restored install cannot turn it back into a chat.
+
+What a reader must hold: the archive is **outside forward secrecy by design** — it is plaintext the ratchet
+had already released, protected only by the password (the export dialog refuses weak and fair passwords)
+against offline, Argon2id-bounded guessing (§11). The export is gated on an open store (a locked store
+returns before a byte is written, so a blank-rows archive cannot be produced). During the seal the JSON
+lines exist in the clear as `<application support directory>/chat_archive_<chat_id>.jsonl` (default file
+mode inside a user-private directory), deleted in a `finally` on every in-process exit; a process **kill**
+mid-seal leaves that file until the next export of the same chat overwrites and deletes it — there is no
+boot sweep (`THREAT_MODEL.md` §2.5, R35). On Android the sealed container is additionally staged by the
+share sheet under `cache/share_plus/` until the next share — sealed bytes only, as for every file the app
+shares.
+
 ---
 
 ## 10. Local state
@@ -697,6 +723,8 @@ flutter_secure_storage  key "crypto_store_key_v1"                       the wrap
 Isar (app database)     StoredMessageData.sealedPlaintext                one local seal (0x20) per message under the chat's history key, base64
 Isar (app database)     StoredVaultMetadata.verificationTokenBase64      the wrapped vault master key (0x10), base64
 vault item files        one file per item (VaultFileDataSource)          a 0x20 blob, AAD "vault-item" (optionally wrapped again in a 0x05 under a per-item password)
+<application support directory>/chat_archive_<chat_id>.jsonl            transient: plaintext JSON lines during an archive export (§9.5), deleted in finally
+<application documents directory>/<chat name>/<name>                     unfuzzed FILES in the clear (§10.5) — plain files, not sealed; fuzzed containers <name>.fuzz sit beside them
 ```
 
 The store directory is created and canonicalised when the store opens; every path under it is formed only
@@ -754,7 +782,7 @@ that is wiped after use ([`state.rs#L27`](../../rust/fuzzy_crypto_core/src/state
 key is left on the heap by buffer growth.
 
 **Atomic write, save-before-return** ([`store.rs#L334`](../../rust/fuzzy_crypto_core/src/store.rs#L334),
-[`#L405`](../../rust/fuzzy_crypto_core/src/store.rs#L420)): every mutation (pairing step, message, file key, flag)
+[`#L420`](../../rust/fuzzy_crypto_core/src/store.rs#L420)): every mutation (pairing step, message, file key, flag)
 runs inside `with_state_mut`: load (lazily cached), mutate, seal, write `<chat_id>.state.tmp` (mode `0o600`),
 `fsync`, rename over `<chat_id>.state`, `fsync` the directory (unix). The result of the operation is returned
 only after the rename. If the mutation, the seal or the write fails, the cached copy is evicted and the next
@@ -769,8 +797,9 @@ a new key and answers `Corrupt` for the old seals.
 
 ### 10.4 Local seal of message history
 
-The app keeps received *and* sent message plaintext locally (the ratchet makes a blob decryptable once, and a
-sender can never decrypt its own output) — owner decision D-1, design (a). Each plaintext is sealed by
+The app keeps received *and* sent **text** plaintext locally (the ratchet makes a blob decryptable once, and a
+sender can never decrypt its own output) — owner decision D-1, design (a). File rows carry no seal: a received
+file is a plain file on disk (§10.5) and its row holds only the path. Each text plaintext is sealed by
 `seal_local(chat_id, plaintext)`: `AEAD(history key of chat_id, random nonce, aad = "local-seal" ‖ chat_id,
 plaintext)` in a `0x20` blob, stored base64 in the database row
 ([`store.rs#L43`](../../rust/fuzzy_crypto_core/src/store.rs#L43), [`#L210`](../../rust/fuzzy_crypto_core/src/store.rs#L210),
@@ -787,7 +816,8 @@ store key reads every chat's history — the per-chat key is defence in depth be
 gate above it. History is therefore readable only while the store is unlocked; because the store key is wrapped
 under the app-lock password, a copy of the database without the password (and without the OS keystore) is
 ciphertext. No migration exists: seals written by the pre-F2-12 store-derived key (`HKDF(store key,
-"fuzzy-local-seal-v1")`, AAD `local-seal` without a chat id) read as `Corrupt` — that key was never shipped.
+"fuzzy-local-seal-v1")`, AAD `local-seal` without a chat id) read as `Corrupt` at the core — an empty row in
+the app, which never throws on a seal it cannot open (`THREAT_MODEL.md` §8) — that key was never shipped.
 
 ### 10.5 What is *not* sealed
 
@@ -797,6 +827,16 @@ blob text itself — ciphertext, but a record that a message exists), and every 
 Only the `sealedPlaintext` column and the vault item files are sealed; a vault item's title, tags, group and
 type are plaintext columns in the database. The wrapped store key lives in the platform
 secure storage (Keychain / Keystore / DPAPI / libsecret) as a `0x10` blob.
+
+**Unfuzzed files are written in the clear.** A received file's plaintext is delivered as an ordinary file at
+`<application documents directory>/<chat name>/<original name>` — on desktop that is the user's Documents
+folder; on Android and iOS the app's documents directory — and the fuzzed containers the user produced sit
+beside it as `<name>.fuzz` (ciphertext). The plaintext file is **not sealed, not gated by the app lock, and
+not removed when the chat is deleted**; anyone who can read the device's file system reads it, and only text
+rows get a `sealedPlaintext` (§10.4). A file row's `encryptedMessage` column holds that file's path, so the
+database names the plaintext file but does not contain it; the archive export (§9.5) records the name only.
+Basics file decryption likewise writes a plain file into a folder under the same documents directory. The app's own copy (About
+encryption; README) says so in as many words. `THREAT_MODEL.md` §2.5, §7.13, R36.
 
 ### 10.6 Vault
 
@@ -1063,6 +1103,10 @@ Stated so a reviewer does not have to discover them.
     message the peer sends on the current receiving chain after the copy was taken — not messages already read
     (forward secrecy), but future ones, until this device sends and the peer's next message arrives on a fresh
     chain. Post-compromise security needs that round trip; nothing in the protocol forces one.
+15. **Unfuzzed files and exported archives are outside every guarantee above.** A received file lands as a
+    plain file under the app's documents directory (§10.5) and an archive export is the chat's plaintext under
+    a user-chosen password (§9.5); neither is sealed by the store, gated by the app lock, or covered by forward
+    secrecy. Only text history is sealed at rest.
 
 ---
 

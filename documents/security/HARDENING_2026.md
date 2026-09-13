@@ -76,7 +76,7 @@ numbered as in the owner brief. "Where" points at the specification section and 
 
 | # | Finding (before) | Fix (after) | Where | Status |
 |---|---|---|---|---|
-| **F-1** | **No forward secrecy.** One long-lived symmetric key per chat, RSA-wrapped in the acceptance blob: one device compromise decrypts the whole history and every future message. | Olm double ratchet: a fresh message key per blob, derived from a chain that ratchets on every direction change; the receiver deletes a key on use and persists the deletion **before** returning plaintext. A blob decrypts once, on one device, never again — not even by the sender. Proved at the Olm layer, not just at the API: `api::messages::tests::forward_secrecy`, `api::files::tests::forward_secrecy_for_files` (a state snapshot taken after message N−1 yields `MissingMessageKey` for N−1 and earlier). | `PROTOCOL.md` §8.1, §14; `rust/fuzzy_crypto_core/src/api/messages.rs` | **Closed.** Product consequence (single-use blobs, local history) is owner decision D-1 — §5 |
+| **F-1** | **No forward secrecy.** One long-lived symmetric key per chat, RSA-wrapped in the acceptance blob: one device compromise decrypts the whole history and every future message. | Olm double ratchet: a fresh message key per blob, derived from a chain that ratchets on every direction change; the receiver deletes a key on use and persists the deletion **before** returning plaintext. A blob decrypts once, on one device, never again — not even by the sender. Proved at the Olm layer, not just at the API: `api::messages::tests::forward_secrecy`, `api::files::tests::forward_secrecy_for_files` (a state snapshot taken after message N−1 yields `MissingMessageKey` for N−1 and earlier). | `PROTOCOL.md` §8.1, §14; `rust/fuzzy_crypto_core/src/api/messages.rs` | **Closed.** Product consequence (single-use blobs, local history) is owner decision D-1 — §5: text history is kept readable on the device, sealed under a random per-chat history key that lives inside the chat's state file (F2-12); unfuzzed files are plain files, not sealed |
 | **F-2** | **Unauthenticated handshake.** No fingerprint or safety number anywhere; the README asked users to verify out of band in prose. | Both pairing blobs carry a 64-byte Ed25519 signature by their author over every preceding byte (envelope included, `verify_strict`); the handshake header binds both identity keys into the 3DH; a **60-digit safety number** (SHA-512 over both Ed25519 keys and the chat id, Signal's 5-digit-group encoding) is shown on a verification page with a persisted "verified" flag and a shield indicator in the chat header. | `PROTOCOL.md` §4.1, §5; `pairing.rs`, `safety.rs`; `lib/src/fuzzy_chat/ui/pages/safety_number_page` | **Closed.** The brief named vodozemac's emoji SAS; a safety number ships instead — owner decision D-2, §5 |
 | **F-3** | **Empty AAD.** `Uint8List(0)` as associated data: ciphertext bound to nothing. | Every message carries an inner header *inside* the Olm plaintext — version, chat id, sender and recipient identity keys, direction, 64-bit counter, content type — checked field by field on receipt (a blob from chat A dies in chat B at the MAC, and again at the header). Every local and password-sealed format has AAD: file chunks bind the 55-byte header and the chunk index; wrapped keys use role-separated AAD (`store-key` / `vault-key`); state files bind `chat-state ‖ chat_id`. | `PROTOCOL.md` §7.1–7.2, §6.6–6.9, §9.1 | **Closed** |
 | **F-4** | **No replay or ordering protection.** No sequence numbers; a captured blob re-decrypts forever. | Two layers: Olm's consumed-key store (a used key is gone) and, per chat and per direction, a 64-bit counter window (`recv_highest` + a 64-bit seen bitmap): a seen counter → `Replay`, more than 63 behind the newest accepted → `TooOld`, both surfaced as distinct user copy. Out-of-order arrival is served by Olm's 40 skipped keys per chain. | `PROTOCOL.md` §8.2–8.3; `counters.rs` | **Closed.** The 63-behind rule is stricter than Olm's own store (a documented product limit, `THREAT_MODEL.md` §7.7) |
@@ -143,16 +143,24 @@ than HKDF-derived from the identity secret because vodozemac 0.10.0 exposes no a
 effect the owner asked for — one chat's key opens no other chat's history, and A's and B's keys for one chat are
 unrelated — holds. Stated plainly in `THREAT_MODEL.md` §4.3/§8/T13/R33: the per-chat key bounds a *history-key*
 leak to one chat; a captured *store key* (or the app-lock password) still opens every state file and therefore
-every history key, so the app lock remains the gate that matters. The archive export and the trade-off copy
-(F2-10 / F2-11) are unblocked by this answer and follow.
+every history key, so the app lock remains the gate that matters. **Scope of the seal: text only.** An unfuzzed
+*file* is delivered as an ordinary file at `<documents>/<chat name>/<original name>` (on desktop the user's
+Documents folder) — not sealed, not gated by the app lock, not removed with the chat — because a file is
+decrypted in order to be used outside the app; the database row holds its path. The About-encryption page and
+the README say so (`THREAT_MODEL.md` §7.13, R36; `PROTOCOL.md` §10.5). **Built on this answer, both on
+2026-09-13:** the password-protected **archive export** (F2-10 — "Export chat archive" in a chat's settings, a
+password-mode `0x04` container of JSON lines that opens in Basics → file decryption, no import path, outside
+forward secrecy by design; `PROTOCOL.md` §9.5, `THREAT_MODEL.md` R35) and the **trade-off copy** (F2-11 — an
+onboarding slide, the chat-creation success notice, an About-encryption page and the README bullet, in English
+and Georgian). D-1 is closed.
 
-**D-2 · Safety number instead of vodozemac's emoji SAS — pending, build proceeds with the safety number.**
+**D-2 · Safety number instead of vodozemac's emoji SAS — accepted by the owner 2026-09-13.**
 vodozemac's `Sas` holds an in-memory ephemeral secret with no serialisation, so an inviter cannot keep it across
 the days between invitation and acceptance; and in a two-blob flow with no commitment round a 7-emoji SAS is
 grindable by an active MITM (≈ 2^42). The build ships a Signal-style 60-digit safety number over both
 Ed25519 identity keys and the chat id, verifiable at any time, with a verification page and a shield indicator.
 F-2 is closed either way. If the owner insists on emoji SAS: one extra blob plus a commitment step, an add-on.
-Recorded as reversible. The owner's answer: _pending_.
+Recorded as reversible. The owner's answer (2026-09-13): **safety number accepted**.
 
 **Decisions applied without an owner answer being required** (recorded in the hardening flow's decision log):
 D-4 (build fully, then one consolidated live QA sweep — applied), D-8 (opt out of OS backups — implemented,
@@ -242,17 +250,17 @@ crypto store and the database, set at launch), and its keychain items are `ThisD
 an iOS backup was a usable, permanent copy of the store key (`THREAT_MODEL.md` §2.8, R34).
 
 **What is pinned and checked.** `Cargo.lock` and `pubspec.lock` are committed and built `--locked`; Rust 1.98.1
-and Flutter 3.41.7 are pinned; 20 byte-exact test vectors under `vectors/` (invitation, acceptance, message,
+and Flutter 3.41.7 are pinned; 19 byte-exact test vectors under `vectors/` (invitation, acceptance, message,
 file container, password blob, wrapped keys, state file, safety number, …) are regenerated from fixed inputs
 through the production code paths and compared in `cargo test`, so any dependency change that alters a byte
-fails CI (`PROTOCOL.md` Appendix A); the two SBOMs (`sbom/rust.cdx.json`, 175 components; `sbom/flutter.cdx.json`,
+fails CI (`PROTOCOL.md` Appendix A); the two SBOMs (`sbom/rust.cdx.json`, 173 components; `sbom/flutter.cdx.json`,
 203 components) are regenerated on every CI run and the run fails if they drift from the lock files; Dependabot
 watches the cargo, pub and GitHub Actions ecosystems weekly — **except `flutter_rust_bridge`**, which is pinned
 three ways (Rust crate, Dart package, the codegen that wrote `lib/rust_bridge/**`) and must move as one, so it is
 excluded from Dependabot in both ecosystems and bumped by hand in lockstep with the codegen re-run; there is no
 CI gate for codegen drift — a stale generated bridge is caught by the per-feature reviewer re-running the
-generator, not by a job (`THREAT_MODEL.md` §9.3, R24). Test counts at the time of writing:
-`cargo test --locked` 161, `flutter test` 240, both green on every push (CI matrix: rust, flutter-test,
+generator, not by a job (`THREAT_MODEL.md` §9.3, R24). Test counts at the closing pass:
+`cargo test --locked` 165, `flutter test` 256 (161 / 240 when this write-up was first drafted), both green on every push (CI matrix: rust, flutter-test,
 android with a 16 KB page-size gate, linux, windows, macos, rust-repro ×2 + compare; `attest` on tags).
 
 ---
@@ -299,7 +307,6 @@ emulator; covered by a router test).
 | **Olm's 8-byte MAC** | vodozemac's `SessionConfig::version_2()` (32-byte MAC) is behind its `experimental-session-config` feature and off by default; no forgery oracle exists here (every decrypt is a human paste). Listed as an audit question. | `THREAT_MODEL.md` §7.5, R6, R23 |
 | **Olm-parity replay window** | The 63-behind counter rule is stricter than Olm's 40-skipped-keys-per-chain store; whether to widen it is a product decision, and the stricter rule is the safer default. | `THREAT_MODEL.md` §7.7; `PROTOCOL.md` §8.2 |
 | **Multi-device, groups, key rotation, transport** | Out of the product's shape: one chat is one pair of devices, blobs move by hand. | `THREAT_MODEL.md` §7.12 |
-| **Archive export (F2-10) and the trade-off copy (F2-11)** | Unblocked by owner decision D-1 (§5, answered 2026-09-13); built after the per-chat history key (F2-12). | `THREAT_MODEL.md` R10 |
 | **The store key re-key path** | Would let a password change actually rotate keys; deliberately not built for this version — the honest statement is in §6. | `THREAT_MODEL.md` R33 |
 
 ---
@@ -308,12 +315,14 @@ emulator; covered by a router test).
 
 | Id | What is needed | Blocks |
 |---|---|---|
-| **D-1** | **Answered 2026-09-13** — (a) with a per-chat history key, implemented (F2-12, §5). Nothing further needed. | — (F2-10 / F2-11 unblocked) |
-| **D-2** | Confirm the safety number over emoji SAS (§5) — or ask for the add-on. | nothing; reversible |
-| **D-3** | An Apple Development certificate/profile for the build Mac or as a CI secret, or a decision to ship macOS unsigned/ad-hoc for now. | a signed, notarized macOS artifact |
-| **D-5** | Enable GitHub private vulnerability reporting on the repository; confirm the `security@fuzzzycore.com` mail route; serve `security.txt` at `/.well-known/` on the website. `SECURITY.md` and `security.txt` work without them (contact address is the working one). | the preferred disclosure channel |
-| **D-6** | The real Android upload keystore as the four `ANDROID_KEYSTORE_*` Actions secrets (never a file in the repo), or a decision that the GitHub release stays a throwaway-signed side-load build. | the `v1.0.0` store build |
-| **D-7** | Two product facts to accept or change: "Copy as link" for a message carries the chat id in the clear (metadata only; recommended: keep and state it); biometric unlock stores the app-lock password in the OS keystore and the chat store never auto-locks (pre-existing design, stated in the threat model). | the wording of the trade-off copy |
+| **D-1** | **Answered 2026-09-13** — (a) with a per-chat history key, implemented (F2-12, §5); archive export (F2-10) and trade-off copy (F2-11) built on it. Closed. | — |
+| **D-2** | **Answered 2026-09-13** — safety number accepted (§5). Closed. | — |
+| **D-3** | **Answered 2026-09-13** — macOS signing moves to the owner's **Codemagic** pipeline; nothing on the build Mac. One item for that pipeline: add `com.apple.security.files.user-selected.read-write` to both macOS entitlements files (they carry `app-sandbox` without it), or a signed build cannot open the file picker or the archive save panel. | a signed, notarized macOS artifact (owner's pipeline) |
+| **D-5** | **Answered yes 2026-09-13.** Private vulnerability reporting **enabled** (`365e8bd`). Still open: the `security@fuzzzycore.com` route (owner-only Cloudflare account — add the route or hand ops a scoped token; `contact@` stays advertised meanwhile) and the website's `security.txt` (written, `fuzzzy_core_website` PR #1, not yet deployed). | the mail route named in the policy |
+| **D-6** | **Answered 2026-09-13** — the store build is signed by the owner at publish time (Codemagic); the GitHub release stays a throwaway-signed, attested side-load build. Closed for this build. | the store build (owner's pipeline) |
+| **D-7** | **Answered 2026-09-13** — keep the chat id in message links; all three facts (chat id in links, biometric unlock keeps the password in the OS keystore, the chat store never auto-locks) are stated on the About-encryption page (F2-11). Closed. | — |
+| **D-10** | **Answered 2026-09-13** — the hardened build ships as **`v1.1.0`** (`v1.0.0` is a 2025 tag of the old stack); `WHAT_CHANGED.md` is the before/after glossary the owner asked for alongside it. | the release name at merge |
+| **ka review** | The Georgian copy added by F2-11 (19 strings; the About-encryption body was reworded again after review) has not had a native read — listed in the hardening flow's `HANDOFF.md`. | nothing in the code |
 
 ---
 
