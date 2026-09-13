@@ -437,6 +437,36 @@ void main() {
     );
 
     blocTest<FileProcessingCubit<FileDecryptionOption>, FileProcessingState>(
+      'a cancelled receive stays canceled but carries the cancelled hint (the '
+      'message is spent)',
+      setUp: () => stubDecrypt(
+        CryptoCoreSuccess(
+          CryptoCoreReceivedFile(
+            outputPath: path.join(chatFolder(), 'report.pdf'),
+            handler: _FakeHandler([
+              FileProcessingProgress(progress: 0.25),
+              FileProcessingProgress.cancelled(),
+            ]).handler,
+          ),
+        ),
+      ),
+      build: buildDecrypt,
+      act: (cubit) => cubit.addFilesToProcess(
+        chatId: _chatId,
+        chatName: _chatName,
+        filePaths: [container.path],
+      ),
+      wait: settleReceive,
+      verify: (cubit) => expect(
+        cubit.state,
+        processedAs(
+          FileProcessingStatus.canceled,
+          failure: FileProcessingFailureType.cancelled,
+        ),
+      ),
+    );
+
+    blocTest<FileProcessingCubit<FileDecryptionOption>, FileProcessingState>(
       'a container whose size still changes is stillArriving and is never '
       'prepared',
       build: buildDecrypt,

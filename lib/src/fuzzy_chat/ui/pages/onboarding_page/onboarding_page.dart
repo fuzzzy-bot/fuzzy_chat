@@ -15,7 +15,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   int _currentPage = 0;
 
   Future<void> _onNext() async {
-    if (_currentPage < 2) {
+    if (_currentPage < 3) {
       await _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -64,6 +64,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     l10n.secureHandshake,
                     l10n.connectWithOthersUsingASecureOfflineCodeExchange,
                   ),
+                  _buildSlide(
+                    context,
+                    Icons.lock_clock,
+                    l10n.forwardSecrecyTitle,
+                    l10n.forwardSecrecyNotice,
+                  ),
                 ],
               ),
             ),
@@ -74,7 +80,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
-                      3,
+                      4,
                       (index) => AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -102,7 +108,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       ),
                       onPressed: _onNext,
                       child: Text(
-                        _currentPage == 2 ? l10n.getStarted : l10n.next,
+                        _currentPage == 3 ? l10n.getStarted : l10n.next,
                         style: theme.textTheme.titleMedium?.copyWith(
                           color:
                               const Color(0xFF18181A), // Dark text on diffColor
@@ -129,35 +135,44 @@ class _OnboardingPageState extends State<OnboardingPage> {
     final theme = Theme.of(context);
     final fuzzzyColors = context.fuzzzyColors;
 
-    return Padding(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 100,
-            color: fuzzzyColors.inkFaint,
-          ),
-          const SizedBox(height: 48),
-          Text(
-            title,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: fuzzzyColors.ink,
+    // Centred when there is room, scrollable when there is not (the longer
+    // slides overflow a short window otherwise).
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 100,
+                  color: fuzzzyColors.inkFaint,
+                ),
+                const SizedBox(height: 48),
+                Text(
+                  title,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: fuzzzyColors.ink,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  description,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: fuzzzyColors.inkMute,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
-          Text(
-            description,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: fuzzzyColors.inkMute,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }

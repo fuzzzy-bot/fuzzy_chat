@@ -9,7 +9,8 @@ class FileProcessingData {
   final String? outputFilePath;
   final FileProcessingStatus status;
   final double progress; // value between 0 and 1
-  final FileProcessingFailure? failure; // set with FileProcessingStatus.failed
+  // set with FileProcessingStatus.failed, and on a canceled receive
+  final FileProcessingFailure? failure;
 
   const FileProcessingData({
     required this.chatId,

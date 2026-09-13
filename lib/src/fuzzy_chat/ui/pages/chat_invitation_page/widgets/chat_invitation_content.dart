@@ -127,6 +127,14 @@ class _ChatInvitationContentState extends State<ChatInvitationContent> {
                   });
                 },
               ),
+              const SizedBox(height: 20),
+              Text(
+                localizations.forwardSecrecyNotice,
+                textAlign: TextAlign.start,
+                style: fuzzzyTextStyles.bodyS.copyWith(
+                  color: fuzzzyColors.inkMute,
+                ),
+              ),
               const SizedBox(height: 32),
               Divider(
                 height: 20,

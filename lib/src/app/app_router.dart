@@ -15,6 +15,7 @@ class AppRouter {
   static const chatConnected = '/chat/connected';
   static const chatVerify = '/chat/verify';
   static const settings = '/settings';
+  static const aboutEncryption = '/settings/about-encryption';
   static const auth = '/auth';
   static const basics = '/basics';
   static const vaultHome = '/vault';
@@ -24,6 +25,7 @@ class AppRouter {
     onboarding,
     chatUnlock,
     settings,
+    aboutEncryption,
     auth,
     basics,
   };
@@ -148,6 +150,10 @@ class AppRouter {
         GoRoute(
           path: settings,
           builder: (_, __) => const SettingsPage(),
+        ),
+        GoRoute(
+          path: aboutEncryption,
+          builder: (_, __) => const AboutEncryptionPage(),
         ),
         GoRoute(
           path: auth,

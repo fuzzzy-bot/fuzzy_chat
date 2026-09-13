@@ -106,6 +106,7 @@ void main() {
       AppRouter.chatUnlock,
     );
     expect(await redirectFor(tester, AppRouter.settings), isNull);
+    expect(await redirectFor(tester, AppRouter.aboutEncryption), isNull);
     expect(await redirectFor(tester, AppRouter.chatUnlock), isNull);
   });
 

@@ -203,6 +203,7 @@ class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
         status: FileProcessingStatus.canceled,
         outputFilePath: null,
         progress: event.progress,
+        failure: _cancelFailure(),
       );
       _goToNextFileProcessing();
       logger.i('FILE PROCESSING: Marked as isCancelled $state');
@@ -247,6 +248,14 @@ class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
     return processingOption is FileDecryptionOption
         ? FileProcessingFailureType.cannotOpenAskResend
         : FileProcessingFailureType.unknown;
+  }
+
+  /// Same for a cancelled receive — the row keeps its `canceled` status and
+  /// carries the hint that the container is spent. A cancelled send has none.
+  FileProcessingFailure? _cancelFailure() {
+    return processingOption is FileDecryptionOption
+        ? FileProcessingFailure(type: FileProcessingFailureType.cancelled)
+        : null;
   }
 
   void _failFile({

@@ -173,6 +173,15 @@ class _SettingsPageState extends State<SettingsPage> {
                     fuzzzyColors: fuzzzyColors,
                     fuzzzyTextStyles: fuzzzyTextStyles,
                   ),
+                  const SizedBox(height: 12),
+                  _SettingsLinkTile(
+                    icon: Icons.lock_clock,
+                    title: localizations.aboutEncryptionTitle,
+                    subtitle: localizations.aboutEncryptionDescription,
+                    onTap: () => context.push(AppRouter.aboutEncryption),
+                    fuzzzyColors: fuzzzyColors,
+                    fuzzzyTextStyles: fuzzzyTextStyles,
+                  ),
                   if (fileBenchmarkCubit != null) ...[
                     const SizedBox(height: 12),
                     BlocConsumer<FileBenchmarkCubit, FileBenchmarkState>(

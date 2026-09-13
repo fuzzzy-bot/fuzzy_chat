@@ -42,6 +42,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Chat Authentication'), findsOneWidget);
+    expect(find.text('About encryption'), findsOneWidget);
     expect(find.text('Benchmark file encryption (dev)'), findsNothing);
     expect(find.byIcon(Icons.speed), findsNothing);
   });
