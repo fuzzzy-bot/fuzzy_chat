@@ -1648,7 +1648,7 @@ abstract class FuzzyChatLocalizations {
   /// No description provided for @aboutEncryptionBodyHistory.
   ///
   /// In en, this message translates to:
-  /// **'Every message you send or unfuzz is kept in the app, sealed per chat under a key only this device holds. If you set an app-lock password, that key is protected by it — without the password, the stored history cannot be opened. Once unlocked, your chats stay open until you close the app; the app does not lock itself after a while. If you turn on biometric unlock, your password is stored securely on this device so a fingerprint or face can release it.'**
+  /// **'Every text you send or unfuzz is kept in the app, sealed per chat under a key only this device holds. If you set an app-lock password, that key is protected by it — without the password, the stored text history cannot be opened. Unfuzzed files are different: they are saved as ordinary files in this chat’s folder on the device and are not sealed or locked by the app — anyone who can read the device’s storage can open them, so protect them like any other file. Once unlocked, your chats stay open until you close the app; the app does not lock itself after a while. If you turn on biometric unlock, your password is stored securely on this device so a fingerprint or face can release it.'**
   String get aboutEncryptionBodyHistory;
 
   /// No description provided for @aboutEncryptionWindowTitle.
@@ -1684,7 +1684,7 @@ abstract class FuzzyChatLocalizations {
   /// No description provided for @aboutEncryptionBodyErrors.
   ///
   /// In en, this message translates to:
-  /// **'“Already unfuzzed”: this blob was unfuzzed on this device before and cannot be read a second time. “Not a valid fuzzed message”: the blob is damaged, incomplete, or belongs to a different chat — the app cannot tell these apart. “Too old”: too many newer messages were unfuzzed first. “Wrong password” (Basics): the password does not match, or the text or file is damaged — the app cannot tell these apart either. For files, a receive that fails or is cancelled after it started has already used the file’s one-time key: ask the sender to send the file again.'**
+  /// **'“Already unfuzzed”: this blob was unfuzzed on this device before and cannot be read a second time. “Not a valid fuzzed message”: the blob is damaged, incomplete, or belongs to a different chat — the app cannot tell these apart. “Too old”: too many newer messages were unfuzzed first. “Incorrect key” / “Wrong password” (Basics): the key or password does not match, or the text or file is damaged — the app cannot tell these apart either. For files, a receive that fails or is cancelled after it started has already used the file’s one-time key: ask the sender to send the file again.'**
   String get aboutEncryptionBodyErrors;
 
   /// No description provided for @aboutEncryptionBodySafetyNumber.
@@ -1702,7 +1702,7 @@ abstract class FuzzyChatLocalizations {
   /// No description provided for @aboutEncryptionBodyUnderTheHood.
   ///
   /// In en, this message translates to:
-  /// **'Messages use the Olm double ratchet (vodozemac, independently audited) — a fresh key per message, which is what makes a blob single-use. Files are sealed with XChaCha20-Poly1305 in chunks and are refused before anything is written if a chunk is damaged. Passwords go through Argon2id. Every key lives in the app’s native core and never leaves this device. There is no web version: the core is native code.'**
+  /// **'Messages use the Olm double ratchet (vodozemac, independently audited) — a fresh key per message, which is what makes a blob single-use. Files are sealed with XChaCha20-Poly1305 in chunks; a damaged file is refused and nothing is left on disk. Passwords go through Argon2id. Your secret keys live in the app’s native core and are never sent anywhere. There is no web version: the core is native code.'**
   String get aboutEncryptionBodyUnderTheHood;
 
   /// No description provided for @alreadyReceived.
