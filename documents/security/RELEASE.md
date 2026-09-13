@@ -23,6 +23,45 @@ runs `attest`.
    GitHub Release (`gh release create v1.2.3 …`). Creating the Release is the publisher's step after the
    owner's go; the pipeline only produces and attests the files.
 
+### 1.1 As run for `v1.1.0` (2026-09-13, from the branch worktree, `agent/chat-harden-rust-crypto-core`)
+
+The bump touches **two** files: `pubspec.yaml` and the Flutter SBOM, which embeds the pub version
+(`pkg:pub/fuzzy_chat@<version>`) — without regenerating it `./sbom.sh flutter --check` fails the `flutter-test` job.
+
+```sh
+# 1. bump + changelog + this section, on a green tip (d3b24e3)
+sed -i '' 's/^version: 1\.0\.0+1$/version: 1.1.0+2/' pubspec.yaml
+./sbom.sh flutter && ./sbom.sh flutter --check                  # SBOM diff must be the version lines only
+$EDITOR CHANGELOG.md documents/security/RELEASE.md
+git add pubspec.yaml CHANGELOG.md documents/security/RELEASE.md documents/security/sbom/flutter.cdx.json
+git diff --cached --check && git diff --cached | grep -iEc 'api[_-]?key|secret|token|password|BEGIN.*PRIVATE'
+git commit -F msg.txt                                           # chore(release): v1.1.0 — …
+git push origin agent/chat-harden-rust-crypto-core && git ls-remote --heads origin agent/chat-harden-rust-crypto-core
+gh run list -R fuzzzy-bot/fuzzy_chat --commit "$(git rev-parse HEAD)" ; gh run watch <push-run-id> --exit-status
+
+# 2. full regression on that exact tip, locally (the same gates CI runs)
+( cd rust/fuzzy_crypto_core && cargo fmt --check && cargo clippy --all-targets --locked -- -D warnings && cargo test --locked )
+fvm flutter analyze --fatal-infos --fatal-warnings
+fvm dart format --output=none --set-exit-if-changed lib test
+( cd rust/fuzzy_crypto_core && cargo build --release --locked ) && fvm flutter test
+./sbom.sh rust --check && ./sbom.sh flutter --check
+
+# 3. tag the release commit, annotated, and watch the tag run (ten jobs incl. attest)
+git tag -a v1.1.0 -m "Fuzzy Chat 1.1.0 — Rust crypto core; see documents/security/HARDENING_2026.md"
+git push origin v1.1.0 && git ls-remote --tags origin v1.1.0
+gh run list -R fuzzzy-bot/fuzzy_chat --event push --branch v1.1.0 ; gh run watch <tag-run-id> --exit-status
+
+# 4. verify the tag's artifacts once (§3), then delete the download
+gh run download <tag-run-id> -R fuzzzy-bot/fuzzy_chat -D rel && cd rel
+shasum -a 256 -c sha256sums/SHA256SUMS
+for f in android-apk/app-production-release.apk linux-bundle/lib/libfuzzy_crypto_core.so macos-app/fuzzy_chat-macos.zip; do
+  gh attestation verify "$f" -R fuzzzy-bot/fuzzy_chat; done
+unzip -p android-apk/app-production-release.apk lib/arm64-v8a/libfuzzy_crypto_core.so | shasum -a 256   # == rust-repro-1/SHA256SUMS android line
+cd .. && rm -rf rel
+```
+
+The GitHub Release itself (step 4 above, `gh release create`) is created after the owner's go, not by the tag.
+
 Artifacts of a run (`gh run download <run-id> -D rel` puts each one in a directory of its name):
 
 | Artifact | Content | In `SHA256SUMS` / attested |

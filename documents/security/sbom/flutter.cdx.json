@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:ebc847d6-5e43-4eaf-9072-25d4c2417994",
+  "serialNumber": "urn:uuid:ed55c862-fb39-45f8-bed8-5537e648bce6",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-09-12T20:36:53Z",
+    "timestamp": "2026-09-13T15:00:34Z",
     "tools": {
       "components": [
         {
@@ -36,9 +36,9 @@
     "component": {
       "name": "fuzzy_chat",
       "description": "End to End encripted chat, It's content is stored locally only and can be read only by chat members",
-      "version": "1.0.0+1",
-      "purl": "pkg:pub/fuzzy_chat@1.0.0%2B1",
-      "bom-ref": "pkg:pub/fuzzy_chat@1.0.0+1",
+      "version": "1.1.0+2",
+      "purl": "pkg:pub/fuzzy_chat@1.1.0%2B2",
+      "bom-ref": "pkg:pub/fuzzy_chat@1.1.0+2",
       "type": "application"
     },
     "properties": [
@@ -56,11 +56,11 @@
     {
       "group": "",
       "name": "fuzzy_chat",
-      "version": "1.0.0+1",
+      "version": "1.1.0+2",
       "description": "End to End encripted chat, It's content is stored locally only and can be read only by chat members",
-      "purl": "pkg:pub/fuzzy_chat@1.0.0%2B1",
+      "purl": "pkg:pub/fuzzy_chat@1.1.0%2B2",
       "type": "application",
-      "bom-ref": "pkg:pub/fuzzy_chat@1.0.0+1"
+      "bom-ref": "pkg:pub/fuzzy_chat@1.1.0+2"
     },
     {
       "group": "",
@@ -7574,7 +7574,7 @@
   ],
   "dependencies": [
     {
-      "ref": "pkg:pub/fuzzy_chat@1.0.0+1",
+      "ref": "pkg:pub/fuzzy_chat@1.1.0+2",
       "dependsOn": [
         "pkg:pub/app_links@7.0.0",
         "pkg:pub/args@2.4.2",
@@ -7624,7 +7624,7 @@
     {
       "bom-ref": "metadata-annotations",
       "subjects": [
-        "pkg:pub/fuzzy_chat@1.0.0+1"
+        "pkg:pub/fuzzy_chat@1.1.0+2"
       ],
       "annotator": {
         "component": {
@@ -7642,8 +7642,8 @@
           ]
         }
       },
-      "timestamp": "2026-09-12T20:36:53Z",
-      "text": "This Software Bill-of-Materials (SBOM) document was created on Saturday, September 12, 2026 with cdxgen. The data was captured during the build lifecycle phase. The document describes an application named 'fuzzy_chat' with version '1.0.0+1'."
+      "timestamp": "2026-09-13T15:00:34Z",
+      "text": "This Software Bill-of-Materials (SBOM) document was created on Sunday, September 13, 2026 with cdxgen. The data was captured during the build lifecycle phase. The document describes an application named 'fuzzy_chat' with version '1.1.0+2'."
     }
   ]
 }
