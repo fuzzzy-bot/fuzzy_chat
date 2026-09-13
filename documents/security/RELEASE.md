@@ -174,6 +174,37 @@ The measured result for the first attested tag, `v1.0.0-rc.1`, is in §5.
 
 ## 5. Measurements per release
 
+### v1.1.0 (tag → `ec321ed`, 2026-09-13)
+Tag run <https://github.com/fuzzzy-bot/fuzzy_chat/actions/runs/34764915646> — ten jobs green, `attest` included;
+attestation <https://github.com/fuzzzy-bot/fuzzy_chat/attestations/47176151> (SLSA provenance v1, six subjects,
+`sourceRepositoryRef=refs/tags/v1.1.0`, `sourceRepositoryDigest=ec321ed3eb86c4ae70cdc8caf3d4221b4786ffe2`).
+Verified once from a fresh download by the publisher: `shasum -a 256 -c SHA256SUMS` six `OK`; `gh attestation verify`
+passed on the APK, the Linux `libfuzzy_crypto_core.so` and the macOS zip; `rust-repro-1` = `rust-repro-2`; and the
+`attest` job's own gate printed `shipped linux + android cores == rust-repro` — the first tag on which that gate ran live.
+
+`SHA256SUMS`:
+```
+71d26717c56ac1cb9d0f8c1218293b2d3f8f74c7405b39d49721bd05d9d19f70  android-apk/app-production-release.apk
+27c978a4a55c00af4dcc6426bcc9525a108888e63b51663fdd52139b674980fe  windows-bundle/fuzzy_chat.exe
+f2974a8419a0d8a522e9197f27f29ce27481ee0d758b1a8bfc8bdf15432dc2d4  linux-bundle/fuzzy_chat
+79a3f94819633ce84435f89f049c02bdda54c5d8c77f3f59cc76b83a31cfaec6  macos-app/fuzzy_chat-macos.zip
+ff7131a3dc277d6a4e201283d7b7d803d6b16d251e49deffd0fd45dd93d151ff  linux-bundle/lib/libfuzzy_crypto_core.so
+254940d3eac469cfb8ecb1fb93993e6ff442b60257d2454c09cfbdbb00bb8f61  windows-bundle/fuzzy_crypto_core.dll
+```
+
+Rust core, rebuilt on two runners (identical), and the shipped cores:
+
+| Target | File | SHA-256 (runner 1 = runner 2) | Shipped |
+|---|---|---|---|
+| `x86_64-unknown-linux-gnu` | `libfuzzy_crypto_core.so` | `ff7131a3dc277d6a4e201283d7b7d803d6b16d251e49deffd0fd45dd93d151ff` | **= `linux-bundle/lib/libfuzzy_crypto_core.so`** |
+| `x86_64-unknown-linux-gnu` | `libfuzzy_crypto_core.a` | `124874111bab4503540c9e65e9d3a747f4c79bb475cb19eae76822dc517549f0` | — |
+| `aarch64-linux-android` (API 24, `llvm-strip --strip-debug`) | `libfuzzy_crypto_core.so` | `e7b3ffa3a2ee57ad132b95b6c1d0c7b65da6fef9d564746f75ee91d46e7a8d31` | **= the APK's `lib/arm64-v8a/libfuzzy_crypto_core.so`** |
+| `aarch64-linux-android` (API 24) | `libfuzzy_crypto_core.a` | `5b5a7b284b620ac0a1cc83f3c5231bb02629f512c227d45a04bdfb6043c9400c` | — |
+
+The core hashes differ from rc.1's because the crate changed between the tags (per-chat history key, `hkdf` dropped),
+not because the build stopped being reproducible. The Linux `fuzzy_chat` executable hash is unchanged from rc.1
+(`f2974a84…`): the Flutter AOT snapshot lives in `data/`, not in the launcher binary.
+
 ### v1.0.0-rc.1
 Rust core at this tag (unchanged since the measurement run
 <https://github.com/fuzzzy-bot/fuzzy_chat/actions/runs/34719697155>; the tag run re-proves the same values):
