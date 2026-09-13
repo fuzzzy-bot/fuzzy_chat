@@ -877,7 +877,7 @@ function; the KEK is a wiped 32-byte buffer; the AEAD object wipes its key on dr
   documented here; a version-1 decoder fed base91 text refuses it at §6.1 step 3, because base91 uses
   characters outside the base64url alphabet — it can never be misread as base64url.
 - **Crate pins** (§15): the four cryptographic crates and the FFI crate are `=`-pinned in `Cargo.toml`; the
-  other nine dependencies are caret ranges. The effective pin for *every* crate is `Cargo.lock`, which CI builds
+  other eight dependencies are caret ranges. The effective pin for *every* crate is `Cargo.lock`, which CI builds
   `--locked`, so no resolution can change without a lock-file commit. A dependency upgrade that changes bytes
   additionally fails the vector check in `cargo test` (§Appendix A) and is therefore a deliberate act, not an
   accident.
@@ -976,7 +976,7 @@ the state file can read.
 ## 15. Reference crates and versions
 
 In `rust/fuzzy_crypto_core/Cargo.toml` the cryptographic crates `vodozemac`, `chacha20poly1305`, `aead-stream`,
-`argon2` and the FFI crate `flutter_rust_bridge` are exact (`=`) pins; `hkdf`, `sha2`, `zeroize`, `getrandom`,
+`argon2` and the FFI crate `flutter_rust_bridge` are exact (`=`) pins; `sha2`, `zeroize`, `getrandom`,
 `subtle`, `base64`, `serde`, `serde_json` and `thiserror` are caret ranges. **The real pin is `Cargo.lock`**,
 which resolves every crate to the version below, and CI builds `--locked`, so a different resolution cannot
 build without a lock-file change. Toolchain: Rust 1.98.1 (`rust-toolchain.toml`), Flutter 3.41.7 / Dart 3.11.5
@@ -988,7 +988,7 @@ build without a lock-file change. Toolchain: Rust 1.98.1 (`rust-toolchain.toml`)
 | `chacha20poly1305` | 0.11.0 (`zeroize`) | XChaCha20-Poly1305 for every AEAD use (§6.7–6.9, §9) | RustCrypto AEADs; NCC Group audit of the `chacha20poly1305` crate, 2020, no significant findings (report linked from the crate README: https://github.com/RustCrypto/AEADs/tree/master/chacha20poly1305). Also present at 0.10.1 as vodozemac's dependency |
 | `aead-stream` | 0.6.0 (`alloc`) | the STREAM construction (BE32 nonce layout) of §9.1 | RustCrypto AEADs (same repository); implements the STREAM construction of Hoang, Reyhanitabar, Rogaway, Vizár (2015) |
 | `argon2` | 0.6.0 (`zeroize`) | Argon2id of §11 | RustCrypto password-hashes; RFC 9106; parameters per OWASP Password Storage Cheat Sheet |
-| `hkdf` / `sha2` | 0.13.0 / 0.11.0 | SHA-512 for the safety number (§5). `hkdf` 0.13 has had no caller since the store-derived local key was replaced by per-chat history keys (§3, §10.4); it stays pinned until a dependency-removal chore drops it from `Cargo.toml`, the lock and the SBOM together | RustCrypto KDFs / hashes (0.12.4 / 0.10.9 also present as vodozemac's dependencies) |
+| `sha2` | 0.11.0 | SHA-512 for the safety number (§5) — the crate's only direct hash use. The crate calls no HKDF of its own: the `hkdf` dependency became callerless when the store-derived local key was replaced by per-chat history keys (§3, §10.4) and was removed from `Cargo.toml`, the lock and the SBOM; the only HKDF in the core is inside vodozemac's ratchet | RustCrypto hashes (`sha2` 0.10.9 and `hkdf` 0.12.4 are also present as vodozemac's transitive dependencies) |
 | `subtle` | 2.6.1 | constant-time comparisons (§4.4, §7.2) | dalek-cryptography |
 | `zeroize` | 1.9.0 (`zeroize_derive`) | wiped buffers and structs (§13) | RustCrypto utils |
 | `getrandom` | 0.4.3 (`sys_rng`) | the only randomness source: nonces, salts, keys, one-time-key seeds (through vodozemac's own `rand`/`getrandom` 0.2.17 for its keys) | rust-random |

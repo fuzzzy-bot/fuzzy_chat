@@ -54,7 +54,7 @@ that never sees a key. The primitives are all audited third-party crates, `=`-pi
 | Pairing, ratchet, per-message keys | `vodozemac` 0.10.0 — Olm double ratchet, unmodified (`SessionConfig::version_1()`) | Least Authority audit, March 2022, no significant findings; powers Matrix/Element; Apache-2.0 |
 | Every AEAD use (files, local state, password blobs, vault) | `chacha20poly1305` 0.11.0 (XChaCha20-Poly1305) + `aead-stream` 0.6.0 (STREAM, BE32) | RustCrypto; NCC Group audit 2020, no significant findings |
 | Password → key | `argon2` 0.6.0 (Argon2id, m = 64 MiB, t = 4, p = 1) | RustCrypto; RFC 9106 |
-| Fingerprints (safety number) | `sha2` (`hkdf` 0.13 stays pinned but has no caller since the per-chat history key of D-1 replaced the store-derived local key; removal is a dependency chore) | RustCrypto |
+| Fingerprints (safety number) | `sha2` 0.11.0 — the crate's only hash use. No `hkdf` dependency remains: it lost its last caller when the per-chat history key of D-1 replaced the store-derived local key and was dropped from `Cargo.toml`, the lock and the SBOM in the closing pass; the only HKDF in the core is vodozemac's own (transitive) | RustCrypto |
 | Constant-time comparison, wiping, randomness | `subtle`, `zeroize`, `getrandom` | dalek / RustCrypto / rust-random |
 
 Nothing cryptographic was written by hand: no primitive, no KDF, no MAC, no protocol. The Olm session is used
@@ -180,6 +180,11 @@ signed by the reviewer for inclusion here:
 > of the analyzer and `web_socket_channel`. What remains that touches secrets is not cryptography:
 > `flutter_secure_storage` and `biometric_storage` are OS keystore wrappers holding Rust-wrapped blobs, `uuid`
 > v4 produces identifiers, and `base64` encodes Rust output for transport. Nothing prevents signing this.
+
+(The HKDF named in that statement was the store-derived local key of `d4f7ce4`. Since F2-12 the crate
+derives no key with HKDF itself — the only HKDF in the core is inside vodozemac's ratchet — and the callerless
+`hkdf` crate was removed from `Cargo.toml`, `Cargo.lock` and the SBOM in the closing pass; §2's crate table is
+the current list.)
 
 **A password change re-wraps; it never rotates a key.** Changing the app-lock password, enabling or disabling
 the lock, or changing the vault password re-wraps the *same* 32-byte store key or vault master key under a new

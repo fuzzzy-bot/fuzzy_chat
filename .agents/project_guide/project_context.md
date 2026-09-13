@@ -36,7 +36,7 @@
 | `chacha20poly1305` | `=0.11.0` | XChaCha20-Poly1305 — every AEAD use (files, local state, password blobs, vault) |
 | `aead-stream` | `=0.6.0` | STREAM (BE32) construction for the `0x04` file container |
 | `argon2` | `=0.6.0` | Argon2id (m = 64 MiB, t = 4, p = 1) — password → key |
-| `hkdf` / `sha2` | 0.13.0 / 0.11.0 | Fingerprints (safety number); `hkdf` has no caller since F2-12 (per-chat history keys) — removal is a chore |
+| `sha2` | 0.11.0 | Fingerprints (safety number). No `hkdf` dependency: it became callerless with F2-12 (per-chat history keys) and was removed in the closing pass; the only HKDF in the core is vodozemac's own |
 | `subtle` / `zeroize` / `getrandom` | 2.6.1 / 1.9.0 / 0.4.3 | Constant-time comparison, wiping, CSPRNG |
 | `flutter_rust_bridge` | `=2.13.0` | The bridge runtime |
 | `base64`, `serde`, `serde_json`, `thiserror` | 0.22.1, 1.0.x, 1.0.x, 2.0.x | url-safe blob text, sealed state serialisation (JSON is used only on disk, never on the wire), error type |

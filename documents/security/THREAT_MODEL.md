@@ -754,8 +754,8 @@ the `security@` route), **D-6** (the Android release keystore). D-4 (build fully
   alike — every crate, direct and transitive, resolves to the locked version or the build fails. On top of
   that, `Cargo.toml` carries exact `=` pins for the four crates that implement the protocol (`vodozemac`,
   `chacha20poly1305`, `aead-stream`, `argon2`) and for `flutter_rust_bridge`; the remaining direct
-  dependencies (`hkdf`, `sha2`, `zeroize`, `getrandom`, `subtle`, `base64`, `serde`, `serde_json`,
-  `thiserror`) are caret ranges fixed by the lockfile. The audited crates and their audits are listed in
+  dependencies (`sha2`, `zeroize`, `getrandom`, `subtle`, `base64`, `serde`, `serde_json`, `thiserror`)
+  are caret ranges fixed by the lockfile. The audited crates and their audits are listed in
   `PROTOCOL.md` §15; `cargo audit` runs in the `rust` job
   ([`.github/workflows/main.yaml`](../../.github/workflows/main.yaml)).
 - **Format drift is a test failure.** Twenty machine-generated vectors are committed and
