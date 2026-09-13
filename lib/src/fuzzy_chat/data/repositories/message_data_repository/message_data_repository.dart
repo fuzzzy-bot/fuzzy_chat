@@ -94,23 +94,32 @@ class MessageDataRepository {
 
   /// Text rows open their seal; a file row keeps its path in both fields
   /// (as the connected chat did before the ratchet). A missing or corrupt
-  /// seal reads as an empty message and is logged, never thrown.
+  /// seal reads as an empty message flagged `isUnreadable` and is logged,
+  /// never thrown.
   Future<MessageData> _openStored(StoredMessageData stored) async {
-    final isText = stored.messageType == MessageType.text.name;
+    if (stored.messageType != MessageType.text.name) {
+      return MessageData.fromStored(
+        stored,
+        decryptedMessage: stored.encryptedMessage,
+      );
+    }
+
+    final plaintext = await _openSealedPlaintext(stored);
 
     return MessageData.fromStored(
       stored,
-      decryptedMessage:
-          isText ? await _openSealedPlaintext(stored) : stored.encryptedMessage,
+      decryptedMessage: plaintext ?? '',
+      isUnreadable: plaintext == null,
     );
   }
 
-  Future<String> _openSealedPlaintext(StoredMessageData stored) async {
+  /// `null` when the seal is missing, malformed or will not open.
+  Future<String?> _openSealedPlaintext(StoredMessageData stored) async {
     final sealedPlaintext = stored.sealedPlaintext;
 
     if (sealedPlaintext == null) {
       logger.w('Message ${stored.id} has no sealed plaintext');
-      return '';
+      return null;
     }
 
     final Uint8List sealed;
@@ -118,7 +127,7 @@ class MessageDataRepository {
       sealed = base64Decode(sealedPlaintext);
     } on FormatException {
       logger.w('Message ${stored.id} has a malformed sealed plaintext');
-      return '';
+      return null;
     }
 
     final openRes = await cryptoCoreService.openLocal(
@@ -128,7 +137,7 @@ class MessageDataRepository {
 
     if (openRes is CryptoCoreFailure<Uint8List>) {
       logger.w('Failed to open message ${stored.id}: ${openRes.type}');
-      return '';
+      return null;
     }
 
     return utf8.decode((openRes as CryptoCoreSuccess<Uint8List>).data);

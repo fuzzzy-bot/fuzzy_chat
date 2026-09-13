@@ -102,6 +102,14 @@ class DependencyInjection {
       ),
     );
 
+    sl.safeRegisterSingleton<ChatArchiveRepository>(
+      ChatArchiveRepository(
+        messageDataRepository: sl.get<MessageDataRepository>(),
+        cryptoCoreService: sl.get<CryptoCoreService>(),
+        workingDirectoryPath: sl.get<AppSupportDirectory>().directory.path,
+      ),
+    );
+
     sl.safeRegisterSingleton<FuzzyLinkHandler>(
       FuzzyLinkHandler(
         linkService: sl.get<FuzzyLinkService>(),

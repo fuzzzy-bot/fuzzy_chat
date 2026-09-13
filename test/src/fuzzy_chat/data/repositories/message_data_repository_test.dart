@@ -257,6 +257,27 @@ void main() {
       );
     });
 
+    test(
+        'a row that opens is not flagged; a row whose seal fails is flagged '
+        'isUnreadable, as is one read through a locked store', () async {
+      await repository.addMessage(_text('hello', isSent: true));
+      await repository.addMessage(_text('reply', isSent: false));
+      final damaged = base64Decode(dataSource.rows.last.sealedPlaintext!);
+      damaged[0] ^= 0x01;
+      dataSource.rows.last.sealedPlaintext = base64Encode(damaged);
+
+      final messages = await repository.getMessagesForChat(_chatId);
+      expect(messages.map((m) => m.decryptedMessage), ['hello', '']);
+      expect(messages.map((m) => m.isUnreadable), [false, true]);
+
+      await service.close();
+      expect(
+        (await repository.getMessagesForChat(_chatId))
+            .map((m) => m.isUnreadable),
+        [true, true],
+      );
+    });
+
     test('a file row carries no seal and keeps its path in both fields',
         () async {
       await repository.addMessage(

@@ -569,5 +569,21 @@
   "fileCorrupt": "ეს არ არის სწორი დაშიფრული ფაილი — ის დაზიანებულია, არასრულია ან სხვა ჩატიდანაა.",
   "@fileCorrupt": {},
   "fileCancelled": "მიღება გაუქმდა — ამ ფაილის გაშიფვრა ამ მოწყობილობაზე აღარ შეიძლება; სთხოვეთ გამომგზავნს, ხელახლა გამოგზავნოს.",
-  "@fileCancelled": {}
+  "@fileCancelled": {},
+  "exportChatArchive": "ჩატის არქივის ექსპორტი",
+  "@exportChatArchive": {},
+  "exportChatArchiveDescription": "ამ ჩატის ისტორია პაროლით დაცულ ფაილში იფუთება (თითო შეტყობინება თითო ხაზზე). მოგვიანებით გახსენით მარტივი დაშიფრვა → ფაილის გაშიფრვა იმავე პაროლით.",
+  "@exportChatArchiveDescription": {},
+  "exportChatArchivePassword": "არქივის პაროლი",
+  "@exportChatArchivePassword": {},
+  "exportChatArchiveDone": "ჩატის არქივი ექსპორტირებულია.",
+  "@exportChatArchiveDone": {},
+  "exportChatArchiveFailed": "ჩატის არქივის ექსპორტი ვერ მოხერხდა.",
+  "@exportChatArchiveFailed": {},
+  "exportChatArchiveNothingToExport": "ამ ჩატში ექსპორტისთვის შეტყობინებები არ არის.",
+  "@exportChatArchiveNothingToExport": {},
+  "exportChatArchiveStoreLocked": "ჯერ განბლოკეთ Fuzzy Chat — დაბლოკილი ისტორიის წაკითხვა შეუძლებელია.",
+  "@exportChatArchiveStoreLocked": {},
+  "export": "ექსპორტი",
+  "@export": {}
 }

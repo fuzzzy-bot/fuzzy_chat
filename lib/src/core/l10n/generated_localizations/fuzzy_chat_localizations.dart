@@ -1728,6 +1728,54 @@ abstract class FuzzyChatLocalizations {
   /// In en, this message translates to:
   /// **'Receiving was cancelled — this file cannot be unfuzzed on this device now; ask the sender to send it again.'**
   String get fileCancelled;
+
+  /// No description provided for @exportChatArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Export chat archive'**
+  String get exportChatArchive;
+
+  /// No description provided for @exportChatArchiveDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Seals this chat\'s history into a password-protected file (one message per line). Open it later in Basic Encryption → file decryption with the same password.'**
+  String get exportChatArchiveDescription;
+
+  /// No description provided for @exportChatArchivePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive password'**
+  String get exportChatArchivePassword;
+
+  /// No description provided for @exportChatArchiveDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat archive exported.'**
+  String get exportChatArchiveDone;
+
+  /// No description provided for @exportChatArchiveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to export the chat archive.'**
+  String get exportChatArchiveFailed;
+
+  /// No description provided for @exportChatArchiveNothingToExport.
+  ///
+  /// In en, this message translates to:
+  /// **'This chat has no messages to export.'**
+  String get exportChatArchiveNothingToExport;
+
+  /// No description provided for @exportChatArchiveStoreLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock Fuzzy Chat first — your history cannot be read while it is locked.'**
+  String get exportChatArchiveStoreLocked;
+
+  /// No description provided for @export.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get export;
 }
 
 class _FuzzyChatLocalizationsDelegate

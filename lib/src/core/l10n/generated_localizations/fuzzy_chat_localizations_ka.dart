@@ -903,4 +903,31 @@ class FuzzyChatLocalizationsKa extends FuzzyChatLocalizations {
   @override
   String get fileCancelled =>
       'მიღება გაუქმდა — ამ ფაილის გაშიფვრა ამ მოწყობილობაზე აღარ შეიძლება; სთხოვეთ გამომგზავნს, ხელახლა გამოგზავნოს.';
+
+  @override
+  String get exportChatArchive => 'ჩატის არქივის ექსპორტი';
+
+  @override
+  String get exportChatArchiveDescription =>
+      'ამ ჩატის ისტორია პაროლით დაცულ ფაილში იფუთება (თითო შეტყობინება თითო ხაზზე). მოგვიანებით გახსენით მარტივი დაშიფრვა → ფაილის გაშიფრვა იმავე პაროლით.';
+
+  @override
+  String get exportChatArchivePassword => 'არქივის პაროლი';
+
+  @override
+  String get exportChatArchiveDone => 'ჩატის არქივი ექსპორტირებულია.';
+
+  @override
+  String get exportChatArchiveFailed => 'ჩატის არქივის ექსპორტი ვერ მოხერხდა.';
+
+  @override
+  String get exportChatArchiveNothingToExport =>
+      'ამ ჩატში ექსპორტისთვის შეტყობინებები არ არის.';
+
+  @override
+  String get exportChatArchiveStoreLocked =>
+      'ჯერ განბლოკეთ Fuzzy Chat — დაბლოკილი ისტორიის წაკითხვა შეუძლებელია.';
+
+  @override
+  String get export => 'ექსპორტი';
 }

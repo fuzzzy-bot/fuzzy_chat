@@ -894,4 +894,31 @@ class FuzzyChatLocalizationsEn extends FuzzyChatLocalizations {
   @override
   String get fileCancelled =>
       'Receiving was cancelled — this file cannot be unfuzzed on this device now; ask the sender to send it again.';
+
+  @override
+  String get exportChatArchive => 'Export chat archive';
+
+  @override
+  String get exportChatArchiveDescription =>
+      'Seals this chat\'s history into a password-protected file (one message per line). Open it later in Basic Encryption → file decryption with the same password.';
+
+  @override
+  String get exportChatArchivePassword => 'Archive password';
+
+  @override
+  String get exportChatArchiveDone => 'Chat archive exported.';
+
+  @override
+  String get exportChatArchiveFailed => 'Failed to export the chat archive.';
+
+  @override
+  String get exportChatArchiveNothingToExport =>
+      'This chat has no messages to export.';
+
+  @override
+  String get exportChatArchiveStoreLocked =>
+      'Unlock Fuzzy Chat first — your history cannot be read while it is locked.';
+
+  @override
+  String get export => 'Export';
 }

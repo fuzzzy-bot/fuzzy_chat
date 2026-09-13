@@ -569,5 +569,21 @@
   "fileCorrupt": "This is not a valid fuzzed file — it is damaged, incomplete, or from a different chat.",
   "@fileCorrupt": {},
   "fileCancelled": "Receiving was cancelled — this file cannot be unfuzzed on this device now; ask the sender to send it again.",
-  "@fileCancelled": {}
+  "@fileCancelled": {},
+  "exportChatArchive": "Export chat archive",
+  "@exportChatArchive": {},
+  "exportChatArchiveDescription": "Seals this chat's history into a password-protected file (one message per line). Open it later in Basic Encryption → file decryption with the same password.",
+  "@exportChatArchiveDescription": {},
+  "exportChatArchivePassword": "Archive password",
+  "@exportChatArchivePassword": {},
+  "exportChatArchiveDone": "Chat archive exported.",
+  "@exportChatArchiveDone": {},
+  "exportChatArchiveFailed": "Failed to export the chat archive.",
+  "@exportChatArchiveFailed": {},
+  "exportChatArchiveNothingToExport": "This chat has no messages to export.",
+  "@exportChatArchiveNothingToExport": {},
+  "exportChatArchiveStoreLocked": "Unlock Fuzzy Chat first — your history cannot be read while it is locked.",
+  "@exportChatArchiveStoreLocked": {},
+  "export": "Export",
+  "@export": {}
 }

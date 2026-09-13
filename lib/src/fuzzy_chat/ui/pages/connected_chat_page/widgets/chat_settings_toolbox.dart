@@ -87,6 +87,21 @@ class _SettingsToolboxState extends State<SettingsToolbox> {
               );
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.archive),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+            title: Text(
+              localizations.exportChatArchive,
+            ),
+            onTap: () {
+              widget.onActionPressed();
+              showChatArchiveExportDialog(
+                context,
+                chatId: widget.chatGeneralData.chatId,
+                chatName: widget.chatGeneralData.chatName,
+              );
+            },
+          ),
           if (widget.chatGeneralData.didAcceptInvitation)
             ListTile(
               leading: const Icon(Icons.file_upload),
