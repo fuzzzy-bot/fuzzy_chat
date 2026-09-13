@@ -62,4 +62,44 @@ void main() {
       expect(find.text(cta), findsOneWidget);
     });
   }
+
+  // T-0335: at 411 dp the ka title's last word was wider than the column at
+  // the display size, so it broke inside the word ("მოწყობილობაზ / ე"). The
+  // title steps its style down until every word fits; en keeps the display
+  // size.
+  for (final (locale, title, width) in [
+    (const Locale('ka'), 'იშიფრება ერთხელ, ამ მოწყობილობაზე', 411.0),
+    (const Locale('ka'), 'იშიფრება ერთხელ, ამ მოწყობილობაზე', 360.0),
+    (const Locale('en'), 'Unfuzzed once, on this device', 411.0),
+  ]) {
+    testWidgets(
+        'the fourth slide title only wraps between words '
+        '(${locale.languageCode}, $width dp)', (tester) async {
+      tester.view.physicalSize = Size(width, 914);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await pumpOnboarding(tester, locale);
+      await next(tester);
+      await next(tester);
+      await next(tester);
+
+      final text = tester.widget<Text>(find.text(title));
+      final column = tester.getSize(find.text(title)).width;
+      for (final word in title.split(' ')) {
+        final painter = TextPainter(
+          text: TextSpan(text: word, style: text.style),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        expect(painter.width, lessThanOrEqualTo(column), reason: word);
+      }
+      if (locale.languageCode == 'en') {
+        final display = Theme.of(tester.element(find.text(title)))
+            .textTheme
+            .headlineMedium!
+            .fontSize;
+        expect(text.style!.fontSize, display);
+      }
+    });
+  }
 }

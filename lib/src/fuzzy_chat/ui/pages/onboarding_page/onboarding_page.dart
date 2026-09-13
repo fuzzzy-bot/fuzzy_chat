@@ -134,6 +134,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   ) {
     final theme = Theme.of(context);
     final fuzzzyColors = context.fuzzzyColors;
+    const padding = EdgeInsets.all(40);
 
     // Centred when there is room, scrollable when there is not (the longer
     // slides overflow a short window otherwise).
@@ -142,7 +143,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
           child: Padding(
-            padding: const EdgeInsets.all(40),
+            padding: padding,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -154,9 +155,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 const SizedBox(height: 48),
                 Text(
                   title,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: fuzzzyColors.ink,
+                  style: _titleStyle(
+                    context,
+                    title,
+                    constraints.maxWidth - padding.horizontal,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -174,6 +176,34 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ),
         ),
       ),
+    );
+  }
+
+  /// The largest title style whose longest word fits [maxWidth], so the title
+  /// only ever wraps between words. A Georgian word can be wider than a phone
+  /// column at the display size (T-0335); English never steps down.
+  TextStyle? _titleStyle(BuildContext context, String title, double maxWidth) {
+    final textTheme = Theme.of(context).textTheme;
+    final textScaler = MediaQuery.textScalerOf(context);
+    final ink = context.fuzzzyColors.ink;
+    final candidates = [
+      textTheme.headlineMedium,
+      textTheme.titleLarge,
+      textTheme.titleMedium,
+    ].map((style) => style?.copyWith(fontWeight: FontWeight.w800, color: ink));
+
+    bool wordFits(String word, TextStyle? style) {
+      final textPainter = TextPainter(
+        text: TextSpan(text: word, style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: textScaler,
+      )..layout();
+      return textPainter.width <= maxWidth;
+    }
+
+    return candidates.firstWhere(
+      (style) => title.split(' ').every((word) => wordFits(word, style)),
+      orElse: () => candidates.last,
     );
   }
 }

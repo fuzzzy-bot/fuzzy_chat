@@ -57,10 +57,15 @@ class GlobalBlocListeners extends StatelessWidget {
           },
         ),
         BlocListener<ChatFileInjectorCubit, ChatFileInjectorState>(
+          // Every injected batch is a fresh list, so a new instance means a
+          // new batch; a length compare skipped every single-file failure
+          // (T-0334). The empty list of a clean batch never shows.
           listenWhen: (previous, current) =>
-              previous.failedToAddProcessedFiles != null &&
-              previous.failedToAddProcessedFiles?.length !=
-                  current.failedToAddProcessedFiles?.length,
+              !identical(
+                previous.failedToAddProcessedFiles,
+                current.failedToAddProcessedFiles,
+              ) &&
+              current.failedToAddProcessedFiles?.isNotEmpty == true,
           listener: (_, state) {
             final localizations = FuzzyChatLocalizations.of(
               navigatorKey.currentContext!,

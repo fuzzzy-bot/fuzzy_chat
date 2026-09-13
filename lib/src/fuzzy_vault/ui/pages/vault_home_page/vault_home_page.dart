@@ -133,53 +133,44 @@ class _VaultTabBar extends StatelessWidget {
         tabs: [
           Tab(
             height: 36,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.key_rounded, size: 16),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    currentContextLocalization.vaultPasswords,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.key_rounded, size: 16),
+                  const SizedBox(width: 6),
+                  Text(currentContextLocalization.vaultPasswords),
+                ],
+              ),
             ),
           ),
           Tab(
             height: 36,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.notes_rounded, size: 16),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    currentContextLocalization.vaultNotes,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.notes_rounded, size: 16),
+                  const SizedBox(width: 6),
+                  Text(currentContextLocalization.vaultNotes),
+                ],
+              ),
             ),
           ),
           Tab(
             height: 36,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.file_present_rounded, size: 16),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    currentContextLocalization.vaultFiles,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.file_present_rounded, size: 16),
+                  const SizedBox(width: 6),
+                  Text(currentContextLocalization.vaultFiles),
+                ],
+              ),
             ),
           ),
         ],
