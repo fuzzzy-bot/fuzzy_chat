@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fuzzy_chat/lib.dart';
 import 'package:fuzzzy_ui_kit/fuzzzy_ui_kit.dart';
+import 'package:go_router/go_router.dart';
 
 export 'components/components.dart';
 export 'widgets/widgets.dart';
@@ -16,12 +17,22 @@ class ConnectedChatPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<ConnectedChatCubit>(
-      create: (context) => ConnectedChatCubit(
-        chatId: payload.chatGeneralData.chatId,
-        messageDataRepository: sl.get<MessageDataRepository>(),
-        keyStorageRepository: sl.get<KeyStorageRepository>(),
-      )..loadInitialMessages(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<ConnectedChatCubit>(
+          create: (context) => ConnectedChatCubit(
+            chatId: payload.chatGeneralData.chatId,
+            messageDataRepository: sl.get<MessageDataRepository>(),
+            cryptoCoreService: sl.get<CryptoCoreService>(),
+          )..loadInitialMessages(),
+        ),
+        BlocProvider<SafetyNumberCubit>(
+          create: (context) => SafetyNumberCubit(
+            chatId: payload.chatGeneralData.chatId,
+            cryptoCoreService: sl.get<CryptoCoreService>(),
+          )..load(),
+        ),
+      ],
       child: ProvidedConnectedChatPage(payload: payload),
     );
   }
@@ -38,6 +49,18 @@ class ProvidedConnectedChatPage extends StatefulWidget {
   @override
   State<ProvidedConnectedChatPage> createState() =>
       _ProvidedConnectedChatPageState();
+}
+
+/// A failure toasts once, on the transition into `failed`: `actionStatus` is
+/// sticky across later page loads, so any other transition must stay silent.
+@visibleForTesting
+bool shouldToastFailure(
+  ConnectedChatState previous,
+  ConnectedChatState current,
+) {
+  return (previous.status != current.status && current.status.isFailed) ||
+      (previous.actionStatus != current.actionStatus &&
+          current.actionStatus.isFailed);
 }
 
 class _ProvidedConnectedChatPageState extends State<ProvidedConnectedChatPage> {
@@ -64,6 +87,20 @@ class _ProvidedConnectedChatPageState extends State<ProvidedConnectedChatPage> {
             '$fuzzIdentificator${widget.payload.prefillEncryptedMessage}';
       });
     }
+
+    // The safety number sits on top of the chat (back lands here); the
+    // header's shield reloads when it pops, as it does from the header.
+    if (widget.payload.openSafetyNumber) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openSafetyNumber());
+    }
+  }
+
+  Future<void> _openSafetyNumber() async {
+    await context.push(
+      AppRouter.chatVerify,
+      extra: widget.payload.chatGeneralData,
+    );
+    if (mounted) await context.read<SafetyNumberCubit>().load();
   }
 
   void _onMessageUpdated() {
@@ -190,10 +227,18 @@ class _ProvidedConnectedChatPageState extends State<ProvidedConnectedChatPage> {
     return FuzzyScaffold(
       hasAutomaticBackButton: false,
       body: BlocConsumer<ConnectedChatCubit, ConnectedChatState>(
+        listenWhen: shouldToastFailure,
         listener: (context, state) {
           if (state.status.isFailed) {
             if (state.failure?.message?.isEmpty ?? true) return;
             FuzzzyToast.show(context, message: state.failure?.message ?? '');
+          } else if (state.actionStatus.isFailed) {
+            FuzzzyToast.show(
+              context,
+              message: state.actionFailure?.type
+                      .toUiMessage(context.fuzzyChatLocalizations) ??
+                  '',
+            );
           }
         },
         builder: (context, state) {
@@ -249,7 +294,9 @@ class _ProvidedConnectedChatPageState extends State<ProvidedConnectedChatPage> {
                     children: [
                       if (_showTutorial)
                         _buildTutorialBanner(
-                            context, context.fuzzyChatLocalizations,),
+                          context,
+                          context.fuzzyChatLocalizations,
+                        ),
                       FileDecryptionProgressDisplay(
                         chatId: chatId,
                       ),
@@ -277,7 +324,9 @@ class _ProvidedConnectedChatPageState extends State<ProvidedConnectedChatPage> {
   }
 
   Widget _buildTutorialBanner(
-      BuildContext context, FuzzyChatLocalizations localizations,) {
+    BuildContext context,
+    FuzzyChatLocalizations localizations,
+  ) {
     final theme = Theme.of(context);
     final fuzzzyColors = context.fuzzzyColors;
 

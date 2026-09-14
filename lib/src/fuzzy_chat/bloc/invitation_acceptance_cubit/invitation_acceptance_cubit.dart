@@ -6,7 +6,7 @@ part 'invitation_acceptance_state.dart';
 class InvitationAcceptanceCubit extends Cubit<InvitationAcceptanceState> {
   InvitationAcceptanceCubit({
     required this.chatGeneralDataListRepository,
-    required this.keyStorageRepository,
+    required this.cryptoCoreService,
   }) : super(
           const InvitationAcceptanceState(
             status: StateStatus.initial,
@@ -14,7 +14,7 @@ class InvitationAcceptanceCubit extends Cubit<InvitationAcceptanceState> {
         );
 
   final ChatGeneralDataListRepository chatGeneralDataListRepository;
-  final KeyStorageRepository keyStorageRepository;
+  final CryptoCoreService cryptoCoreService;
 
   Future<void> acceptInvitation({
     required String invitationContent,
@@ -37,30 +37,54 @@ class InvitationAcceptanceCubit extends Cubit<InvitationAcceptanceState> {
         return;
       }
 
-      final receivedInvitation =
-          await HandshakeService.parseInvitation(invitationContent);
-      final chatId = receivedInvitation.chatId;
-      final otherPartyPublicKey = receivedInvitation.publicKey;
+      final chatIdRes = cryptoCoreService.peekChatId(invitationContent);
+      if (chatIdRes is CryptoCoreFailure) {
+        emit(
+          state.copyWith(
+            status: StateStatus.failed,
+            failure: ChatCreationFailure(
+              type: ChatCreationFailureType.invalidInvitation,
+            ),
+          ),
+        );
+        return;
+      }
+      final chatId = (chatIdRes as CryptoCoreSuccess<String>).data;
 
-      final keyPair = await RSAService.generateRSAKeyPair();
-      final symmetricKey = await AESService.generateKey();
+      final existingChat =
+          await chatGeneralDataListRepository.getChatById(chatId);
+      if (existingChat != null) {
+        emit(
+          state.copyWith(
+            status: StateStatus.failed,
+            failure: ChatCreationFailure(
+              type: ChatCreationFailureType.ownInvitation,
+            ),
+          ),
+        );
+        return;
+      }
 
-      final encryptedSymmetricKey = await RSAService.encrypt(
-        symmetricKey,
-        otherPartyPublicKey,
-      );
+      // No chat record → any core state under this id is an orphan of an
+      // accept whose record never persisted; a stale one would make every
+      // retry `internal`.
+      await cryptoCoreService.deleteChat(chatId);
 
-      await keyStorageRepository.savePrivateKey(chatId, keyPair.privateKey);
-      await keyStorageRepository.savePublicKey(chatId, keyPair.publicKey);
-      await keyStorageRepository.saveSymmetricKey(chatId, symmetricKey);
-      await keyStorageRepository.saveOtherPartyPublicKey(
-          chatId, otherPartyPublicKey,);
-
-      final acceptance = await HandshakeService.generateAcceptance(
+      final acceptanceRes = await cryptoCoreService.acceptInvitation(
         chatId: chatId,
-        otherPartyPublicKey: keyPair.publicKey,
-        encryptedSymmetricKey: encryptedSymmetricKey,
+        invitation: invitationContent,
       );
+      if (acceptanceRes is CryptoCoreFailure) {
+        emit(
+          state.copyWith(
+            status: StateStatus.failed,
+            failure: ChatCreationFailure(
+              type: _failureTypeOf((acceptanceRes as CryptoCoreFailure).type),
+            ),
+          ),
+        );
+        return;
+      }
 
       final chatData = ChatGeneralData(
         chatId: chatId,
@@ -75,7 +99,8 @@ class InvitationAcceptanceCubit extends Cubit<InvitationAcceptanceState> {
         state.copyWith(
           status: StateStatus.success,
           chatData: chatData,
-          generatedAcceptance: acceptance,
+          generatedAcceptance:
+              (acceptanceRes as CryptoCoreSuccess<CryptoCoreAcceptance>).data,
         ),
       );
     } catch (ex) {
@@ -94,7 +119,8 @@ class InvitationAcceptanceCubit extends Cubit<InvitationAcceptanceState> {
   }
 
   Future<ChatCreationFailureType?> checkChatNameRestrictions(
-      String chatName,) async {
+    String chatName,
+  ) async {
     final name = await chatGeneralDataListRepository.getChatByName(chatName);
 
     if (name != null) {
@@ -102,5 +128,15 @@ class InvitationAcceptanceCubit extends Cubit<InvitationAcceptanceState> {
     }
 
     return null;
+  }
+
+  static ChatCreationFailureType _failureTypeOf(CryptoCoreFailureType type) {
+    return switch (type) {
+      CryptoCoreFailureType.unsupportedFormat ||
+      CryptoCoreFailureType.invalidSignature ||
+      CryptoCoreFailureType.corrupt =>
+        ChatCreationFailureType.invalidInvitation,
+      _ => ChatCreationFailureType.unknown,
+    };
   }
 }

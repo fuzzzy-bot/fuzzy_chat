@@ -7,7 +7,7 @@ part 'chat_general_data_list_state.dart';
 
 class ChatGeneralDataListCubit extends Cubit<ChatGeneralDataListState> {
   ChatGeneralDataListCubit({
-    required this.keyStorageRepository,
+    required this.cryptoCoreService,
     required this.chatRepository,
   }) : super(
           const ChatGeneralDataListState(
@@ -19,7 +19,7 @@ class ChatGeneralDataListCubit extends Cubit<ChatGeneralDataListState> {
     });
   }
 
-  final KeyStorageRepository keyStorageRepository;
+  final CryptoCoreService cryptoCoreService;
 
   final ChatGeneralDataListRepository chatRepository;
   late final StreamSubscription<ChatGeneralDataListUpdated>
@@ -83,8 +83,18 @@ class ChatGeneralDataListCubit extends Cubit<ChatGeneralDataListState> {
     );
 
     try {
+      final deleteRes = await cryptoCoreService.deleteChat(chatId);
+      if (deleteRes is CryptoCoreFailure) {
+        emit(
+          state.copyWith(
+            actionStatus: StateStatus.failed,
+            actionType: ActionType.delete,
+            actionFailure: DefaultFailure(),
+          ),
+        );
+        return;
+      }
       await chatRepository.deleteChat(chatId);
-      await keyStorageRepository.clearAllKeysForChat(chatId);
 
       final updatedChats =
           state.chatList?.where((chat) => chat.chatId != chatId).toList();

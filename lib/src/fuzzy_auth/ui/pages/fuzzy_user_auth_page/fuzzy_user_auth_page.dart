@@ -11,8 +11,6 @@ class FuzzyUserAuthPage extends StatelessWidget {
     return BlocProvider<FuzzyUserAuthPreferencesCubit>(
       create: (context) => FuzzyUserAuthPreferencesCubit(
         chatAuthRepository: sl.get<ChatAuthRepository>(),
-        chatGeneralDataListRepository: sl.get<ChatGeneralDataListRepository>(),
-        keyStorageRepository: sl.get<KeyStorageRepository>(),
         fuzzyAuthStore: sl.get<FuzzyAuthStore>(),
         biometricAuthRepository: sl.get<BiometricAuthRepository>(),
       ),
@@ -113,8 +111,9 @@ class _FuzzyUserAuthPageContentState extends State<_FuzzyUserAuthPageContent> {
     if (oldPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content:
-                Text(currentContextLocalization.chatAuthBiometricDescription),),
+          content:
+              Text(currentContextLocalization.chatAuthBiometricDescription),
+        ),
       );
       return;
     }
@@ -178,7 +177,7 @@ class _FuzzyUserAuthPageContentState extends State<_FuzzyUserAuthPageContent> {
             case AuthPreferencesAction.disable:
               message = localizations.chatAuthDisabled;
             case AuthPreferencesAction.changePassword:
-              message = localizations.chatAuthEnabled;
+              message = localizations.chatAuthPasswordChanged;
             case AuthPreferencesAction.enableBiometric:
               message = localizations.chatAuthBiometricEnabled;
             case AuthPreferencesAction.disableBiometric:
@@ -208,12 +207,15 @@ class _FuzzyUserAuthPageContentState extends State<_FuzzyUserAuthPageContent> {
               body: CustomScrollView(
                 slivers: [
                   SliverToBoxAdapter(
-                    child: FuzzzyAppBar(title: localizations.chatAuthSetupTitle),
+                    child:
+                        FuzzzyAppBar(title: localizations.chatAuthSetupTitle),
                   ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8,),
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -255,7 +257,8 @@ class _FuzzyUserAuthPageContentState extends State<_FuzzyUserAuthPageContent> {
                             ),
                           const SizedBox(height: 32),
                           Divider(
-                              color: fuzzzyColors.focus.withOpacity(0.2),),
+                            color: fuzzzyColors.focus.withValues(alpha: 0.2),
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             localizations.vaultAuthentication,
@@ -298,7 +301,9 @@ class _FuzzyUserAuthPageContentState extends State<_FuzzyUserAuthPageContent> {
                       const CircularProgressIndicator(),
                       const SizedBox(height: 16),
                       Text(
-                        localizations.chatAuthMigratingKeys,
+                        state.lastAction == AuthPreferencesAction.changePassword
+                            ? localizations.chatAuthResecuringKeys
+                            : localizations.chatAuthMigratingKeys,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: Colors.white,
                         ),
@@ -618,8 +623,7 @@ class _VaultBiometricSectionState extends State<_VaultBiometricSection> {
     if (canUse == false) {
       return Text(
         localizations.vaultBiometricUnavailable,
-        style: theme.textTheme.bodySmall
-            ?.copyWith(color: fuzzzyColors.inkMute),
+        style: theme.textTheme.bodySmall?.copyWith(color: fuzzzyColors.inkMute),
       );
     }
 
@@ -630,8 +634,7 @@ class _VaultBiometricSectionState extends State<_VaultBiometricSection> {
     if (!hasVault) {
       return Text(
         localizations.vaultNotCreated,
-        style: theme.textTheme.bodySmall
-            ?.copyWith(color: fuzzzyColors.inkMute),
+        style: theme.textTheme.bodySmall?.copyWith(color: fuzzzyColors.inkMute),
       );
     }
 
@@ -689,9 +692,9 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [

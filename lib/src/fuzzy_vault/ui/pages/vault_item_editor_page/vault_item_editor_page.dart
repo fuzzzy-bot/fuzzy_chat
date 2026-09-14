@@ -89,7 +89,7 @@ class _VaultItemEditorPageState extends State<VaultItemEditorPage> {
         } catch (_) {}
       }
     }
-    
+
     // Clear the FilePicker cache to ensure picked files are removed
     FilePicker.platform.clearTemporaryFiles();
 
@@ -417,8 +417,7 @@ class _VaultItemEditorPageState extends State<VaultItemEditorPage> {
                           const SizedBox(height: 16),
                           FuzzzyTextField(
                             controller: _urlController,
-                            label:
-                                currentContextLocalization.vaultUrlWebsite,
+                            label: currentContextLocalization.vaultUrlWebsite,
                           ),
                           const SizedBox(height: 16),
                         ],
@@ -449,8 +448,7 @@ class _VaultItemEditorPageState extends State<VaultItemEditorPage> {
                                             Text(
                                               _pickedFileName!,
                                               style: TextStyle(
-                                                color:
-                                                    context.fuzzzyColors.ink,
+                                                color: context.fuzzzyColors.ink,
                                                 fontWeight: FontWeight.bold,
                                               ),
                                               overflow: TextOverflow.ellipsis,

@@ -17,8 +17,10 @@ class CopyGuard {
         builder: (context) {
           return AlertDialog(
             title: Text(localizations.securityWarning),
-            content: Text(localizations
-                .areYouSureYouWantToCopyUnencryptedDataToYourClipboardThisCouldCompromiseYourSecureChat,),
+            content: Text(
+              localizations
+                  .areYouSureYouWantToCopyUnencryptedDataToYourClipboardThisCouldCompromiseYourSecureChat,
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -43,6 +45,7 @@ class CopyGuard {
     }
 
     await Clipboard.setData(ClipboardData(text: textToCopy));
+    if (!context.mounted) return;
     FuzzzyToast.show(context, message: localizations.copiedToTheClipboard);
   }
 }

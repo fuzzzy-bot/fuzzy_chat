@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fuzzy_chat/lib.dart';
 import 'package:fuzzzy_ui_kit/fuzzzy_ui_kit.dart';
+import 'package:go_router/go_router.dart';
 
 class ChatHeader extends StatelessWidget {
   final ChatGeneralData chatGeneralData;
@@ -11,6 +13,11 @@ class ChatHeader extends StatelessWidget {
     required this.onBackPressed,
     super.key,
   });
+
+  Future<void> _openSafetyNumber(BuildContext context) async {
+    await context.push(AppRouter.chatVerify, extra: chatGeneralData);
+    if (context.mounted) await context.read<SafetyNumberCubit>().load();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,11 +38,37 @@ class ChatHeader extends StatelessWidget {
               onPressed: onBackPressed,
             ),
             const SizedBox(width: 8),
-            Text(
-              chatGeneralData.chatName,
-              style: fuzzzyTextStyles.titleM.copyWith(color: fuzzzyColors.ink),
+            Expanded(
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      chatGeneralData.chatName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: fuzzzyTextStyles.titleM
+                          .copyWith(color: fuzzzyColors.ink),
+                    ),
+                  ),
+                  BlocBuilder<SafetyNumberCubit, SafetyNumberState>(
+                    builder: (context, state) {
+                      return IconButton(
+                        key: const ValueKey('verify_shield_button'),
+                        icon: Icon(
+                          state.isVerified
+                              ? Icons.verified_user
+                              : Icons.shield_outlined,
+                          color: state.isVerified
+                              ? fuzzzyColors.ink
+                              : fuzzzyColors.inkMute,
+                        ),
+                        onPressed: () => _openSafetyNumber(context),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-            const Spacer(),
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: FuzzyOverlaySpawner(

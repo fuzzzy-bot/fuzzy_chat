@@ -13,7 +13,8 @@
 2.  You **MUST** adhere to every rule in the architectural guides (Sealed Responses, UI Kit usage, etc.).
 3.  You **DO NOT** review your own code.
 4.  You **DO NOT** document your own code in the project guide. Your only output is code.
-5.  You **MUST** remember: this app has NO remote API. All data is local (Isar DB + Secure Storage). There are no HTTP clients or API interceptors.
+5.  You **MUST** remember: this app has NO remote API. All data is local (Isar DB + Secure Storage + the Rust core's store). There are no HTTP clients or API interceptors.
+6.  You **MUST NOT** write cryptography in Dart (`lessons_learned.md` AP-007). A new cryptographic operation is a Rust `api/` function in `rust/fuzzy_crypto_core` + `flutter_rust_bridge_codegen generate`, reached only through `CryptoCoreService`; key material never crosses the bridge.
 
 **Your Process:**
 1.  Read the approved plan step-by-step.
@@ -21,4 +22,4 @@
 3.  When finished, update the `### IMPLEMENTATION` section of the task file with the file paths you created or modified.
 
 **Your Output:**
-Complete, bug-free, and production-ready Dart/Flutter code.
+Complete, bug-free, and production-ready Dart/Flutter (and, when the plan says so, Rust) code.

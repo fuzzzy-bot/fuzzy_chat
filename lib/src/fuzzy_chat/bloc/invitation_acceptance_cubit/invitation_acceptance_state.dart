@@ -3,7 +3,7 @@ part of 'invitation_acceptance_cubit.dart';
 class InvitationAcceptanceState {
   final StateStatus status;
   final ChatGeneralData? chatData;
-  final ToBeSentAcceptance? generatedAcceptance;
+  final CryptoCoreAcceptance? generatedAcceptance;
   final ChatCreationFailure? failure;
 
   const InvitationAcceptanceState({
@@ -16,7 +16,7 @@ class InvitationAcceptanceState {
   InvitationAcceptanceState copyWith({
     StateStatus? status,
     ChatGeneralData? chatData,
-    ToBeSentAcceptance? generatedAcceptance,
+    CryptoCoreAcceptance? generatedAcceptance,
     ChatCreationFailure? failure,
   }) {
     return InvitationAcceptanceState(

@@ -1,6 +1,8 @@
+> **HISTORICAL (pre-hardening).** This file describes the pure-Dart crypto stack — `KeyStorageRepository`, `reencryptAllKeys`, the salt + AES verification token, PBE under the app-lock password — all **removed in v1.0.0-rc.1** (F4-4). Kept as the design record of the chat-auth gate; the current gate (store key wrapped by Argon2id in the Rust core, one `rewrap` on password change) is `.agents/project_guide/architecture_state.md` §4. Do not implement anything from this file.
+
 # TASK: Chat Authentication Gate — Finalize Implementation
 
-**Status:** IN_PROGRESS (Doer phase — ~70% complete)
+**Status:** SUPERSEDED — historical, see banner (was: IN_PROGRESS, Doer phase ~70%)
 
 ---
 ### PLAN (by [PLANNER])

@@ -4,7 +4,7 @@ class ChatCreationState {
   final StateStatus status;
   final String? chatName;
   final String? chatId;
-  final ToBeSentInvitation? generatedChatInvitation;
+  final CryptoCoreInvitation? generatedChatInvitation;
   final ChatCreationFailure? failure;
 
   const ChatCreationState({
@@ -19,7 +19,7 @@ class ChatCreationState {
     StateStatus? status,
     String? chatName,
     String? chatId,
-    ToBeSentInvitation? generatedChatInvitation,
+    CryptoCoreInvitation? generatedChatInvitation,
     ChatCreationFailure? failure,
   }) {
     return ChatCreationState(

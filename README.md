@@ -11,7 +11,9 @@ Once you link up with someone, within the app 'fuzz' (encrypt) messages and file
 
 ## 🚀 Get Fuzzy Chat!
 
-Ready to start fuzzing? Grab the latest version here:
+Ready to start fuzzing? Fuzzy Chat runs on **Android, Windows, macOS and Linux**. (The web build is
+unsupported — the encryption core is native code. iOS builds from this repo but is not in the App Store.)
+Grab the latest version here:
 
 <!-- [TODO: add app build and link them] -->
 
@@ -103,8 +105,10 @@ Repeat as many times as your secret-sharing heart desires!
 
 ## Important Little Secrets About Your Secrets:
 
-- **Your App is Your Key:** Fuzzy Chat keeps the magic keys for each channel on your device. If you lose your device or uninstall the app without a backup (if available), those channels might be locked forever. Guard it like the precious thing it is!
+- **Each Blob Unfuzzes Once, On One Device:** a fuzzed message can be unfuzzed exactly once, on the device it was sent to — paste it a second time and Fuzzy Chat tells you it was already unfuzzed. Your readable **text** history stays inside the app on that device, sealed per channel under a key only that device holds (and behind your app-lock password, if you set one). Unfuzzed **files** are different: they land as plain files in the channel's folder on your device — not sealed, not locked by the app — so protect them like any other file. Want a backup? Chat settings → "Export chat archive" writes a password-protected file of the channel's history — it opens in Basics → file decryption with the same password. A new device, or a fresh install, cannot re-read old blobs, and there is no cloud copy. Guard your device like the precious thing it is!
+- **Unfuzz Roughly In Order:** the app keeps keys for skipped messages, but not without limit — a blob more than 63 messages behind the newest one you already unfuzzed in that channel is gone for good ("too old"), and at most 40 skipped messages are kept at once.
 - **Know Your Recipient:** Double-check you're sending Invitation and Acceptance codes to the right spy... er, person. The codes themselves are fine to send over any channel to establish the link, but you want the _right_ person getting them!
+- **Check the Safety Number:** every live channel has a 60-digit safety number (the shield icon in the chat header), computed from both devices' identity keys. Read it to your ally by voice or compare it in person: if the digits match, nobody sat in the middle when you linked up. Tap "Mark as verified" as your own note that you did this — the app cannot check it for you.
 - **One Chat, One Ally (No Threesomes!):** Always create a **new, unique chat** for each new person you want to communicate with. If you try to reuse an existing chat link with multiple people, they'll all be able to read each other's messages. Think of it like giving everyone the same key to the same diary – awkward!
 - **Fuzzy is Your Friend (Plain Text is Not!):** The only thing that can "expose" you is sharing something that _isn't_ fuzzed!
   - The scrambled "fuzz" (encrypted content) from Fuzzy Chat? Totally safe to splash all over the internet. It's designed to be unreadable nonsense to anyone but your linked secret sharer.
@@ -113,7 +117,10 @@ Repeat as many times as your secret-sharing heart desires!
 ## Want to Dive Deeper into the Rabbit Hole?
 
 - 🎬 **Watch the Quick Mission Briefing (Video Guide):** [//TODO video guide link]
-- 📖 **For Gadget Q-Branch Types ([Technical Details](documents/technical_documentation.md)):**
+- 📖 **For Gadget Q-Branch Types ([Technical Details](documents/security/PROTOCOL.md)):** the protocol
+  specification; also the [threat model](documents/security/THREAT_MODEL.md), the
+  [2026 hardening write-up](documents/security/HARDENING_2026.md) and, for building the app yourself,
+  the [developer notes](documents/technical_documentation.md).
 - 🐛 **Spotted a Gremlin? Got Ideas for a New Gadget?** Report to HQ (GitHub Issues): [https://github.com/fuzzzer/fuzzy_chat/issues]
 
 Happy (and secure) scheming with Fuzzy Chat! 🛡️

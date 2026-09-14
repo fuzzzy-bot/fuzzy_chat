@@ -109,7 +109,7 @@ class _SentMessageAreaState extends State<SentMessageArea> {
       FuzzzyToast.show(context, message: localizations.copiedToTheClipboard);
 
       final hasVibrator = await Vibration.hasVibrator();
-      if (hasVibrator ?? true) {
+      if (hasVibrator) {
         await Vibration.vibrate();
       }
     });
@@ -215,10 +215,13 @@ class _SentMessageAreaState extends State<SentMessageArea> {
                                           onTap: () {
                                             final filePath =
                                                 encryptedMessage.replaceAll(
-                                                    fuzzIdentificator, '',);
+                                              fuzzIdentificator,
+                                              '',
+                                            );
                                             DeviceFileInteractor.shareFile(
-                                                filePath,
-                                                context: context,);
+                                              filePath,
+                                              context: context,
+                                            );
                                             closeOverlay();
                                           },
                                         ),
@@ -228,12 +231,17 @@ class _SentMessageAreaState extends State<SentMessageArea> {
                                           onTap: () {
                                             final filePath =
                                                 encryptedMessage.replaceAll(
-                                                    fuzzIdentificator, '',);
+                                              fuzzIdentificator,
+                                              '',
+                                            );
                                             Clipboard.setData(
-                                                ClipboardData(text: filePath),);
-                                            FuzzzyToast.show(context,
-                                                message: localizations
-                                                    .copiedToTheClipboard,);
+                                              ClipboardData(text: filePath),
+                                            );
+                                            FuzzzyToast.show(
+                                              context,
+                                              message: localizations
+                                                  .copiedToTheClipboard,
+                                            );
                                             closeOverlay();
                                           },
                                         ),
@@ -248,15 +256,18 @@ class _SentMessageAreaState extends State<SentMessageArea> {
                                             );
                                             final preparedEncryptedMessage =
                                                 _prepareEncrypredMessage(
-                                                    encryptedMessage,);
+                                              encryptedMessage,
+                                            );
                                             final shareable = FuzzyLinkGenerator
                                                 .generateShareableContent(
                                               link: link,
                                               rawFuzz: preparedEncryptedMessage,
                                               type: FuzzyLinkType.fuzz,
                                             );
-                                            ShareHelper.share(shareable,
-                                                context: context,);
+                                            ShareHelper.share(
+                                              shareable,
+                                              context: context,
+                                            );
                                             closeOverlay();
                                           },
                                         ),
@@ -271,10 +282,13 @@ class _SentMessageAreaState extends State<SentMessageArea> {
                                               encryptedMessage,
                                             );
                                             Clipboard.setData(
-                                                ClipboardData(text: link),);
-                                            FuzzzyToast.show(context,
-                                                message: localizations
-                                                    .linkCopiedToClipboard,);
+                                              ClipboardData(text: link),
+                                            );
+                                            FuzzzyToast.show(
+                                              context,
+                                              message: localizations
+                                                  .linkCopiedToClipboard,
+                                            );
                                             closeOverlay();
                                           },
                                         ),
@@ -299,11 +313,13 @@ class _SentMessageAreaState extends State<SentMessageArea> {
                                           onTap: () {
                                             final preparedEncryptedMessage =
                                                 _prepareEncrypredMessage(
-                                                    encryptedMessage,);
+                                              encryptedMessage,
+                                            );
 
                                             ShareHelper.share(
-                                                preparedEncryptedMessage,
-                                                context: context,);
+                                              preparedEncryptedMessage,
+                                              context: context,
+                                            );
 
                                             closeOverlay();
                                           },
@@ -318,10 +334,13 @@ class _SentMessageAreaState extends State<SentMessageArea> {
                                               encryptedMessage,
                                             );
                                             Clipboard.setData(
-                                                ClipboardData(text: link),);
-                                            FuzzzyToast.show(context,
-                                                message: localizations
-                                                    .linkCopiedToClipboard,);
+                                              ClipboardData(text: link),
+                                            );
+                                            FuzzzyToast.show(
+                                              context,
+                                              message: localizations
+                                                  .linkCopiedToClipboard,
+                                            );
                                             closeOverlay();
                                           },
                                         ),
@@ -337,15 +356,18 @@ class _SentMessageAreaState extends State<SentMessageArea> {
                                             );
                                             final preparedEncryptedMessage =
                                                 _prepareEncrypredMessage(
-                                                    encryptedMessage,);
+                                              encryptedMessage,
+                                            );
                                             final shareable = FuzzyLinkGenerator
                                                 .generateShareableContent(
                                               link: link,
                                               rawFuzz: preparedEncryptedMessage,
                                               type: FuzzyLinkType.fuzz,
                                             );
-                                            ShareHelper.share(shareable,
-                                                context: context,);
+                                            ShareHelper.share(
+                                              shareable,
+                                              context: context,
+                                            );
                                             closeOverlay();
                                           },
                                         ),
@@ -402,7 +424,7 @@ class _SentMessageAreaState extends State<SentMessageArea> {
                                 Container(
                                   width: 60,
                                   height: 24,
-                                  color: Colors.white.withOpacity(0),
+                                  color: Colors.white.withValues(alpha: 0),
                                 ),
                                 Icon(
                                   isExpanded

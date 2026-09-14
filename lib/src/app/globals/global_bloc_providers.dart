@@ -26,19 +26,19 @@ class GlobalBlocProviders extends StatelessWidget {
         BlocProvider<ChatGeneralDataListCubit>(
           create: (context) => ChatGeneralDataListCubit(
             chatRepository: sl.get<ChatGeneralDataListRepository>(),
-            keyStorageRepository: sl.get<KeyStorageRepository>(),
+            cryptoCoreService: sl.get<CryptoCoreService>(),
           )..fetchChats(),
         ),
         BlocProvider<FileProcessingCubit<FileEncryptionOption>>(
           create: (_) => FileProcessingCubit<FileEncryptionOption>(
             processingOption: const FileEncryptionOption(),
-            keyStorageRepository: sl.get<KeyStorageRepository>(),
+            cryptoCoreService: sl.get<CryptoCoreService>(),
           ),
         ),
         BlocProvider<FileProcessingCubit<FileDecryptionOption>>(
           create: (_) => FileProcessingCubit<FileDecryptionOption>(
             processingOption: const FileDecryptionOption(),
-            keyStorageRepository: sl.get<KeyStorageRepository>(),
+            cryptoCoreService: sl.get<CryptoCoreService>(),
           ),
         ),
         BlocProvider<ChatFileInjectorCubit>(

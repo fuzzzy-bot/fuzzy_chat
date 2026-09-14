@@ -39,7 +39,7 @@ class FuzzyButton extends StatelessWidget {
           color: backgroundColor ??
               (isEnabled
                   ? fuzzzyColors.actionPrimaryBg
-                  : fuzzzyColors.actionPrimaryBg.withOpacity(0.4)),
+                  : fuzzzyColors.actionPrimaryBg.withValues(alpha: 0.4)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Center(

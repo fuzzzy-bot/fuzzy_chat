@@ -5,11 +5,11 @@ part 'chat_creation_state.dart';
 
 class ChatCreationCubit extends Cubit<ChatCreationState> {
   ChatCreationCubit({
-    required this.keyStorageRepository,
+    required this.cryptoCoreService,
     required this.chatGeneralDataListRepository,
   }) : super(const ChatCreationState(status: StateStatus.initial));
 
-  final KeyStorageRepository keyStorageRepository;
+  final CryptoCoreService cryptoCoreService;
   final ChatGeneralDataListRepository chatGeneralDataListRepository;
 
   Future<void> createChat({
@@ -32,8 +32,20 @@ class ChatCreationCubit extends Cubit<ChatCreationState> {
         return;
       }
 
-      final keyPair = await RSAService.generateRSAKeyPair();
       final chatId = generateId();
+
+      final invitationRes = await cryptoCoreService.createInvitation(chatId);
+      if (invitationRes is CryptoCoreFailure) {
+        emit(
+          state.copyWith(
+            status: StateStatus.failed,
+            failure: ChatCreationFailure(
+              type: ChatCreationFailureType.unknown,
+            ),
+          ),
+        );
+        return;
+      }
 
       final chatData = ChatGeneralData(
         chatId: chatId,
@@ -43,17 +55,12 @@ class ChatCreationCubit extends Cubit<ChatCreationState> {
       );
       await chatGeneralDataListRepository.addChat(chatData);
 
-      await keyStorageRepository.savePrivateKey(chatId, keyPair.privateKey);
-      await keyStorageRepository.savePublicKey(chatId, keyPair.publicKey);
-
-      final invitation =
-          await HandshakeService.generateInvitation(chatId, keyPair.publicKey);
-
       emit(
         state.copyWith(
           status: StateStatus.success,
           chatId: chatId,
-          generatedChatInvitation: invitation,
+          generatedChatInvitation:
+              (invitationRes as CryptoCoreSuccess<CryptoCoreInvitation>).data,
         ),
       );
     } catch (ex) {
@@ -72,7 +79,8 @@ class ChatCreationCubit extends Cubit<ChatCreationState> {
   }
 
   Future<ChatCreationFailureType?> checkChatNameRestrictions(
-      String chatName,) async {
+    String chatName,
+  ) async {
     final name = await chatGeneralDataListRepository.getChatByName(chatName);
 
     if (name != null) {

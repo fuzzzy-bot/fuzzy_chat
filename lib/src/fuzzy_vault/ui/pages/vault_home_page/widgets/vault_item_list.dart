@@ -222,9 +222,7 @@ class _VaultItemCardState extends State<VaultItemCard> {
                   if (mounted) setState(() => _isLoading = false);
                 }
               },
-        onLongPress: _isLoading
-            ? null
-            : () => _showMoveToGroupSheet(context),
+        onLongPress: _isLoading ? null : () => _showMoveToGroupSheet(context),
       ),
     );
   }
@@ -238,8 +236,7 @@ class _VaultItemCardState extends State<VaultItemCard> {
       color: fuzzzyColors.ink,
     );
 
-    final otherGroups =
-        groups.where((g) => g.id != currentGroupId).toList();
+    final otherGroups = groups.where((g) => g.id != currentGroupId).toList();
 
     showModalBottomSheet(
       context: context,
