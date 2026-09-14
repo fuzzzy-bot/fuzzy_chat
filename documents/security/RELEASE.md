@@ -87,14 +87,14 @@ which workflow produced these exact bytes* — nothing more.
   (`FLUTTER_XCODE_CODE_SIGNING_ALLOWED=NO`): the Xcode project is signed for team `C9387PQ63V` and CI
   has no certificate. Gatekeeper will refuse the app unless the user overrides it. Signing needs an Apple
   Developer certificate as a CI secret or a signing step on a Mac that holds it — an owner decision
-  (hardening decision D-3).
-- **iOS is not built.** There is no iOS job; nothing in a release is an iOS artifact.
+  (hardening decision D-3); signed builds come from Codemagic, §6.
+- **iOS is not built.** There is no iOS job; nothing in a release is an iOS artifact (signed IPA: Codemagic, §6).
 - **The Android APK is signed with a throwaway key.** The `android` job generates a fresh keystore per run
   (`keytool -genkeypair … -validity 1`, `CN=fuzzy_chat CI throwaway`) because the `release` build type
   refuses to build without one. The APK installs and runs, and is a faithful build of the commit, but it is
   **not a store build**: it cannot update an installation signed with the real key, and the real key is
   never in this repository or in CI until the owner provides it as the `ANDROID_KEYSTORE_*` secrets
-  (hardening decision D-6).
+  (hardening decision D-6); the store build is signed on Codemagic, §6.
 - **Provenance is not a review.** The attestation says who built the bytes, not that the code is correct.
   What the code does is documented in `PROTOCOL.md`; what it defends against, in `THREAT_MODEL.md`.
 
@@ -247,3 +247,104 @@ Rust core at this tag (unchanged since the measurement run
   `.comment` line from the darwin-hosted NDK clang (`-bolt, -mlgo` build of the same LLVM commit), which is
   what compiles `dart-sys`'s `dart_api_dl.c` — the only C in the crate. Two builds on the same Mac were
   identical. Reproduce on a Linux x86_64 host.
+
+## 6. Codemagic — signed store builds (D-3 / D-6)
+
+GitHub Actions stays the CI (tests, 16 KB gate, reproducibility, provenance). The **signed** artefacts —
+a Play-signable Android build, a Mac App Store package, an App Store IPA — come from `codemagic.yaml` at the
+repo root: three workflows, `android-release`, `macos-release`, `ios-release`, each pinned to Flutter 3.41.7,
+Rust 1.98.1 (installed per build; the images ship none) and triggered by `v*` tags or by hand. **Nothing secret
+is in the file**: it names a keystore reference, an App Store Connect integration and two variable groups that
+exist only in the Codemagic UI. The file parses (Ruby Psych, PyYAML) and validates against Codemagic's own JSON
+schema (<https://codemagic.io/codemagic-schema.json>, 0 errors); it has **not been run** — Codemagic has no
+account for this app yet, so the first build is the owner's, after the steps below.
+
+### 6.1 What the owner enters in the Codemagic UI (once)
+
+1. **Add the app** — Applications → *Add application* → GitHub → `fuzzzy-bot/fuzzy_chat` (project type
+   Flutter). `codemagic.yaml` is detected from the branch you scan. For tag-triggered builds Codemagic needs its
+   **webhook** on the repository (app settings → *Webhooks* shows the URL; GitHub → Settings → Webhooks → add it
+   for *push* + *tag* events). Manual starts from the UI work without it.
+2. **Android upload keystore** — Team settings → *codemagic.yaml settings* → *Code signing identities* →
+   *Android keystores*: upload the `.jks`/`.keystore`, enter the **keystore password**, **key alias** and
+   **key password**, and set the reference name **`fuzzy_chat_upload`** (the name `codemagic.yaml` lists under
+   `android_signing`). Keep an independent copy of the keystore — Codemagic never lets it be downloaded, and
+   every later Play release must be signed with the same key. Codemagic exports it as `CM_KEYSTORE_PATH`,
+   `CM_KEYSTORE_PASSWORD`, `CM_KEY_ALIAS`, `CM_KEY_PASSWORD`; the workflow maps those onto the
+   `ANDROID_KEYSTORE_PATH / _ALIAS / _PASSWORD / _PRIVATE_KEY_PASSWORD` names `android/app/build.gradle` reads,
+   so the gradle file is unchanged.
+3. **App Store Connect API key** — App Store Connect → Users and Access → Integrations → App Store Connect API →
+   *Generate API key* (role **App Manager**), download the `.p8` (one-time download), note the **Key ID** and
+   the **Issuer ID**. Then Codemagic Team settings → *Team integrations* → *Developer Portal* → *Connect*: name
+   **`fuzzy_chat_asc`** (the name under `integrations.app_store_connect`), Issuer ID, Key ID, upload the `.p8`.
+   Team: **`C9387PQ63V`**.
+4. **Variable group `fuzzy_chat_signing`** (app or team *Environment variables*, every value marked *Secret*):
+   - `CERTIFICATE_PRIVATE_KEY` — an RSA-2048 private key in PEM (`ssh-keygen -t rsa -b 2048 -m PEM -f mac_distribution_private_key -q -N ""`,
+     paste the file's content including the `-----BEGIN/END RSA PRIVATE KEY-----` lines). `app-store-connect
+     fetch-signing-files … --create` creates the *Mac App Distribution* / *Apple Distribution* certificates from
+     it in the developer account (or reuses the ones already made from this key), and `certificates create --type
+     MAC_INSTALLER_DISTRIBUTION` the installer certificate. To reuse an existing certificate instead, export its
+     private key from Keychain Access as described in Codemagic's macOS signing guide and paste that.
+   - `CERTIFICATE_PRIVATE_KEY_PASSWORD` — only if that key is encrypted.
+5. **Variable group `fuzzy_chat_deps`** — `FUZZY_DESIGN_SSH_KEY` (*Secret*): the private half of a **new**,
+   passphrase-less deploy key whose public half is added read-only to `fuzzzy-bot/fuzzy_design` (Settings →
+   Deploy keys). `fuzzzy_ui_kit` is a git dependency on that private repo; Codemagic adds every `*_SSH_KEY`
+   variable to the SSH agent and the workflow routes exactly that URL over SSH. The GitHub Actions deploy key
+   cannot be reused — its private half exists only as the Actions secret `FUZZY_DESIGN_DEPLOY_KEY`.
+   Alternative: make `fuzzy_design` public and delete the group and the "Route the private fuzzzy_ui_kit
+   dependency over SSH" step from all three workflows.
+6. **Store records** must exist before a build can be uploaded (Codemagic's note: upload the very first version
+   by hand): an App Store Connect app for the macOS bundle id and one for iOS, a Play Console app for the
+   Android application id — see the table.
+
+| Platform | Flavor | Identifier (as committed) | Source |
+|---|---|---|---|
+| Android | production | `com.fuzzzytechnologies.fuzzy_chat` | `android/app/build.gradle` `applicationId` + `applicationIdSuffix ""` |
+| Android | staging / development | `….fuzzy_chat.stg` / `….fuzzy_chat.dev` | same file, suffixes |
+| macOS | production | `com.fuzzzytechnologies.secure-chat` | `macos/Runner.xcodeproj` (`Release-production`); `Configs/AppInfo.xcconfig` still holds the template `com.example.myApp` and is overridden per configuration |
+| macOS | staging / development | `com.fuzzzytechnologies.secure-chat.dev` (both) | same project |
+| iOS | production | **`com.fuzzzytechnologies.secure-chat.dev`** | `ios/Runner.xcodeproj` (`Release-production`) — the production configurations carry the `.dev` id; staging is `.stg`. **Owner decision before the first App Store upload:** keep it, or change the three `*-production` configurations to `com.fuzzzytechnologies.secure-chat` (then update `BUNDLE_ID` in `ios-release`). Not changed here. |
+
+### 6.2 What a signed macOS build needs
+
+1. **`com.apple.security.files.user-selected.read-write`** — added to both `macos/Runner/DebugProfile.entitlements`
+   and `macos/Runner/Release.entitlements` (D-3 addendum). The app is sandboxed (`com.apple.security.app-sandbox`,
+   required by the Mac App Store); without this entitlement a signed, sandboxed build cannot open the file picker
+   (`pickFiles`, vault / basics / chat files) or the archive save panel (`saveFile`, F2-10). `network.client` is
+   deliberately absent — the app never fetches anything. `keychain-access-groups` (empty, pre-existing) is a
+   *restricted* entitlement: it is fine under an Apple-issued certificate, but an ad-hoc-signed local build carrying
+   it is killed by AMFI, so local sandbox tests sign with a copy of the file minus that key.
+2. **Provisioning + distribution certificate** — automatic in the workflow: `app-store-connect fetch-signing-files
+   "$BUNDLE_ID" --platform MAC_OS --type MAC_APP_STORE --create` (Mac App Store profile + Mac App Distribution
+   certificate), `keychain add-certificates`, `xcode-project use-profiles`. **Default: Mac App Store** — no
+   notarization step, no hardened runtime needed; the build is packaged as a `.pkg` signed with the Mac Installer
+   Distribution certificate, which is what App Store Connect accepts.
+   **Alternative: distribution outside the store (Developer ID).** Change `--type MAC_APP_STORE` to
+   `--type MAC_APP_DIRECT` (fetches a Developer ID Application certificate), drop the installer-certificate and
+   `.pkg` steps, set `ENABLE_HARDENED_RUNTIME = YES` on the Runner target (hardened runtime is mandatory for
+   notarization; the project does not set it today), then notarize and staple with the same API key:
+   ```sh
+   ditto -c -k --keepParent "build/macos/Build/Products/Release-production/Fuzzy Chat.app" fuzzy_chat-macos.zip
+   xcrun notarytool submit fuzzy_chat-macos.zip --key "$APP_STORE_CONNECT_PRIVATE_KEY_PATH" \
+     --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" --issuer "$APP_STORE_CONNECT_ISSUER_ID" --wait
+   xcrun stapler staple "build/macos/Build/Products/Release-production/Fuzzy Chat.app"
+   ```
+   (`notarytool` wants the `.p8` as a file; write `$APP_STORE_CONNECT_PRIVATE_KEY` to one first.) Both paths
+   need the sandbox entitlement above; only Developer ID needs the hardened runtime.
+
+### 6.3 Publishing, and what is deliberately not wired
+
+- Every workflow emails `contact@fuzzzycore.com` on success and failure with the artefacts attached
+  (`build/app/outputs/flutter-apk/*.apk`, `bundle/**/*.aab`, `Release-production/*.pkg`, `build/ios/ipa/*.ipa`).
+  Store upload is **not** automated: once the store records exist, add
+  `publishing.app_store_connect: { auth: integration }` (macOS/iOS; add `submit_to_testflight: true` for
+  TestFlight) and `publishing.google_play: { credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS, track: internal }`
+  with a Play service-account JSON as a secret variable.
+- iOS has no entitlements file and needs none: `file_picker` and `share_plus` use the system document picker and
+  share sheet. The Rust core is built by cargokit for `aarch64-apple-ios` inside `flutter build ipa`.
+- The Android job runs the same 16 KB page-size gate as GitHub and seeds the `CARGO_ENCODED_RUSTFLAGS` path
+  remap with Codemagic's home (`/home/builder`), so no builder path is embedded in the core. Whether the
+  Codemagic-built core hashes identically to the tag's `rust-repro` core (same Linux x86_64 + NDK + rustc, so it
+  should) is not gated — compare `unzip -p app-production-release.apk lib/arm64-v8a/libfuzzy_crypto_core.so | sha256sum`
+  with the tag run's `rust-repro-1/SHA256SUMS` by hand.
+- `xcode: 26.5` is pinned to the Xcode this repo was last built with locally (F1-3); move it deliberately.
