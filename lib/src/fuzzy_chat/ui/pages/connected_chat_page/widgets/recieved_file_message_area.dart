@@ -27,20 +27,46 @@ class _ReceivedFileMessageAreaState extends State<ReceivedFileMessageArea> {
     fileName = parts.isNotEmpty ? parts.last : '';
   }
 
-  void _openDecryptedFileDirectory({
+  Future<void> _openDecryptedFileDirectory({
     required String encryptedMessage,
-  }) {
+    required FuzzyChatLocalizations localizations,
+  }) async {
     final filePath = encryptedMessage.replaceAll(fuzzIdentificator, '');
 
-    DeviceFileInteractor.revealFile(filePath);
+    try {
+      await DeviceFileInteractor.revealFile(filePath, context: context);
+    } catch (_) {
+      if (!mounted) return;
+      FuzzzyToast.show(context, message: localizations.couldNotOpenFile);
+    }
   }
 
-  void _openDecryptedFile({
+  Future<void> _openDecryptedFile({
     required String encryptedMessage,
-  }) {
+    required FuzzyChatLocalizations localizations,
+  }) async {
     final filePath = encryptedMessage.replaceAll(fuzzIdentificator, '');
 
-    DeviceFileInteractor.openFile(filePath);
+    try {
+      await DeviceFileInteractor.openFile(filePath);
+    } catch (_) {
+      if (!mounted) return;
+      FuzzzyToast.show(context, message: localizations.couldNotOpenFile);
+    }
+  }
+
+  Future<void> _shareDecryptedFile({
+    required String encryptedMessage,
+    required FuzzyChatLocalizations localizations,
+  }) async {
+    final filePath = encryptedMessage.replaceAll(fuzzIdentificator, '');
+
+    try {
+      await DeviceFileInteractor.shareFile(filePath, context: context);
+    } catch (_) {
+      if (!mounted) return;
+      FuzzzyToast.show(context, message: localizations.couldNotOpenFile);
+    }
   }
 
   @override
@@ -62,6 +88,7 @@ class _ReceivedFileMessageAreaState extends State<ReceivedFileMessageArea> {
         onLongPress: () {
           _openDecryptedFile(
             encryptedMessage: widget.message.encryptedMessage,
+            localizations: localizations,
           );
         },
         child: SizedBox(
@@ -81,21 +108,28 @@ class _ReceivedFileMessageAreaState extends State<ReceivedFileMessageArea> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // On mobile revealing is the share sheet, so "Show"
+                      // would duplicate "Share File".
+                      if (DeviceFileInteractor.canRevealFile) ...[
+                        TextAction(
+                          hasLeftBorder: true,
+                          label: localizations.show,
+                          onTap: () {
+                            _openDecryptedFileDirectory(
+                              encryptedMessage: widget.message.encryptedMessage,
+                              localizations: localizations,
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 2),
+                      ],
                       TextAction(
-                        hasLeftBorder: true,
-                        label: localizations.show,
-                        onTap: () {
-                          _openDecryptedFileDirectory(
-                            encryptedMessage: widget.message.encryptedMessage,
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 2),
-                      TextAction(
+                        hasLeftBorder: !DeviceFileInteractor.canRevealFile,
                         label: localizations.open,
                         onTap: () {
                           _openDecryptedFile(
                             encryptedMessage: widget.message.encryptedMessage,
+                            localizations: localizations,
                           );
                         },
                       ),
@@ -103,11 +137,9 @@ class _ReceivedFileMessageAreaState extends State<ReceivedFileMessageArea> {
                       TextAction(
                         label: localizations.shareFile,
                         onTap: () {
-                          final filePath = widget.message.encryptedMessage
-                              .replaceAll(fuzzIdentificator, '');
-                          DeviceFileInteractor.shareFile(
-                            filePath,
-                            context: context,
+                          _shareDecryptedFile(
+                            encryptedMessage: widget.message.encryptedMessage,
+                            localizations: localizations,
                           );
                           closeOverlay();
                         },

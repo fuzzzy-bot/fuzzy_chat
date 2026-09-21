@@ -1776,6 +1776,12 @@ abstract class FuzzyChatLocalizations {
   /// In en, this message translates to:
   /// **'Export'**
   String get export;
+
+  /// No description provided for @couldNotOpenFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open file.'**
+  String get couldNotOpenFile;
 }
 
 class _FuzzyChatLocalizationsDelegate

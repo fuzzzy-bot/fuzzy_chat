@@ -154,7 +154,9 @@ class _VaultItemEditorPageState extends State<VaultItemEditorPage> {
     if (_pickedFileBytes == null || _pickedFileName == null) return;
     try {
       final tempFile = await _writeTempFile();
-      await DeviceFileInteractor.revealFile(tempFile.path);
+      if (context.mounted) {
+        await DeviceFileInteractor.revealFile(tempFile.path, context: context);
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -490,15 +492,22 @@ class _VaultItemEditorPageState extends State<VaultItemEditorPage> {
                                             onTap: () => _shareFile(context),
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: _FileActionButton(
-                                            icon: Icons.folder_open_rounded,
-                                            label:
-                                                currentContextLocalization.show,
-                                            onTap: () => _revealFile(context),
+                                        // On mobile revealing is the share
+                                        // sheet, so "Show" would duplicate
+                                        // "Share File".
+                                        if (DeviceFileInteractor
+                                            .canRevealFile) ...[
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: _FileActionButton(
+                                              icon: Icons.folder_open_rounded,
+                                              label: currentContextLocalization
+                                                  .show,
+                                              onTap: () =>
+                                                  _revealFile(context),
+                                            ),
                                           ),
-                                        ),
+                                        ],
                                       ],
                                     ),
                                   ],

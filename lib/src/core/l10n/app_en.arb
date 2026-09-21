@@ -585,5 +585,7 @@
   "exportChatArchiveStoreLocked": "Unlock Fuzzy Chat first — your history cannot be read while it is locked.",
   "@exportChatArchiveStoreLocked": {},
   "export": "Export",
-  "@export": {}
+  "@export": {},
+  "couldNotOpenFile": "Could not open file.",
+  "@couldNotOpenFile": {}
 }

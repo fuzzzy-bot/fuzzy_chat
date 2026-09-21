@@ -585,5 +585,7 @@
   "exportChatArchiveStoreLocked": "ჯერ განბლოკეთ Fuzzy Chat — დაბლოკილი ისტორიის წაკითხვა შეუძლებელია.",
   "@exportChatArchiveStoreLocked": {},
   "export": "ექსპორტი",
-  "@export": {}
+  "@export": {},
+  "couldNotOpenFile": "ფაილის გახსნა ვერ მოხერხდა.",
+  "@couldNotOpenFile": {}
 }

@@ -921,4 +921,7 @@ class FuzzyChatLocalizationsEn extends FuzzyChatLocalizations {
 
   @override
   String get export => 'Export';
+
+  @override
+  String get couldNotOpenFile => 'Could not open file.';
 }

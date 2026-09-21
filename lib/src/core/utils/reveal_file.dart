@@ -40,17 +40,22 @@ class DeviceFileInteractor {
     }
   }
 
-  ///Revealing does not fully work on android and ios platorms.
-  ///On those platforms corresponding file will be just openend.
-  static Future<void> revealFile(String filePath) async {
+  ///Only desktop platforms have a file manager that can select a file.
+  ///On Android and iOS the app's folders are private and a directory URI has
+  ///no handler, so [revealFile] hands the file to the share sheet instead.
+  static bool get canRevealFile =>
+      Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+
+  static Future<void> revealFile(
+    String filePath, {
+    BuildContext? context,
+  }) async {
     final file = File(filePath);
     final fileExists = await file.exists();
 
     if (!fileExists) {
       throw FileSystemException('File does not exist', filePath);
     }
-
-    final folderPath = file.parent.path;
 
     if (Platform.isWindows) {
       await Process.run('explorer', ['/select,', filePath]);
@@ -75,12 +80,8 @@ class DeviceFileInteractor {
 
       throw Exception('Could not open file manager on Linux.');
     } else if (Platform.isAndroid || Platform.isIOS) {
-      final uri = Uri.directory(folderPath);
-      final isUrlLaunched = await launchUrl(uri);
-
-      if (!isUrlLaunched) {
-        throw Exception('Could not open file: $filePath');
-      }
+      // ignore: use_build_context_synchronously
+      await shareFile(filePath, context: context);
     } else {
       throw UnsupportedError('Unsupported platform');
     }

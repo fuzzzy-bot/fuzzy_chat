@@ -930,4 +930,7 @@ class FuzzyChatLocalizationsKa extends FuzzyChatLocalizations {
 
   @override
   String get export => 'ექსპორტი';
+
+  @override
+  String get couldNotOpenFile => 'ფაილის გახსნა ვერ მოხერხდა.';
 }
