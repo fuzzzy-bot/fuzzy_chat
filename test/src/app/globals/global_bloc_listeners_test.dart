@@ -11,6 +11,8 @@ import 'package:mocktail/mocktail.dart';
 
 class MockCryptoCoreService extends Mock implements CryptoCoreService {}
 
+class MockUserFileStore extends Mock implements UserFileStore {}
+
 class MockMessageDataRepository extends Mock implements MessageDataRepository {}
 
 class MockFuzzyAuthStore extends Mock implements FuzzyAuthStore {}
@@ -87,12 +89,14 @@ void main() {
             create: (_) => FileProcessingCubit<FileEncryptionOption>(
               processingOption: const FileEncryptionOption(),
               cryptoCoreService: mockService,
+              userFileStore: MockUserFileStore(),
             ),
           ),
           BlocProvider<FileProcessingCubit<FileDecryptionOption>>(
             create: (_) => FileProcessingCubit<FileDecryptionOption>(
               processingOption: const FileDecryptionOption(),
               cryptoCoreService: mockService,
+              userFileStore: MockUserFileStore(),
             ),
           ),
           BlocProvider<ChatFileInjectorCubit>.value(value: injector),

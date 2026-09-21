@@ -13,8 +13,30 @@ import 'package:path/path.dart' as path;
 
 class MockCryptoCoreService extends Mock implements CryptoCoreService {}
 
+/// Stands in for the user-visible place a finished file moves to (T-0366):
+/// answers `publishedPath` for every file, or throws when [failure] is set.
+class _FakeUserFileStore extends Fake implements UserFileStore {
+  _FakeUserFileStore({this.publishedPath, this.failure});
+
+  final String? publishedPath;
+  final Exception? failure;
+  final List<({String outputPath, String chatName})> published = [];
+
+  @override
+  Future<String> publish({
+    required String outputPath,
+    required String chatName,
+  }) async {
+    published.add((outputPath: outputPath, chatName: chatName));
+    if (failure != null) throw failure!;
+    return publishedPath ?? outputPath;
+  }
+}
+
 const _chatId = '6f1e9b2c-3d4a-4f5b-8c6d-7e8f9a0b1c2d';
 const _chatName = 'Bob';
+const _publishedPath =
+    '/storage/emulated/0/Download/Fuzzy Chat/Bob/report.pdf.fuzz';
 
 /// A handler whose stream replays [events]; pause/resume/cancel are counted.
 class _FakeHandler {
@@ -35,6 +57,7 @@ class _FakeHandler {
 
 void main() {
   late MockCryptoCoreService mockService;
+  late _FakeUserFileStore userFileStore;
   late Directory documents;
   late File input;
 
@@ -47,6 +70,7 @@ void main() {
 
   setUp(() {
     mockService = MockCryptoCoreService();
+    userFileStore = _FakeUserFileStore();
     documents = Directory.systemTemp.createTempSync('file_processing_cubit_');
     input = File(path.join(documents.path, 'report.pdf'))
       ..writeAsStringSync('plain');
@@ -65,14 +89,21 @@ void main() {
   FileProcessingCubit<FileEncryptionOption> buildEncrypt() =>
       FileProcessingCubit<FileEncryptionOption>(
         cryptoCoreService: mockService,
+        userFileStore: userFileStore,
         processingOption: const FileEncryptionOption(),
       );
 
   FileProcessingCubit<FileDecryptionOption> buildDecrypt() =>
       FileProcessingCubit<FileDecryptionOption>(
         cryptoCoreService: mockService,
+        userFileStore: userFileStore,
         processingOption: const FileDecryptionOption(),
       );
+
+  FileProcessingHandler completingHandler() => _FakeHandler([
+        FileProcessingProgress(progress: 0.5),
+        FileProcessingProgress.completed(),
+      ]).handler;
 
   void stubEncrypt(CryptoCoreResponse<FileProcessingHandler> response) {
     when(
@@ -165,6 +196,98 @@ void main() {
             chatId: any(named: 'chatId'),
             inputPath: any(named: 'inputPath'),
             outputDirectoryPath: any(named: 'outputDirectoryPath'),
+          ),
+        );
+      },
+    );
+
+    // T-0366: the finished file is handed to the user-visible store and the
+    // row keeps the path the store answers (Downloads/Fuzzy Chat/<chat> on
+    // Android); a store that cannot place it keeps the app's own copy.
+    blocTest<FileProcessingCubit<FileEncryptionOption>, FileProcessingState>(
+      'a completed file is published under the chat name and the row keeps '
+      'the published path',
+      setUp: () {
+        userFileStore = _FakeUserFileStore(publishedPath: _publishedPath);
+        stubEncrypt(CryptoCoreSuccess(completingHandler()));
+      },
+      build: buildEncrypt,
+      act: (cubit) => cubit.addFilesToProcess(
+        chatId: _chatId,
+        chatName: _chatName,
+        filePaths: [input.path],
+      ),
+      wait: settle,
+      verify: (cubit) {
+        expect(
+          userFileStore.published.single,
+          (
+            outputPath: path.join(chatFolder(), 'report.pdf.fuzz'),
+            chatName: _chatName,
+          ),
+        );
+        expect(
+          cubit.state,
+          processedAs(
+            FileProcessingStatus.completed,
+            outputFilePath: _publishedPath,
+          ),
+        );
+      },
+    );
+
+    blocTest<FileProcessingCubit<FileEncryptionOption>, FileProcessingState>(
+      "a store that cannot place the file keeps the app's own path, still "
+      'completed',
+      setUp: () {
+        userFileStore = _FakeUserFileStore(failure: Exception('no storage'));
+        stubEncrypt(CryptoCoreSuccess(completingHandler()));
+      },
+      build: buildEncrypt,
+      act: (cubit) => cubit.addFilesToProcess(
+        chatId: _chatId,
+        chatName: _chatName,
+        filePaths: [input.path],
+      ),
+      wait: settle,
+      verify: (cubit) => expect(
+        cubit.state,
+        processedAs(
+          FileProcessingStatus.completed,
+          outputFilePath: path.join(chatFolder(), 'report.pdf.fuzz'),
+        ),
+      ),
+    );
+
+    blocTest<FileProcessingCubit<FileEncryptionOption>, FileProcessingState>(
+      "a picker's 'null-' name artefact is dropped from the fuzzed file's "
+      'name',
+      setUp: () {
+        input = File(path.join(documents.path, 'null-20260920-WA0000.jpg'))
+          ..writeAsStringSync('jpeg');
+        stubEncrypt(CryptoCoreSuccess(completingHandler()));
+      },
+      build: buildEncrypt,
+      act: (cubit) => cubit.addFilesToProcess(
+        chatId: _chatId,
+        chatName: _chatName,
+        filePaths: [input.path],
+      ),
+      wait: settle,
+      verify: (cubit) {
+        final outputPath = path.join(chatFolder(), '20260920-WA0000.jpg.fuzz');
+        verify(
+          () => mockService.encryptFileForChat(
+            chatId: _chatId,
+            inputPath: input.path,
+            outputPath: outputPath,
+          ),
+        ).called(1);
+        expect(
+          cubit.state,
+          processedAs(
+            FileProcessingStatus.completed,
+            outputFilePath: outputPath,
           ),
         );
       },
@@ -370,6 +493,14 @@ void main() {
           processedAs(
             FileProcessingStatus.completed,
             outputFilePath: path.join(chatFolder(), 'report.pdf'),
+          ),
+        );
+        // T-0366: the unfuzzed file is published like a fuzzed one.
+        expect(
+          userFileStore.published.single,
+          (
+            outputPath: path.join(chatFolder(), 'report.pdf'),
+            chatName: _chatName,
           ),
         );
       },

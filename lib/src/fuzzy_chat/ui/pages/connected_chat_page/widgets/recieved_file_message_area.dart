@@ -17,16 +17,6 @@ class ReceivedFileMessageArea extends StatefulWidget {
 }
 
 class _ReceivedFileMessageAreaState extends State<ReceivedFileMessageArea> {
-  String fileName = '';
-
-  @override
-  void initState() {
-    super.initState();
-
-    final parts = widget.message.encryptedMessage.split('/');
-    fileName = parts.isNotEmpty ? parts.last : '';
-  }
-
   Future<void> _openDecryptedFileDirectory({
     required String encryptedMessage,
     required FuzzyChatLocalizations localizations,
@@ -76,6 +66,10 @@ class _ReceivedFileMessageAreaState extends State<ReceivedFileMessageArea> {
 
     final localizations = context.fuzzyChatLocalizations;
 
+    // Read per build: the list has no keys, so this State is reused for
+    // whatever file row lands at its index.
+    final fileLocation = UserFileLocation.of(widget.message.encryptedMessage);
+
     const borderRadius = BorderRadius.only(
       topLeft: Radius.circular(12),
       topRight: Radius.circular(12),
@@ -98,105 +92,90 @@ class _ReceivedFileMessageAreaState extends State<ReceivedFileMessageArea> {
             child: FuzzyOverlaySpawner(
               splashColor: fuzzzyColors.ground,
               splashRadius: borderRadius,
-              offset: const Offset(150, -20),
+              // Hangs from the bubble's top-left and grows rightwards.
+              followerAnchor: Alignment.bottomLeft,
+              offset: const Offset(0, 16),
               spawnedChildBuilder: (context, closeOverlay) {
-                return DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: fuzzzyColors.focus,
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // On mobile revealing is the share sheet, so "Show"
-                      // would duplicate "Share File".
-                      if (DeviceFileInteractor.canRevealFile) ...[
-                        TextAction(
-                          hasLeftBorder: true,
-                          label: localizations.show,
-                          onTap: () {
-                            _openDecryptedFileDirectory(
-                              encryptedMessage: widget.message.encryptedMessage,
-                              localizations: localizations,
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 2),
-                      ],
-                      TextAction(
-                        hasLeftBorder: !DeviceFileInteractor.canRevealFile,
-                        label: localizations.open,
-                        onTap: () {
-                          _openDecryptedFile(
-                            encryptedMessage: widget.message.encryptedMessage,
-                            localizations: localizations,
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 2),
-                      TextAction(
-                        label: localizations.shareFile,
-                        onTap: () {
-                          _shareDecryptedFile(
-                            encryptedMessage: widget.message.encryptedMessage,
-                            localizations: localizations,
-                          );
-                          closeOverlay();
-                        },
-                      ),
-                      const SizedBox(width: 2),
-                      TextAction(
-                        label: '🔗',
-                        onTap: () {
-                          final link = FuzzyLinkGenerator.generateFuzzLink(
-                            widget.message.chatId,
-                            widget.message.encryptedMessage,
-                          );
-                          final preparedFuzz =
-                              '$fuzzIdentificator${widget.message.encryptedMessage}';
-                          final shareable =
-                              FuzzyLinkGenerator.generateShareableContent(
-                            link: link,
-                            rawFuzz: preparedFuzz,
-                            type: FuzzyLinkType.fuzz,
-                          );
-                          ShareHelper.share(shareable, context: context);
-                          closeOverlay();
-                        },
-                      ),
-                      const SizedBox(width: 2),
-                      TextAction(
-                        label: localizations.copyAsLink,
-                        onTap: () {
-                          final link = FuzzyLinkGenerator.generateFuzzLink(
-                            widget.message.chatId,
-                            widget.message.encryptedMessage,
-                          );
-                          Clipboard.setData(ClipboardData(text: link));
-                          FuzzzyToast.show(
-                            context,
-                            message: localizations.linkCopiedToClipboard,
-                          );
-                          closeOverlay();
-                        },
-                      ),
-                      const SizedBox(width: 2),
-                      TextAction(
-                        hasRightBorder: true,
-                        label: localizations.copy,
-                        onTap: () {
-                          final filePath = widget.message.encryptedMessage
-                              .replaceAll(fuzzIdentificator, '');
-                          Clipboard.setData(ClipboardData(text: filePath));
-                          FuzzzyToast.show(
-                            context,
-                            message: localizations.copiedToTheClipboard,
-                          );
-                          closeOverlay();
-                        },
-                      ),
-                    ],
-                  ),
+                return FuzzyActionPill(
+                  actions: [
+                    TextAction(
+                      label: localizations.show,
+                      onTap: () {
+                        _openDecryptedFileDirectory(
+                          encryptedMessage: widget.message.encryptedMessage,
+                          localizations: localizations,
+                        );
+                        closeOverlay();
+                      },
+                    ),
+                    TextAction(
+                      label: localizations.open,
+                      onTap: () {
+                        _openDecryptedFile(
+                          encryptedMessage: widget.message.encryptedMessage,
+                          localizations: localizations,
+                        );
+                        closeOverlay();
+                      },
+                    ),
+                    TextAction(
+                      label: localizations.shareFile,
+                      onTap: () {
+                        _shareDecryptedFile(
+                          encryptedMessage: widget.message.encryptedMessage,
+                          localizations: localizations,
+                        );
+                        closeOverlay();
+                      },
+                    ),
+                    TextAction(
+                      label: '🔗',
+                      onTap: () {
+                        final link = FuzzyLinkGenerator.generateFuzzLink(
+                          widget.message.chatId,
+                          widget.message.encryptedMessage,
+                        );
+                        final preparedFuzz =
+                            '$fuzzIdentificator${widget.message.encryptedMessage}';
+                        final shareable =
+                            FuzzyLinkGenerator.generateShareableContent(
+                          link: link,
+                          rawFuzz: preparedFuzz,
+                          type: FuzzyLinkType.fuzz,
+                        );
+                        ShareHelper.share(shareable, context: context);
+                        closeOverlay();
+                      },
+                    ),
+                    TextAction(
+                      label: localizations.copyAsLink,
+                      onTap: () {
+                        final link = FuzzyLinkGenerator.generateFuzzLink(
+                          widget.message.chatId,
+                          widget.message.encryptedMessage,
+                        );
+                        Clipboard.setData(ClipboardData(text: link));
+                        FuzzzyToast.show(
+                          context,
+                          message: localizations.linkCopiedToClipboard,
+                        );
+                        closeOverlay();
+                      },
+                    ),
+                    TextAction(
+                      label: localizations.copy,
+                      onTap: () {
+                        final filePath = widget.message.encryptedMessage
+                            .replaceAll(fuzzIdentificator, '');
+                        Clipboard.setData(ClipboardData(text: filePath));
+                        FuzzzyToast.show(
+                          context,
+                          message: localizations.copiedToTheClipboard,
+                        );
+                        closeOverlay();
+                      },
+                    ),
+                  ],
                 );
               },
               child: Container(
@@ -212,11 +191,24 @@ class _ReceivedFileMessageAreaState extends State<ReceivedFileMessageArea> {
                     bottomRight: Radius.circular(12),
                   ),
                 ),
-                child: Text(
-                  widget.message.encryptedMessage,
-                  style: fuzzzyTextStyles.body.copyWith(
-                    color: fuzzzyColors.ink,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fileLocation.fileName,
+                      style: fuzzzyTextStyles.body.copyWith(
+                        color: fuzzzyColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      fileLocation.folderLine,
+                      style: fuzzzyTextStyles.bodyS.copyWith(
+                        color: fuzzzyColors.inkMute,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

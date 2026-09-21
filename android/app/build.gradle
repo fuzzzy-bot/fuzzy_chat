@@ -114,4 +114,6 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
+    // FileProvider for the content URIs UserFiles.kt hands out (T-0366).
+    implementation 'androidx.core:core:1.13.1'
 }

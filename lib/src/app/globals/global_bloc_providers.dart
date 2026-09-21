@@ -33,12 +33,14 @@ class GlobalBlocProviders extends StatelessWidget {
           create: (_) => FileProcessingCubit<FileEncryptionOption>(
             processingOption: const FileEncryptionOption(),
             cryptoCoreService: sl.get<CryptoCoreService>(),
+            userFileStore: sl.get<UserFileStore>(),
           ),
         ),
         BlocProvider<FileProcessingCubit<FileDecryptionOption>>(
           create: (_) => FileProcessingCubit<FileDecryptionOption>(
             processingOption: const FileDecryptionOption(),
             cryptoCoreService: sl.get<CryptoCoreService>(),
+            userFileStore: sl.get<UserFileStore>(),
           ),
         ),
         BlocProvider<ChatFileInjectorCubit>(

@@ -506,8 +506,7 @@ class _VaultItemEditorPageState extends State<VaultItemEditorPage> {
                                               icon: Icons.folder_open_rounded,
                                               label: currentContextLocalization
                                                   .show,
-                                              onTap: () =>
-                                                  _revealFile(context),
+                                              onTap: () => _revealFile(context),
                                             ),
                                           ),
                                         ],

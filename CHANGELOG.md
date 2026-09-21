@@ -3,6 +3,16 @@
 All notable changes to Fuzzy Chat are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- **Files land where the user can find them.** A fuzzed file (on send) and an unfuzzed file (on receive) go to
+  `Downloads/Fuzzy Chat/<chat name>/` on Android (MediaStore, no storage permission on API 29+) and to the app's
+  Documents folder on iOS, now visible in the Files app. The bubble shows the file's name and that place instead
+  of a path; a picker's `null-` name artefact is dropped. "Show" is back on Android and iOS and opens the folder in
+  the system file manager; "Open" and "Share File" go by content URI with an explicit type. The action pill stacks
+  into rows so every action fits a 360dp phone.
+
 ## [1.1.0] — 2026-09-13
 
 The cryptography was rebuilt from the ground up. The app had not launched, so every format was broken on purpose:

@@ -13,10 +13,12 @@ part 'file_processing_state.dart';
 class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
     extends Cubit<FileProcessingState> {
   final CryptoCoreService cryptoCoreService;
+  final UserFileStore userFileStore;
   final ActualProcessingOption processingOption;
 
   FileProcessingCubit({
     required this.cryptoCoreService,
+    required this.userFileStore,
     required this.processingOption,
   }) : super(const FileProcessingState());
 
@@ -224,14 +226,7 @@ class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
 
     if (event.isComplete) {
       _resetThrottle();
-      _markFileAsFinished(
-        fileData: fileData,
-        status: FileProcessingStatus.completed,
-        outputFilePath: outputPath,
-        progress: 1,
-      );
-      _goToNextFileProcessing();
-      logger.i('FILE PROCESSING: Marked as isComplete $state');
+      _finishFile(fileData: fileData, outputPath: outputPath);
       return;
     }
 
@@ -239,6 +234,41 @@ class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
       fileData: fileData,
       progress: event.progress,
     );
+  }
+
+  /// The finished file goes where the user can find it before the row is
+  /// written (T-0366); the bar stays full while it moves. A place that
+  /// cannot be written keeps the app's own copy, which still opens and
+  /// shares.
+  Future<void> _finishFile({
+    required FileProcessingData fileData,
+    required String outputPath,
+  }) async {
+    _updateFileStatus(
+      fileData: fileData,
+      newStatus: FileProcessingStatus.inProgress,
+      newProgress: 1,
+    );
+
+    String publishedPath;
+    try {
+      publishedPath = await userFileStore.publish(
+        outputPath: outputPath,
+        chatName: fileData.chatName,
+      );
+    } catch (error) {
+      logger.w('FILE PROCESSING: could not publish $outputPath: $error');
+      publishedPath = outputPath;
+    }
+
+    _markFileAsFinished(
+      fileData: fileData,
+      status: FileProcessingStatus.completed,
+      outputFilePath: publishedPath,
+      progress: 1,
+    );
+    _goToNextFileProcessing();
+    logger.i('FILE PROCESSING: Marked as isComplete $state');
   }
 
   /// A run that fails after `decryptFileForChat` succeeded has already spent
@@ -432,6 +462,7 @@ String _fuzzedOutputPath({
   required String inputFilePath,
   required String fuzzedFileIdentificator,
 }) {
-  final fileName = path.basename(inputFilePath);
+  final fileName =
+      UserFileLocation.cleanPickedFileName(path.basename(inputFilePath));
   return path.join(chatFolderPath, '$fileName.$fuzzedFileIdentificator');
 }

@@ -13,6 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class MockCryptoCoreService extends Mock implements CryptoCoreService {}
 
+class MockUserFileStore extends Mock implements UserFileStore {}
+
 class MockMessageDataRepository extends Mock implements MessageDataRepository {}
 
 const _chatId = '6f1e9b2c-3d4a-4f5b-8c6d-7e8f9a0b1c2d';
@@ -168,12 +170,14 @@ void main() {
               create: (_) => FileProcessingCubit<FileEncryptionOption>(
                 processingOption: const FileEncryptionOption(),
                 cryptoCoreService: mockService,
+                userFileStore: MockUserFileStore(),
               ),
             ),
             BlocProvider<FileProcessingCubit<FileDecryptionOption>>(
               create: (_) => FileProcessingCubit<FileDecryptionOption>(
                 processingOption: const FileDecryptionOption(),
                 cryptoCoreService: mockService,
+                userFileStore: MockUserFileStore(),
               ),
             ),
           ],

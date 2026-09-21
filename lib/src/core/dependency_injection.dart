@@ -50,6 +50,8 @@ class DependencyInjection {
 
     sl.safeRegisterSingleton<FuzzyLinkService>(FuzzyLinkService());
 
+    sl.safeRegisterSingleton<UserFileStore>(UserFileStore());
+
     sl.safeRegisterSingleton<UserAuthPreferencesRepository>(
       UserAuthPreferencesRepository(
         localDataSource: UserAuthPreferencesLocalDataSource(isar: sl.get()),
