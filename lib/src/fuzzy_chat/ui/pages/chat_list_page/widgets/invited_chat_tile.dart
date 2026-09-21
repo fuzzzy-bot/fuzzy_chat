@@ -34,10 +34,10 @@ class InvitedChatTile extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         onLongPress: onLongPress,
-        leading: const Icon(
+        leading: Icon(
           Icons.hourglass_empty,
           size: 32,
-          color: Color.fromARGB(135, 255, 153, 0),
+          color: fuzzzyColors.warning,
         ),
         title: Text(
           name,

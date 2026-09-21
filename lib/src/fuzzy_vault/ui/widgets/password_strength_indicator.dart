@@ -12,16 +12,18 @@ class PasswordStrengthIndicator extends StatelessWidget {
     final service = sl.get<PasswordStrengthService>();
     final strength = service.assess(password);
 
+    final fuzzzyColors = context.fuzzzyColors;
+
     Color getLevelColor() {
       switch (strength.level) {
         case PasswordStrengthLevel.weak:
-          return Colors.red;
+          return fuzzzyColors.destructiveText;
         case PasswordStrengthLevel.fair:
-          return Colors.orange;
+          return fuzzzyColors.warning;
         case PasswordStrengthLevel.good:
-          return Colors.yellow.shade700;
+          return fuzzzyColors.info;
         case PasswordStrengthLevel.strong:
-          return Colors.green;
+          return fuzzzyColors.success;
       }
     }
 

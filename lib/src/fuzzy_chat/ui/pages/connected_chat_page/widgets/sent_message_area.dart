@@ -194,7 +194,7 @@ class _SentMessageAreaState extends State<SentMessageArea> {
                 child: Ink(
                   decoration: BoxDecoration(
                     borderRadius: borderRadius,
-                    color: fuzzzyColors.surface,
+                    color: fuzzzyColors.actionPrimaryBg,
                   ),
                   child: Stack(
                     children: [
@@ -431,7 +431,7 @@ class _SentMessageAreaState extends State<SentMessageArea> {
                                     ? TextOverflow.visible
                                     : TextOverflow.ellipsis,
                                 style: fuzzzyTextStyles.body.copyWith(
-                                  color: fuzzzyColors.ground,
+                                  color: fuzzzyColors.actionPrimaryFg,
                                 ),
                               ),
                             ),
@@ -457,7 +457,7 @@ class _SentMessageAreaState extends State<SentMessageArea> {
                                       ? Icons.expand_less
                                       : Icons.expand_more,
                                   size: 24,
-                                  color: fuzzzyColors.ground,
+                                  color: fuzzzyColors.actionPrimaryFg,
                                 ),
                               ],
                             ),

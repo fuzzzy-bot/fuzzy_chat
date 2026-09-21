@@ -153,7 +153,9 @@ class _ChatUnlockPageState extends State<ChatUnlockPage>
                         const SizedBox(height: 8),
                         Text(
                           currentContextLocalization.chatAuthIncorrectPassword,
-                          style: const TextStyle(color: Colors.red),
+                          style: TextStyle(
+                            color: context.fuzzzyColors.destructiveText,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -208,9 +210,9 @@ class _ChatUnlockPageState extends State<ChatUnlockPage>
                 ),
               ),
               if (isLoading)
-                const ColoredBox(
-                  color: Colors.black54,
-                  child: Center(
+                ColoredBox(
+                  color: context.fuzzzyColors.ground.withValues(alpha: 0.54),
+                  child: const Center(
                     child: CircularProgressIndicator(),
                   ),
                 ),

@@ -141,7 +141,9 @@ class _VaultUnlockPageState extends State<VaultUnlockPage>
                     const SizedBox(height: 8),
                     Text(
                       currentContextLocalization.vaultIncorrectPassword,
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(
+                        color: context.fuzzzyColors.destructiveText,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -193,9 +195,9 @@ class _VaultUnlockPageState extends State<VaultUnlockPage>
               ),
             ),
             if (isLoading)
-              const ColoredBox(
-                color: Colors.black54,
-                child: Center(
+              ColoredBox(
+                color: context.fuzzzyColors.ground.withValues(alpha: 0.54),
+                child: const Center(
                   child: CircularProgressIndicator(),
                 ),
               ),

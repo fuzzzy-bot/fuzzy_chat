@@ -143,33 +143,39 @@ class _VaultCreatePageState extends State<VaultCreatePage> {
                     const SizedBox(height: 8),
                     Text(
                       currentContextLocalization.vaultPasswordsDoNotMatch,
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(
+                        color: context.fuzzzyColors.destructiveText,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 40),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
+                      color: context.fuzzzyColors.destructive
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border:
-                          Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: context.fuzzzyColors.destructiveLine,
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.warning_amber_rounded,
-                          color: Colors.red,
+                          color: context.fuzzzyColors.destructiveText,
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Text(
                             currentContextLocalization
                                 .vaultPasswordCannotBeReset,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Colors.red,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: context.fuzzzyColors.destructiveText,
+                                ),
                           ),
                         ),
                       ],
@@ -184,9 +190,9 @@ class _VaultCreatePageState extends State<VaultCreatePage> {
               ),
             ),
             if (isLoading)
-              const ColoredBox(
-                color: Colors.black54,
-                child: Center(
+              ColoredBox(
+                color: context.fuzzzyColors.ground.withValues(alpha: 0.54),
+                child: const Center(
                   child: CircularProgressIndicator(),
                 ),
               ),

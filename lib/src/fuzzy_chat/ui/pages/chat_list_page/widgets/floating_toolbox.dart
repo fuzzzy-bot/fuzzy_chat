@@ -102,7 +102,7 @@ class _FloatingToolboxState extends State<FloatingToolbox>
           FloatingActionButton(
             onPressed: _toggleMenu,
             backgroundColor: fuzzzyColors.inkFaint,
-            foregroundColor: const Color(0xFF18181A),
+            foregroundColor: fuzzzyColors.ground,
             child: AnimatedIcon(
               icon: AnimatedIcons.menu_close,
               progress: _animation,

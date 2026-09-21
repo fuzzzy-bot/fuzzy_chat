@@ -300,7 +300,10 @@ class _VaultItemEditorPageState extends State<VaultItemEditorPage> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              child: Text(
+                'Delete',
+                style: TextStyle(color: context.fuzzzyColors.destructiveText),
+              ),
             ),
           ],
         );
@@ -370,9 +373,9 @@ class _VaultItemEditorPageState extends State<VaultItemEditorPage> {
                             )
                           else
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.delete_outline,
-                                color: Colors.red,
+                                color: context.fuzzzyColors.destructiveText,
                               ),
                               onPressed: () => _onDelete(context),
                             ),

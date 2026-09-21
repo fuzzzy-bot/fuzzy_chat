@@ -36,7 +36,7 @@ class _FileDropAreaState extends State<FileDropArea> {
           widget.child,
           if (_dragging)
             ColoredBox(
-              color: Colors.black.withValues(alpha: 0.4),
+              color: context.fuzzzyColors.ground.withValues(alpha: 0.4),
               child: Center(
                 child: Text(
                   context.fuzzyChatLocalizations.dropFilesHere,
