@@ -117,9 +117,7 @@ class MessageInputField extends StatelessWidget {
                     ),
                     child: Icon(
                       Icons.send,
-                      color: isEncrypting
-                          ? const Color(0xFF18181A)
-                          : fuzzzyColors.actionPrimaryFg,
+                      color: fuzzzyColors.actionPrimaryFg,
                     ),
                   ),
                 ),

@@ -34,10 +34,10 @@ class ConnectedChatTile extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         onLongPress: onLongPress,
-        leading: const Icon(
+        leading: Icon(
           Icons.lock,
           size: 32,
-          color: Color.fromARGB(210, 59, 103, 60),
+          color: fuzzzyColors.success,
         ),
         title: Text(
           name,

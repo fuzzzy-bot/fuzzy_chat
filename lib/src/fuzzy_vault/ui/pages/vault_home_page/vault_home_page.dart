@@ -83,7 +83,7 @@ class _VaultHomePageState extends State<VaultHomePage>
       floatingActionButton: FloatingActionButton(
         onPressed: () => _createItem(context),
         backgroundColor: context.fuzzzyColors.actionPrimaryBg,
-        child: const Icon(Icons.add, color: Colors.white),
+        child: Icon(Icons.add, color: context.fuzzzyColors.actionPrimaryFg),
       ),
     );
   }

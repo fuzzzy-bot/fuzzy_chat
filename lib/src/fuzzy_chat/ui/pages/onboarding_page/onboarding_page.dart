@@ -110,8 +110,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       child: Text(
                         _currentPage == 3 ? l10n.getStarted : l10n.next,
                         style: theme.textTheme.titleMedium?.copyWith(
-                          color:
-                              const Color(0xFF18181A), // Dark text on diffColor
+                          color: fuzzzyColors.ground, // dark text on inkFaint
                           fontWeight: FontWeight.bold,
                         ),
                       ),

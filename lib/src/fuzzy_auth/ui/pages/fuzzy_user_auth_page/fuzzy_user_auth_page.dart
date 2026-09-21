@@ -294,7 +294,7 @@ class _FuzzyUserAuthPageContentState extends State<_FuzzyUserAuthPageContent> {
             if (isLoading)
               Positioned.fill(
                 child: ColoredBox(
-                  color: Colors.black54,
+                  color: context.fuzzzyColors.ground.withValues(alpha: 0.54),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -305,7 +305,7 @@ class _FuzzyUserAuthPageContentState extends State<_FuzzyUserAuthPageContent> {
                             ? localizations.chatAuthResecuringKeys
                             : localizations.chatAuthMigratingKeys,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white,
+                          color: context.fuzzzyColors.ink,
                         ),
                       ),
                     ],
@@ -368,7 +368,7 @@ class _SetupPasswordSection extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 localizations.chatAuthPasswordsDoNotMatch,
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(color: context.fuzzzyColors.destructiveText),
               ),
             ],
             const SizedBox(height: 24),
@@ -448,7 +448,7 @@ class _ChangePasswordSection extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 localizations.chatAuthPasswordsDoNotMatch,
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(color: context.fuzzzyColors.destructiveText),
               ),
             ],
             const SizedBox(height: 24),
