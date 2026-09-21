@@ -20,7 +20,20 @@ $ flutter run --flavor staging --target lib/main_staging.dart
 $ flutter run --flavor production --target lib/main_production.dart
 ```
 
-_\*Fuzzy Chat works on iOS, Android, Mac, and Windows and Possibly on Linux
+Fuzzy Chat ships on Android, Windows, macOS and Linux (see `.github/workflows/main.yaml`). iOS builds
+(`flutter build ios --flavor development -t lib/main_development.dart`) but is not in the App Store; the
+web build is unsupported because the encryption core is native code.
+
+---
+
+## Cryptography
+
+All cryptography runs in the Rust crate `rust/fuzzy_crypto_core`, reached through `flutter_rust_bridge`;
+no cryptographic code is written in Dart. The protocol and every wire format are specified in
+[`security/PROTOCOL.md`](security/PROTOCOL.md), what the app defends against in
+[`security/THREAT_MODEL.md`](security/THREAT_MODEL.md), the 2026 hardening (what changed and why) in
+[`security/HARDENING_2026.md`](security/HARDENING_2026.md), and how releases are built and verified in
+[`security/RELEASE.md`](security/RELEASE.md).
 
 ---
 

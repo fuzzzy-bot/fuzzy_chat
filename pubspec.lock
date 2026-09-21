@@ -105,6 +105,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.1"
+  build_cli_annotations:
+    dependency: transitive
+    description:
+      name: build_cli_annotations
+      sha256: e563c2e01de8974566a1998410d3f6f03521788160a02503b0b1f1a46c7b3d95
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.1"
   characters:
     dependency: transitive
     description:
@@ -315,6 +323,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.26"
+  flutter_rust_bridge:
+    dependency: "direct main"
+    description:
+      name: flutter_rust_bridge
+      sha256: ec69331e2335ab4d456c0a9fc700892c2c85b72b9c0cb39df3ecfe8833d5d5c8
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.13.0"
   flutter_secure_storage:
     dependency: "direct main"
     description:
@@ -381,12 +397,21 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.0"
+  fuzzy_crypto_core:
+    dependency: "direct main"
+    description:
+      path: rust_builder
+      relative: true
+    source: path
+    version: "0.0.1"
   fuzzzy_ui_kit:
     dependency: "direct main"
     description:
-      path: "../fuzzy_design"
-      relative: true
-    source: path
+      path: "."
+      ref: "6ad980211cdaece6e7764f0ea379e86a98c56b4a"
+      resolved-ref: "6ad980211cdaece6e7764f0ea379e86a98c56b4a"
+      url: "https://github.com/fuzzzy-bot/fuzzy_design.git"
+    source: git
     version: "0.1.0"
   get_it:
     dependency: "direct main"
@@ -548,6 +573,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.0"
+  marionette_flutter:
+    dependency: "direct main"
+    description:
+      name: marionette_flutter
+      sha256: "9bf6aa531157edeb3d94f7c4972367240a1d704bbe9f4ac558ef1a125c4d1a6d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.0"
+  marionette_mcp:
+    dependency: "direct dev"
+    description:
+      name: marionette_mcp
+      sha256: "24a2b3277c659367e3d6c306d35d35600fc78c5d28512f06bc843cb2e65e21b3"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.0"
   matcher:
     dependency: transitive
     description:
@@ -564,14 +605,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.13.0"
+  mcp_dart:
+    dependency: transitive
+    description:
+      name: mcp_dart
+      sha256: "5a185c1c02e90239e6f3ebca05ef51e04ac0f9c2b1b7ec7ffbb1a671a6379729"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.2"
   meta:
     dependency: transitive
     description:
       name: meta
-      sha256: "1741988757a65eb6b36abe716829688cf01910bbf91c34354ff7ec1c3de2b349"
+      sha256: "23f08335362185a5ea2ad3a4e597f1375e78bce8a040df5c600c8d3552ef2394"
       url: "https://pub.dev"
     source: hosted
-    version: "1.18.0"
+    version: "1.17.0"
   mime:
     dependency: transitive
     description:
@@ -740,13 +789,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
-  pointycastle:
-    dependency: "direct main"
-    description:
-      path: "packages/pointycastle"
-      relative: true
-    source: path
-    version: "4.0.0"
   pool:
     dependency: transitive
     description:
@@ -956,26 +998,26 @@ packages:
     dependency: transitive
     description:
       name: test
-      sha256: "8d9ceddbab833f180fbefed08afa76d7c03513dfdba87ffcec2718b02bbcbf20"
+      sha256: "280d6d890011ca966ad08df7e8a4ddfab0fb3aa49f96ed6de56e3521347a9ae7"
       url: "https://pub.dev"
     source: hosted
-    version: "1.31.0"
+    version: "1.30.0"
   test_api:
     dependency: transitive
     description:
       name: test_api
-      sha256: "949a932224383300f01be9221c39180316445ecb8e7547f70a41a35bf421fb9e"
+      sha256: "8161c84903fd860b26bfdefb7963b3f0b68fee7adea0f59ef805ecca346f0c7a"
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.11"
+    version: "0.7.10"
   test_core:
     dependency: transitive
     description:
       name: test_core
-      sha256: "1991d4cfe85d5043241acac92962c3977c8d2f2add1ee73130c7b286417d1d34"
+      sha256: "0381bd1585d1a924763c308100f2138205252fb90c9d4eeaf28489ee65ccde51"
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.17"
+    version: "0.6.16"
   typed_data:
     dependency: transitive
     description:

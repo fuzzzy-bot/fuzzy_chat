@@ -655,10 +655,32 @@ class FuzzyChatLocalizationsEn extends FuzzyChatLocalizations {
   String get chatAuthMigratingKeys => 'Encrypting your keys...';
 
   @override
+  String get chatAuthResecuringKeys => 'Re-securing your keys…';
+
+  @override
   String get chatAuthentication => 'Chat Authentication';
 
   @override
   String get chatAuthenticationDescription => 'Manage chat password protection';
+
+  @override
+  String get benchmarkFileEncryption => 'Benchmark file encryption (dev)';
+
+  @override
+  String get benchmarkFileEncryptionDescription =>
+      'Fuzzes and unfuzzes a 64 MiB temp file and reports MB/s';
+
+  @override
+  String get benchmarkResult => 'Benchmark result';
+
+  @override
+  String benchmarkResultSummary(Object encrypt, Object decrypt, Object sizeMiB,
+      Object encryptKdf, Object decryptKdf, Object device, Object buildMode) {
+    return 'Encrypt: $encrypt MB/s · Decrypt: $decrypt MB/s ($sizeMiB MiB)\nArgon2id: $encryptKdf s / $decryptKdf s (not in the MB/s)\n$device · $buildMode build';
+  }
+
+  @override
+  String get close => 'Close';
 
   @override
   String get chatAuthBiometricUnlock => 'Unlock with biometrics';
@@ -740,6 +762,163 @@ class FuzzyChatLocalizationsEn extends FuzzyChatLocalizations {
   String get chatAuthEnterPassword => 'Please enter your current password';
 
   @override
+  String get chatAuthPasswordChanged => 'Chat Password Changed';
+
+  @override
   String get vaultFileSaveWarning =>
       '⚠️ The original file is NOT auto-deleted. After a successful save, the user\'s source file remains on disk untouched. The app currently doesn\'t warn about this.';
+
+  @override
+  String get invitationAlreadyUsed => 'This invitation was already used.';
+
+  @override
+  String get invalidInvitation => 'This invitation is invalid or damaged.';
+
+  @override
+  String get invalidAcceptance => 'This acceptance is invalid or damaged.';
+
+  @override
+  String get wrongChatBlob => 'This code belongs to a different chat.';
+
+  @override
+  String get alreadyUnfuzzed =>
+      'This message was already unfuzzed on this device.';
+
+  @override
+  String get blobTooOld =>
+      'This message is too old to unfuzz — too many newer messages were unfuzzed first.';
+
+  @override
+  String get corruptBlob => 'This is not a valid fuzzed message.';
+
+  @override
+  String get safetyNumberTitle => 'Safety number';
+
+  @override
+  String get safetyNumberExplanation =>
+      'Compare these digits with your partner by voice or in person. Until they match, someone who intercepted the invitation or acceptance could be in the middle.';
+
+  @override
+  String get safetyNumberMarkVerified => 'Mark as verified';
+
+  @override
+  String get safetyNumberUnmark => 'Unmark';
+
+  @override
+  String get safetyNumberVerifiedBadge => 'Verified';
+
+  @override
+  String get verifySafetyNumberCta => 'Verify safety number';
+
+  @override
+  String get wrongPasswordFile =>
+      'Wrong password — this file cannot be unfuzzed with it.';
+
+  @override
+  String get fileStillArriving =>
+      'This file is still being written — wait until it has fully arrived, then try again.';
+
+  @override
+  String get fileCannotBeOpenedAskToResend =>
+      'This file cannot be opened; ask the sender to send it again.';
+
+  @override
+  String get basicsWrongPassword =>
+      'Incorrect key — this text cannot be unfuzzed with it.';
+
+  @override
+  String get forwardSecrecyTitle => 'Unfuzzed once, on this device';
+
+  @override
+  String get forwardSecrecyNotice =>
+      'Each fuzzed message can be unfuzzed once, on this device only. Your history stays in the app — export an archive to back it up. A new device cannot re-read old blobs.';
+
+  @override
+  String get aboutEncryptionTitle => 'About encryption';
+
+  @override
+  String get aboutEncryptionDescription =>
+      'What single-use unfuzzing means, and how your history is kept';
+
+  @override
+  String get aboutEncryptionHistoryTitle => 'Your history on this device';
+
+  @override
+  String get aboutEncryptionBodyHistory =>
+      'Every text you send or unfuzz is kept in the app, sealed per chat under a key only this device holds. If you set an app-lock password, that key is protected by it — without the password, the stored text history cannot be opened. Unfuzzed files are different: they are saved as ordinary files in this chat’s folder on the device and are not sealed or locked by the app — anyone who can read the device’s storage can open them, so protect them like any other file. Once unlocked, your chats stay open until you close the app; the app does not lock itself after a while. If you turn on biometric unlock, your password is stored securely on this device so a fingerprint or face can release it.';
+
+  @override
+  String get aboutEncryptionWindowTitle => 'Unfuzz in order';
+
+  @override
+  String get aboutEncryptionBodyWindow =>
+      'The app keeps keys for skipped messages, but not without limit. A blob more than 63 messages behind the newest one you already read in that chat can no longer be unfuzzed — the app says it is too old — and no more than 40 skipped messages are kept at once. Your own sent blobs cannot be unfuzzed by you either; that is why the app keeps what you sent.';
+
+  @override
+  String get aboutEncryptionLinksTitle => 'Message links';
+
+  @override
+  String get aboutEncryptionBodyLinks =>
+      'A message copied or shared as a link carries the chat’s id next to the blob, so tapping the link opens the right chat. The id is not part of the secret, but anyone who sees the link can tell which chat it belongs to. The blob itself carries no chat id.';
+
+  @override
+  String get aboutEncryptionErrorsTitle => 'What the errors mean';
+
+  @override
+  String get aboutEncryptionBodyErrors =>
+      '“Already unfuzzed”: this blob was unfuzzed on this device before and cannot be read a second time. “Not a valid fuzzed message”: the blob is damaged, incomplete, or belongs to a different chat — the app cannot tell these apart. “Too old”: too many newer messages were unfuzzed first. “Incorrect key” / “Wrong password” (Basics): the key or password does not match, or the text or file is damaged — the app cannot tell these apart either. For files, a receive that fails or is cancelled after it started has already used the file’s one-time key: ask the sender to send the file again.';
+
+  @override
+  String get aboutEncryptionBodySafetyNumber =>
+      'Every chat has a 60-digit safety number, computed from both devices’ identity keys. Compare it with your partner by voice or in person: if the digits match, nobody sat in the middle when you paired. “Verified” is your own note that you did this — the app cannot check it for you.';
+
+  @override
+  String get aboutEncryptionUnderTheHoodTitle => 'Under the hood';
+
+  @override
+  String get aboutEncryptionBodyUnderTheHood =>
+      'Messages use the Olm double ratchet (vodozemac, independently audited) — a fresh key per message, which is what makes a blob single-use. Files are sealed with XChaCha20-Poly1305 in chunks; a damaged file is refused and nothing is left on disk. Passwords go through Argon2id. Your secret keys live in the app’s native core and are never sent anywhere. There is no web version: the core is native code.';
+
+  @override
+  String get alreadyReceived =>
+      'This file was already received on this device — it cannot be unfuzzed a second time.';
+
+  @override
+  String get fileTooOld =>
+      'This file is too old to unfuzz — too many newer messages were unfuzzed first.';
+
+  @override
+  String get fileCorrupt =>
+      'This is not a valid fuzzed file — it is damaged, incomplete, or from a different chat.';
+
+  @override
+  String get fileCancelled =>
+      'Receiving was cancelled — this file cannot be unfuzzed on this device now; ask the sender to send it again.';
+
+  @override
+  String get exportChatArchive => 'Export chat archive';
+
+  @override
+  String get exportChatArchiveDescription =>
+      'Seals this chat\'s history into a password-protected file (one message per line). Open it later in Basic Encryption → file decryption with the same password.';
+
+  @override
+  String get exportChatArchivePassword => 'Archive password';
+
+  @override
+  String get exportChatArchiveDone => 'Chat archive exported.';
+
+  @override
+  String get exportChatArchiveFailed => 'Failed to export the chat archive.';
+
+  @override
+  String get exportChatArchiveNothingToExport =>
+      'This chat has no messages to export.';
+
+  @override
+  String get exportChatArchiveStoreLocked =>
+      'Unlock Fuzzy Chat first — your history cannot be read while it is locked.';
+
+  @override
+  String get export => 'Export';
 }

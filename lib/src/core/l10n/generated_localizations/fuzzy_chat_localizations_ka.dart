@@ -662,10 +662,32 @@ class FuzzyChatLocalizationsKa extends FuzzyChatLocalizations {
   String get chatAuthMigratingKeys => 'გასაღებების დაშიფვრა...';
 
   @override
+  String get chatAuthResecuringKeys => 'გასაღებების ხელახლა დაცვა…';
+
+  @override
   String get chatAuthentication => 'ჩატის ავთენტიფიკაცია';
 
   @override
   String get chatAuthenticationDescription => 'ჩატის პაროლით დაცვის მართვა';
+
+  @override
+  String get benchmarkFileEncryption => 'ფაილის დაშიფვრის ბენჩმარკი (dev)';
+
+  @override
+  String get benchmarkFileEncryptionDescription =>
+      'ფაზავს და ხსნის 64 MiB დროებით ფაილს და აჩვენებს MB/s-ს';
+
+  @override
+  String get benchmarkResult => 'ბენჩმარკის შედეგი';
+
+  @override
+  String benchmarkResultSummary(Object encrypt, Object decrypt, Object sizeMiB,
+      Object encryptKdf, Object decryptKdf, Object device, Object buildMode) {
+    return 'დაშიფვრა: $encrypt MB/s · გაშიფვრა: $decrypt MB/s ($sizeMiB MiB)\nArgon2id: $encryptKdf წმ / $decryptKdf წმ (MB/s-ში არ შედის)\n$device · $buildMode ბილდი';
+  }
+
+  @override
+  String get close => 'დახურვა';
 
   @override
   String get chatAuthBiometricUnlock => 'განბლოკვა ბიომეტრიით';
@@ -749,6 +771,163 @@ class FuzzyChatLocalizationsKa extends FuzzyChatLocalizations {
   String get chatAuthEnterPassword => 'გთხოვთ შეიყვანოთ მიმდინარე პაროლი';
 
   @override
+  String get chatAuthPasswordChanged => 'ჩატის პაროლი შეიცვალა';
+
+  @override
   String get vaultFileSaveWarning =>
       '⚠️ ორიგინალი ფაილი არ იშლება ავტომატურად. შენახვის შემდეგ ფაილი რჩება მოწყობილობაზე. გთხოვთ წაშალოთ ის უსაფრთხოების მიზნით.';
+
+  @override
+  String get invitationAlreadyUsed => 'ეს მოწვევა უკვე გამოყენებულია.';
+
+  @override
+  String get invalidInvitation => 'ეს მოწვევა არასწორია ან დაზიანებულია.';
+
+  @override
+  String get invalidAcceptance => 'ეს მიღება არასწორია ან დაზიანებულია.';
+
+  @override
+  String get wrongChatBlob => 'ეს კოდი სხვა ჩატს ეკუთვნის.';
+
+  @override
+  String get alreadyUnfuzzed =>
+      'ეს შეტყობინება ამ მოწყობილობაზე უკვე გაშიფრულია.';
+
+  @override
+  String get blobTooOld =>
+      'ეს შეტყობინება გასაშიფრად ძალიან ძველია — მასზე ბევრად ახალი შეტყობინებები უკვე გაშიფრულია.';
+
+  @override
+  String get corruptBlob => 'ეს არ არის სწორი დაშიფრული შეტყობინება.';
+
+  @override
+  String get safetyNumberTitle => 'უსაფრთხოების ნომერი';
+
+  @override
+  String get safetyNumberExplanation =>
+      'შეადარეთ ეს ციფრები თქვენს პარტნიორს ხმით ან პირადად. სანამ ისინი არ დაემთხვევა, შესაძლოა ვინმემ, ვინც მოწვევა ან მიღება გადაიჭირა, შუაში იყოს.';
+
+  @override
+  String get safetyNumberMarkVerified => 'მონიშნე როგორც დადასტურებული';
+
+  @override
+  String get safetyNumberUnmark => 'მონიშვნის მოხსნა';
+
+  @override
+  String get safetyNumberVerifiedBadge => 'დადასტურებული';
+
+  @override
+  String get verifySafetyNumberCta => 'უსაფრთხოების ნომრის შემოწმება';
+
+  @override
+  String get wrongPasswordFile =>
+      'არასწორი პაროლი — ამ პაროლით ამ ფაილის გაშიფვრა ვერ მოხერხდება.';
+
+  @override
+  String get fileStillArriving =>
+      'ეს ფაილი ჯერ კიდევ იწერება — დაელოდეთ სრულად ჩამოტვირთვას და სცადეთ ხელახლა.';
+
+  @override
+  String get fileCannotBeOpenedAskToResend =>
+      'ამ ფაილის გახსნა ვერ მოხერხდა; სთხოვეთ გამომგზავნს, ხელახლა გამოგზავნოს.';
+
+  @override
+  String get basicsWrongPassword =>
+      'არასწორი გასაღები — ამ გასაღებით ამ ტექსტის გაშიფვრა ვერ მოხერხდება.';
+
+  @override
+  String get forwardSecrecyTitle => 'იშიფრება ერთხელ, ამ მოწყობილობაზე';
+
+  @override
+  String get forwardSecrecyNotice =>
+      'თითოეული დაშიფრული შეტყობინების გაშიფვრა მხოლოდ ერთხელ და მხოლოდ ამ მოწყობილობაზე შეიძლება. თქვენი ისტორია აპლიკაციაში რჩება — სარეზერვო ასლისთვის არქივის ექსპორტი გააკეთეთ. ახალ მოწყობილობას ძველი შეტყობინებების ხელახლა წაკითხვა არ შეუძლია.';
+
+  @override
+  String get aboutEncryptionTitle => 'დაშიფვრის შესახებ';
+
+  @override
+  String get aboutEncryptionDescription =>
+      'რას ნიშნავს ერთჯერადი გაშიფვრა და როგორ ინახება თქვენი ისტორია';
+
+  @override
+  String get aboutEncryptionHistoryTitle => 'თქვენი ისტორია ამ მოწყობილობაზე';
+
+  @override
+  String get aboutEncryptionBodyHistory =>
+      'ყველა ტექსტი, რომელსაც აგზავნით ან გაშიფრავთ, აპლიკაციაში ინახება — თითოეული ჩატისთვის ცალკე გასაღებით დალუქული, რომელიც მხოლოდ ამ მოწყობილობას აქვს. თუ აპლიკაციის ჩაკეტვის პაროლი გაქვთ დაყენებული, ეს გასაღები მით არის დაცული — პაროლის გარეშე შენახული ტექსტური ისტორია ვერ გაიხსნება. გაშიფრული ფაილები სხვაგვარადაა: ისინი ჩვეულებრივი ფაილების სახით ინახება ამ ჩატის საქაღალდეში მოწყობილობაზე და აპლიკაცია მათ არც ლუქავს და არც კეტავს — ვისაც მოწყობილობის მეხსიერების წაკითხვა შეუძლია, მათ გახსნასაც შეძლებს, ამიტომ დაიცავით ისინი, როგორც ნებისმიერი სხვა ფაილი. განბლოკვის შემდეგ ჩატები ღია რჩება, სანამ აპლიკაციას არ დახურავთ; აპლიკაცია დროის გასვლის შემდეგ თავისით არ იკეტება. თუ ბიომეტრიულ განბლოკვას ჩართავთ, თქვენი პაროლი ამ მოწყობილობაზე უსაფრთხოდ ინახება, რათა თითის ანაბეჭდით ან სახით გაიხსნას.';
+
+  @override
+  String get aboutEncryptionWindowTitle => 'გაშიფრეთ თანმიმდევრობით';
+
+  @override
+  String get aboutEncryptionBodyWindow =>
+      'აპლიკაცია გამოტოვებული შეტყობინებების გასაღებებს ინახავს, მაგრამ არა უსასრულოდ. შეტყობინება, რომელიც ამ ჩატში თქვენ მიერ ბოლოს წაკითხულს 63-ზე მეტით ჩამორჩება, ვეღარ გაიშიფრება — აპლიკაცია იტყვის, რომ ის ძალიან ძველია — და ერთდროულად 40-ზე მეტი გამოტოვებული შეტყობინების გასაღები არ ინახება. თქვენ მიერ გაგზავნილ დაშიფრულ შეტყობინებებს თავადაც ვერ გაშიფრავთ; სწორედ ამიტომ ინახავს აპლიკაცია გაგზავნილ ტექსტს.';
+
+  @override
+  String get aboutEncryptionLinksTitle => 'შეტყობინების ბმულები';
+
+  @override
+  String get aboutEncryptionBodyLinks =>
+      'ბმულის სახით კოპირებულ ან გაზიარებულ შეტყობინებას დაშიფრულ ტექსტთან ერთად ჩატის იდენტიფიკატორიც მიჰყვება, რათა ბმულმა სწორი ჩატი გახსნას. ეს იდენტიფიკატორი საიდუმლოს ნაწილი არ არის, მაგრამ ვინც ბმულს ხედავს, მიხვდება, რომელ ჩატს ეკუთვნის. თავად დაშიფრული ტექსტი ჩატის იდენტიფიკატორს არ შეიცავს.';
+
+  @override
+  String get aboutEncryptionErrorsTitle => 'რას ნიშნავს შეცდომები';
+
+  @override
+  String get aboutEncryptionBodyErrors =>
+      '„უკვე გაშიფრულია“: ეს შეტყობინება ამ მოწყობილობაზე უკვე გაიშიფრა და მეორედ ვეღარ წაიკითხება. „ეს არ არის სწორი დაშიფრული შეტყობინება“: ტექსტი დაზიანებულია, არასრულია ან სხვა ჩატს ეკუთვნის — აპლიკაცია ამათ ერთმანეთისგან ვერ არჩევს. „ძალიან ძველია“: მასზე ბევრად ახალი შეტყობინებები უკვე გაიშიფრა. „არასწორი გასაღები“ / „არასწორი პაროლი“ (მარტივი დაშიფრვა): გასაღები ან პაროლი არ ემთხვევა, ან ტექსტი თუ ფაილი დაზიანებულია — აპლიკაცია ამასაც ვერ არჩევს. ფაილების შემთხვევაში, თუ მიღება დაწყების შემდეგ ჩაიშალა ან გაუქმდა, ფაილის ერთჯერადი გასაღები უკვე გამოყენებულია: სთხოვეთ გამომგზავნს, ხელახლა გამოგზავნოს.';
+
+  @override
+  String get aboutEncryptionBodySafetyNumber =>
+      'ყველა ჩატს აქვს 60-ნიშნა უსაფრთხოების ნომერი, რომელიც ორივე მოწყობილობის საიდენტიფიკაციო გასაღებებიდან გამოითვლება. შეადარეთ ის თქვენს პარტნიორს ხმით ან პირადად: თუ ციფრები ემთხვევა, დაკავშირებისას შუაში არავინ იდგა. „დადასტურებული“ თქვენი საკუთარი ნიშანია, რომ ეს გააკეთეთ — აპლიკაცია ამას თქვენ მაგივრად ვერ შეამოწმებს.';
+
+  @override
+  String get aboutEncryptionUnderTheHoodTitle => 'როგორ მუშაობს';
+
+  @override
+  String get aboutEncryptionBodyUnderTheHood =>
+      'შეტყობინებები Olm-ის ორმაგ რაჩეტს (double ratchet) იყენებს (vodozemac, დამოუკიდებლად აუდიტირებული) — ყოველ შეტყობინებას ახალი გასაღები აქვს, სწორედ ამიტომ არის დაშიფრული ტექსტი ერთჯერადი. ფაილები XChaCha20-Poly1305-ით ნაწილ-ნაწილ ილუქება; დაზიანებული ფაილი უარყოფილი იქნება და დისკზე არაფერი რჩება. პაროლები Argon2id-ით მუშავდება. თქვენი საიდუმლო გასაღებები აპლიკაციის ნატიურ ბირთვშია და არსად არ იგზავნება. ვებ-ვერსია არ არსებობს: ბირთვი ნატიური კოდია.';
+
+  @override
+  String get alreadyReceived =>
+      'ეს ფაილი ამ მოწყობილობაზე უკვე მიღებულია — მეორედ ვეღარ გაიშიფრება.';
+
+  @override
+  String get fileTooOld =>
+      'ეს ფაილი გასაშიფრად ძალიან ძველია — მასზე ბევრად ახალი შეტყობინებები უკვე გაშიფრულია.';
+
+  @override
+  String get fileCorrupt =>
+      'ეს არ არის სწორი დაშიფრული ფაილი — ის დაზიანებულია, არასრულია ან სხვა ჩატიდანაა.';
+
+  @override
+  String get fileCancelled =>
+      'მიღება გაუქმდა — ამ ფაილის გაშიფვრა ამ მოწყობილობაზე აღარ შეიძლება; სთხოვეთ გამომგზავნს, ხელახლა გამოგზავნოს.';
+
+  @override
+  String get exportChatArchive => 'ჩატის არქივის ექსპორტი';
+
+  @override
+  String get exportChatArchiveDescription =>
+      'ამ ჩატის ისტორია პაროლით დაცულ ფაილში იფუთება (თითო შეტყობინება თითო ხაზზე). მოგვიანებით გახსენით მარტივი დაშიფრვა → ფაილის გაშიფრვა იმავე პაროლით.';
+
+  @override
+  String get exportChatArchivePassword => 'არქივის პაროლი';
+
+  @override
+  String get exportChatArchiveDone => 'ჩატის არქივი ექსპორტირებულია.';
+
+  @override
+  String get exportChatArchiveFailed => 'ჩატის არქივის ექსპორტი ვერ მოხერხდა.';
+
+  @override
+  String get exportChatArchiveNothingToExport =>
+      'ამ ჩატში ექსპორტისთვის შეტყობინებები არ არის.';
+
+  @override
+  String get exportChatArchiveStoreLocked =>
+      'ჯერ განბლოკეთ Fuzzy Chat — დაბლოკილი ისტორიის წაკითხვა შეუძლებელია.';
+
+  @override
+  String get export => 'ექსპორტი';
 }

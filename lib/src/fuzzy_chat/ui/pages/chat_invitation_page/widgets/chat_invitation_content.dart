@@ -75,7 +75,7 @@ class _ChatInvitationContentState extends State<ChatInvitationContent> {
                     Clipboard.setData(
                       ClipboardData(text: widget.invitationContent),
                     ).then((_) {
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       FuzzzyToast.show(
                         context,
                         message: localizations.invitationCopiedToClipboard,
@@ -118,7 +118,7 @@ class _ChatInvitationContentState extends State<ChatInvitationContent> {
                       widget.invitationContent,
                     );
                     Clipboard.setData(ClipboardData(text: link)).then((_) {
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       FuzzzyToast.show(
                         context,
                         message: localizations.linkCopiedToClipboard,
@@ -126,6 +126,14 @@ class _ChatInvitationContentState extends State<ChatInvitationContent> {
                     });
                   });
                 },
+              ),
+              const SizedBox(height: 20),
+              Text(
+                localizations.forwardSecrecyNotice,
+                textAlign: TextAlign.start,
+                style: fuzzzyTextStyles.bodyS.copyWith(
+                  color: fuzzzyColors.inkMute,
+                ),
               ),
               const SizedBox(height: 32),
               Divider(

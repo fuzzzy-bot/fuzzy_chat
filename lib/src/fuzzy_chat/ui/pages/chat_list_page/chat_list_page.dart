@@ -44,7 +44,8 @@ class _ProvidedChatListPageState extends State<ProvidedChatListPage> {
                 child: FuzzzyEmptyState(
                   title:
                       state.failure?.message ?? localizations.failedToLoadChats,
-                  message: localizations.unexpectedFailureOccuredPleaseContactUs,
+                  message:
+                      localizations.unexpectedFailureOccuredPleaseContactUs,
                 ),
               ),
             ),

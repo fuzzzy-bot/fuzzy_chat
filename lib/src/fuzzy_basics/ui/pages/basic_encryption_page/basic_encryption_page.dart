@@ -14,15 +14,19 @@ class BasicEncryptionPage extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<BasicEncryptionCubit>(
-          create: (context) => BasicEncryptionCubit(),
+          create: (context) => BasicEncryptionCubit(
+            cryptoCoreService: sl.get<CryptoCoreService>(),
+          ),
         ),
         BlocProvider<CustomFileProcessingCubit<FileEncryptionOption>>(
           create: (context) => CustomFileProcessingCubit(
+            cryptoCoreService: sl.get<CryptoCoreService>(),
             processingOption: const FileEncryptionOption(),
           ),
         ),
         BlocProvider<CustomFileProcessingCubit<FileDecryptionOption>>(
           create: (context) => CustomFileProcessingCubit(
+            cryptoCoreService: sl.get<CryptoCoreService>(),
             processingOption: const FileDecryptionOption(),
           ),
         ),
@@ -71,13 +75,17 @@ class _ProvidedBasicEncryptionPageState
   void _processFiles() {
     final key = _keyController.text;
     if (key.isEmpty) {
-      FuzzzyToast.show(context,
-          message: context.fuzzyChatLocalizations.pleaseEnterAKey,);
+      FuzzzyToast.show(
+        context,
+        message: context.fuzzyChatLocalizations.pleaseEnterAKey,
+      );
       return;
     }
     if (_selectedFilePaths?.isNotEmpty != true) {
-      FuzzzyToast.show(context,
-          message: context.fuzzyChatLocalizations.pleaseSelectFilesToProcess,);
+      FuzzzyToast.show(
+        context,
+        message: context.fuzzyChatLocalizations.pleaseSelectFilesToProcess,
+      );
       return;
     }
 
@@ -125,6 +133,10 @@ class _ProvidedBasicEncryptionPageState
       case 'decryptionFailedCheckYourKeyOrEncryptedText':
         return context
             .fuzzyChatLocalizations.decryptionFailedCheckYourKeyOrEncryptedText;
+      case 'basicsWrongPassword':
+        return context.fuzzyChatLocalizations.basicsWrongPassword;
+      case 'corruptBlob':
+        return context.fuzzyChatLocalizations.corruptBlob;
       default:
         return message;
     }
@@ -141,9 +153,14 @@ class _ProvidedBasicEncryptionPageState
                 _resultText = state.result ?? '';
               });
             } else if (state.status.isFailed) {
-              FuzzzyToast.show(context,
-                  message:
-                      _localizeFailureMessage(context, state.failure?.message),);
+              setState(() {
+                _resultText = '';
+              });
+              FuzzzyToast.show(
+                context,
+                message:
+                    _localizeFailureMessage(context, state.failure?.message),
+              );
             }
           },
         ),

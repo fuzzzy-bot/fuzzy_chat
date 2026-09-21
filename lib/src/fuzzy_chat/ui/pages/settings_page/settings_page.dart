@@ -1,4 +1,9 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fuzzy_chat/lib.dart';
 import 'package:fuzzzy_ui_kit/fuzzzy_ui_kit.dart';
 import 'package:go_router/go_router.dart';
@@ -12,11 +17,21 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   late CopySecurityLevel _securityLevel;
+  late final FileBenchmarkCubit? _fileBenchmarkCubit;
 
   @override
   void initState() {
     super.initState();
     _securityLevel = sl.get<PreferencesService>().copySecurityLevel;
+    _fileBenchmarkCubit = isFileBenchmarkEnabled
+        ? FileBenchmarkCubit(cryptoCoreService: sl.get<CryptoCoreService>())
+        : null;
+  }
+
+  @override
+  void dispose() {
+    _fileBenchmarkCubit?.close();
+    super.dispose();
   }
 
   void _onSecurityLevelChanged(CopySecurityLevel level) {
@@ -24,6 +39,67 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _securityLevel = level;
     });
+  }
+
+  String _benchmarkSummary(
+    FuzzyChatLocalizations localizations,
+    FileBenchmarkResult result,
+  ) {
+    String seconds(Duration duration) =>
+        (duration.inMilliseconds / 1000).toStringAsFixed(2);
+
+    return localizations.benchmarkResultSummary(
+      result.encryptMbPerSecond.toStringAsFixed(1),
+      result.decryptMbPerSecond.toStringAsFixed(1),
+      result.sizeBytes ~/ (1024 * 1024),
+      seconds(result.encryptKeyDerivation),
+      seconds(result.decryptKeyDerivation),
+      '${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
+      kDebugMode ? 'debug' : (kProfileMode ? 'profile' : 'release'),
+    );
+  }
+
+  Future<void> _showBenchmarkResult(FileBenchmarkResult result) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        final localizations = context.fuzzyChatLocalizations;
+        final summary = _benchmarkSummary(localizations, result);
+
+        return AlertDialog(
+          title: Text(localizations.benchmarkResult),
+          content: Text(summary),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: summary)).then((_) {
+                  if (!context.mounted) return;
+                  FuzzzyToast.show(
+                    context,
+                    message: localizations.copiedToTheClipboard,
+                  );
+                });
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: context.fuzzzyColors.focus,
+              ),
+              child: Text(
+                localizations.copy,
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: context.fuzzzyColors.focus,
+              ),
+              child: Text(
+                localizations.close,
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -34,6 +110,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final localizations = context.fuzzyChatLocalizations;
 
     final isStrict = _securityLevel == CopySecurityLevel.strict;
+    final fileBenchmarkCubit = _fileBenchmarkCubit;
 
     return FuzzyScaffold(
       body: CustomScrollView(
@@ -96,6 +173,43 @@ class _SettingsPageState extends State<SettingsPage> {
                     fuzzzyColors: fuzzzyColors,
                     fuzzzyTextStyles: fuzzzyTextStyles,
                   ),
+                  const SizedBox(height: 12),
+                  _SettingsLinkTile(
+                    icon: Icons.lock_clock,
+                    title: localizations.aboutEncryptionTitle,
+                    subtitle: localizations.aboutEncryptionDescription,
+                    onTap: () => context.push(AppRouter.aboutEncryption),
+                    fuzzzyColors: fuzzzyColors,
+                    fuzzzyTextStyles: fuzzzyTextStyles,
+                  ),
+                  if (fileBenchmarkCubit != null) ...[
+                    const SizedBox(height: 12),
+                    BlocConsumer<FileBenchmarkCubit, FileBenchmarkState>(
+                      bloc: fileBenchmarkCubit,
+                      listenWhen: (previous, current) =>
+                          previous.status != current.status,
+                      listener: (context, state) {
+                        if (state.status.isSuccess) {
+                          _showBenchmarkResult(state.result!);
+                        } else if (state.status.isFailed) {
+                          FuzzzyToast.show(
+                            context,
+                            message: localizations.anUnknownErrorOccurred,
+                          );
+                        }
+                      },
+                      builder: (context, state) => _SettingsLinkTile(
+                        icon: Icons.speed,
+                        title: localizations.benchmarkFileEncryption,
+                        subtitle: state.status.isLoading
+                            ? localizations.loading
+                            : localizations.benchmarkFileEncryptionDescription,
+                        onTap: fileBenchmarkCubit.run,
+                        fuzzzyColors: fuzzzyColors,
+                        fuzzzyTextStyles: fuzzzyTextStyles,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -133,7 +247,7 @@ class _SettingsLinkTile extends StatelessWidget {
           color: fuzzzyColors.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: fuzzzyColors.focus.withOpacity(0.2),
+            color: fuzzzyColors.focus.withValues(alpha: 0.2),
           ),
         ),
         child: Row(
@@ -204,10 +318,12 @@ class _SecurityLevelTile extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.12) : fuzzzyColors.surface,
+          color:
+              isSelected ? color.withValues(alpha: 0.12) : fuzzzyColors.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? color : fuzzzyColors.focus.withOpacity(0.2),
+            color:
+                isSelected ? color : fuzzzyColors.focus.withValues(alpha: 0.2),
             width: isSelected ? 1.5 : 1,
           ),
         ),

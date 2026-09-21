@@ -75,8 +75,7 @@ class VaultGroupFilter extends StatelessWidget {
               hintText: currentContextLocalization.vaultGroupName,
               hintStyle: TextStyle(color: context.fuzzzyColors.inkMute),
               enabledBorder: UnderlineInputBorder(
-                borderSide:
-                    BorderSide(color: context.fuzzzyColors.inkMute),
+                borderSide: BorderSide(color: context.fuzzzyColors.inkMute),
               ),
               focusedBorder: UnderlineInputBorder(
                 borderSide: BorderSide(color: context.fuzzzyColors.focusBorder),

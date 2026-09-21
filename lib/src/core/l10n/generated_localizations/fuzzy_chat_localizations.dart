@@ -1308,6 +1308,12 @@ abstract class FuzzyChatLocalizations {
   /// **'Encrypting your keys...'**
   String get chatAuthMigratingKeys;
 
+  /// No description provided for @chatAuthResecuringKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-securing your keys…'**
+  String get chatAuthResecuringKeys;
+
   /// No description provided for @chatAuthentication.
   ///
   /// In en, this message translates to:
@@ -1319,6 +1325,37 @@ abstract class FuzzyChatLocalizations {
   /// In en, this message translates to:
   /// **'Manage chat password protection'**
   String get chatAuthenticationDescription;
+
+  /// No description provided for @benchmarkFileEncryption.
+  ///
+  /// In en, this message translates to:
+  /// **'Benchmark file encryption (dev)'**
+  String get benchmarkFileEncryption;
+
+  /// No description provided for @benchmarkFileEncryptionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Fuzzes and unfuzzes a 64 MiB temp file and reports MB/s'**
+  String get benchmarkFileEncryptionDescription;
+
+  /// No description provided for @benchmarkResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Benchmark result'**
+  String get benchmarkResult;
+
+  /// No description provided for @benchmarkResultSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypt: {encrypt} MB/s · Decrypt: {decrypt} MB/s ({sizeMiB} MiB)\nArgon2id: {encryptKdf} s / {decryptKdf} s (not in the MB/s)\n{device} · {buildMode} build'**
+  String benchmarkResultSummary(Object encrypt, Object decrypt, Object sizeMiB,
+      Object encryptKdf, Object decryptKdf, Object device, Object buildMode);
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
 
   /// No description provided for @chatAuthBiometricUnlock.
   ///
@@ -1464,11 +1501,281 @@ abstract class FuzzyChatLocalizations {
   /// **'Please enter your current password'**
   String get chatAuthEnterPassword;
 
+  /// No description provided for @chatAuthPasswordChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Password Changed'**
+  String get chatAuthPasswordChanged;
+
   /// No description provided for @vaultFileSaveWarning.
   ///
   /// In en, this message translates to:
   /// **'⚠️ The original file is NOT auto-deleted. After a successful save, the user\'s source file remains on disk untouched. The app currently doesn\'t warn about this.'**
   String get vaultFileSaveWarning;
+
+  /// No description provided for @invitationAlreadyUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation was already used.'**
+  String get invitationAlreadyUsed;
+
+  /// No description provided for @invalidInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation is invalid or damaged.'**
+  String get invalidInvitation;
+
+  /// No description provided for @invalidAcceptance.
+  ///
+  /// In en, this message translates to:
+  /// **'This acceptance is invalid or damaged.'**
+  String get invalidAcceptance;
+
+  /// No description provided for @wrongChatBlob.
+  ///
+  /// In en, this message translates to:
+  /// **'This code belongs to a different chat.'**
+  String get wrongChatBlob;
+
+  /// No description provided for @alreadyUnfuzzed.
+  ///
+  /// In en, this message translates to:
+  /// **'This message was already unfuzzed on this device.'**
+  String get alreadyUnfuzzed;
+
+  /// No description provided for @blobTooOld.
+  ///
+  /// In en, this message translates to:
+  /// **'This message is too old to unfuzz — too many newer messages were unfuzzed first.'**
+  String get blobTooOld;
+
+  /// No description provided for @corruptBlob.
+  ///
+  /// In en, this message translates to:
+  /// **'This is not a valid fuzzed message.'**
+  String get corruptBlob;
+
+  /// No description provided for @safetyNumberTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Safety number'**
+  String get safetyNumberTitle;
+
+  /// No description provided for @safetyNumberExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare these digits with your partner by voice or in person. Until they match, someone who intercepted the invitation or acceptance could be in the middle.'**
+  String get safetyNumberExplanation;
+
+  /// No description provided for @safetyNumberMarkVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as verified'**
+  String get safetyNumberMarkVerified;
+
+  /// No description provided for @safetyNumberUnmark.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmark'**
+  String get safetyNumberUnmark;
+
+  /// No description provided for @safetyNumberVerifiedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get safetyNumberVerifiedBadge;
+
+  /// No description provided for @verifySafetyNumberCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify safety number'**
+  String get verifySafetyNumberCta;
+
+  /// No description provided for @wrongPasswordFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong password — this file cannot be unfuzzed with it.'**
+  String get wrongPasswordFile;
+
+  /// No description provided for @fileStillArriving.
+  ///
+  /// In en, this message translates to:
+  /// **'This file is still being written — wait until it has fully arrived, then try again.'**
+  String get fileStillArriving;
+
+  /// No description provided for @fileCannotBeOpenedAskToResend.
+  ///
+  /// In en, this message translates to:
+  /// **'This file cannot be opened; ask the sender to send it again.'**
+  String get fileCannotBeOpenedAskToResend;
+
+  /// No description provided for @basicsWrongPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect key — this text cannot be unfuzzed with it.'**
+  String get basicsWrongPassword;
+
+  /// No description provided for @forwardSecrecyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfuzzed once, on this device'**
+  String get forwardSecrecyTitle;
+
+  /// No description provided for @forwardSecrecyNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Each fuzzed message can be unfuzzed once, on this device only. Your history stays in the app — export an archive to back it up. A new device cannot re-read old blobs.'**
+  String get forwardSecrecyNotice;
+
+  /// No description provided for @aboutEncryptionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About encryption'**
+  String get aboutEncryptionTitle;
+
+  /// No description provided for @aboutEncryptionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'What single-use unfuzzing means, and how your history is kept'**
+  String get aboutEncryptionDescription;
+
+  /// No description provided for @aboutEncryptionHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your history on this device'**
+  String get aboutEncryptionHistoryTitle;
+
+  /// No description provided for @aboutEncryptionBodyHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Every text you send or unfuzz is kept in the app, sealed per chat under a key only this device holds. If you set an app-lock password, that key is protected by it — without the password, the stored text history cannot be opened. Unfuzzed files are different: they are saved as ordinary files in this chat’s folder on the device and are not sealed or locked by the app — anyone who can read the device’s storage can open them, so protect them like any other file. Once unlocked, your chats stay open until you close the app; the app does not lock itself after a while. If you turn on biometric unlock, your password is stored securely on this device so a fingerprint or face can release it.'**
+  String get aboutEncryptionBodyHistory;
+
+  /// No description provided for @aboutEncryptionWindowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfuzz in order'**
+  String get aboutEncryptionWindowTitle;
+
+  /// No description provided for @aboutEncryptionBodyWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'The app keeps keys for skipped messages, but not without limit. A blob more than 63 messages behind the newest one you already read in that chat can no longer be unfuzzed — the app says it is too old — and no more than 40 skipped messages are kept at once. Your own sent blobs cannot be unfuzzed by you either; that is why the app keeps what you sent.'**
+  String get aboutEncryptionBodyWindow;
+
+  /// No description provided for @aboutEncryptionLinksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Message links'**
+  String get aboutEncryptionLinksTitle;
+
+  /// No description provided for @aboutEncryptionBodyLinks.
+  ///
+  /// In en, this message translates to:
+  /// **'A message copied or shared as a link carries the chat’s id next to the blob, so tapping the link opens the right chat. The id is not part of the secret, but anyone who sees the link can tell which chat it belongs to. The blob itself carries no chat id.'**
+  String get aboutEncryptionBodyLinks;
+
+  /// No description provided for @aboutEncryptionErrorsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What the errors mean'**
+  String get aboutEncryptionErrorsTitle;
+
+  /// No description provided for @aboutEncryptionBodyErrors.
+  ///
+  /// In en, this message translates to:
+  /// **'“Already unfuzzed”: this blob was unfuzzed on this device before and cannot be read a second time. “Not a valid fuzzed message”: the blob is damaged, incomplete, or belongs to a different chat — the app cannot tell these apart. “Too old”: too many newer messages were unfuzzed first. “Incorrect key” / “Wrong password” (Basics): the key or password does not match, or the text or file is damaged — the app cannot tell these apart either. For files, a receive that fails or is cancelled after it started has already used the file’s one-time key: ask the sender to send the file again.'**
+  String get aboutEncryptionBodyErrors;
+
+  /// No description provided for @aboutEncryptionBodySafetyNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Every chat has a 60-digit safety number, computed from both devices’ identity keys. Compare it with your partner by voice or in person: if the digits match, nobody sat in the middle when you paired. “Verified” is your own note that you did this — the app cannot check it for you.'**
+  String get aboutEncryptionBodySafetyNumber;
+
+  /// No description provided for @aboutEncryptionUnderTheHoodTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Under the hood'**
+  String get aboutEncryptionUnderTheHoodTitle;
+
+  /// No description provided for @aboutEncryptionBodyUnderTheHood.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages use the Olm double ratchet (vodozemac, independently audited) — a fresh key per message, which is what makes a blob single-use. Files are sealed with XChaCha20-Poly1305 in chunks; a damaged file is refused and nothing is left on disk. Passwords go through Argon2id. Your secret keys live in the app’s native core and are never sent anywhere. There is no web version: the core is native code.'**
+  String get aboutEncryptionBodyUnderTheHood;
+
+  /// No description provided for @alreadyReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'This file was already received on this device — it cannot be unfuzzed a second time.'**
+  String get alreadyReceived;
+
+  /// No description provided for @fileTooOld.
+  ///
+  /// In en, this message translates to:
+  /// **'This file is too old to unfuzz — too many newer messages were unfuzzed first.'**
+  String get fileTooOld;
+
+  /// No description provided for @fileCorrupt.
+  ///
+  /// In en, this message translates to:
+  /// **'This is not a valid fuzzed file — it is damaged, incomplete, or from a different chat.'**
+  String get fileCorrupt;
+
+  /// No description provided for @fileCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Receiving was cancelled — this file cannot be unfuzzed on this device now; ask the sender to send it again.'**
+  String get fileCancelled;
+
+  /// No description provided for @exportChatArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Export chat archive'**
+  String get exportChatArchive;
+
+  /// No description provided for @exportChatArchiveDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Seals this chat\'s history into a password-protected file (one message per line). Open it later in Basic Encryption → file decryption with the same password.'**
+  String get exportChatArchiveDescription;
+
+  /// No description provided for @exportChatArchivePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive password'**
+  String get exportChatArchivePassword;
+
+  /// No description provided for @exportChatArchiveDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat archive exported.'**
+  String get exportChatArchiveDone;
+
+  /// No description provided for @exportChatArchiveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to export the chat archive.'**
+  String get exportChatArchiveFailed;
+
+  /// No description provided for @exportChatArchiveNothingToExport.
+  ///
+  /// In en, this message translates to:
+  /// **'This chat has no messages to export.'**
+  String get exportChatArchiveNothingToExport;
+
+  /// No description provided for @exportChatArchiveStoreLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock Fuzzy Chat first — your history cannot be read while it is locked.'**
+  String get exportChatArchiveStoreLocked;
+
+  /// No description provided for @export.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get export;
 }
 
 class _FuzzyChatLocalizationsDelegate

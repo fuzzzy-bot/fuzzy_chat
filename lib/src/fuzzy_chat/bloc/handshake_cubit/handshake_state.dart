@@ -3,7 +3,7 @@ part of 'handshake_cubit.dart';
 class HandshakeState {
   final StateStatus status;
   final ChatGeneralData? chatData;
-  final DefaultFailure? failure;
+  final ChatCreationFailure? failure;
 
   const HandshakeState({
     required this.status,
@@ -14,7 +14,7 @@ class HandshakeState {
   HandshakeState copyWith({
     StateStatus? status,
     ChatGeneralData? chatData,
-    DefaultFailure? failure,
+    ChatCreationFailure? failure,
   }) {
     return HandshakeState(
       status: status ?? this.status,

@@ -37,8 +37,13 @@ const StoredMessageDataSchema = CollectionSchema(
       name: r'messageType',
       type: IsarType.string,
     ),
-    r'sentAt': PropertySchema(
+    r'sealedPlaintext': PropertySchema(
       id: 4,
+      name: r'sealedPlaintext',
+      type: IsarType.string,
+    ),
+    r'sentAt': PropertySchema(
+      id: 5,
       name: r'sentAt',
       type: IsarType.dateTime,
     )
@@ -80,6 +85,12 @@ int _storedMessageDataEstimateSize(
   bytesCount += 3 + object.chatId.length * 3;
   bytesCount += 3 + object.encryptedMessage.length * 3;
   bytesCount += 3 + object.messageType.length * 3;
+  {
+    final value = object.sealedPlaintext;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -93,7 +104,8 @@ void _storedMessageDataSerialize(
   writer.writeString(offsets[1], object.encryptedMessage);
   writer.writeBool(offsets[2], object.isSent);
   writer.writeString(offsets[3], object.messageType);
-  writer.writeDateTime(offsets[4], object.sentAt);
+  writer.writeString(offsets[4], object.sealedPlaintext);
+  writer.writeDateTime(offsets[5], object.sentAt);
 }
 
 StoredMessageData _storedMessageDataDeserialize(
@@ -108,7 +120,8 @@ StoredMessageData _storedMessageDataDeserialize(
   object.id = id;
   object.isSent = reader.readBool(offsets[2]);
   object.messageType = reader.readString(offsets[3]);
-  object.sentAt = reader.readDateTime(offsets[4]);
+  object.sealedPlaintext = reader.readStringOrNull(offsets[4]);
+  object.sentAt = reader.readDateTime(offsets[5]);
   return object;
 }
 
@@ -128,6 +141,8 @@ P _storedMessageDataDeserializeProp<P>(
     case 3:
       return (reader.readString(offset)) as P;
     case 4:
+      return (reader.readStringOrNull(offset)) as P;
+    case 5:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -750,6 +765,160 @@ extension StoredMessageDataQueryFilter
   }
 
   QueryBuilder<StoredMessageData, StoredMessageData, QAfterFilterCondition>
+      sealedPlaintextIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'sealedPlaintext',
+      ));
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterFilterCondition>
+      sealedPlaintextIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'sealedPlaintext',
+      ));
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterFilterCondition>
+      sealedPlaintextEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'sealedPlaintext',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterFilterCondition>
+      sealedPlaintextGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'sealedPlaintext',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterFilterCondition>
+      sealedPlaintextLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'sealedPlaintext',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterFilterCondition>
+      sealedPlaintextBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'sealedPlaintext',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterFilterCondition>
+      sealedPlaintextStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'sealedPlaintext',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterFilterCondition>
+      sealedPlaintextEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'sealedPlaintext',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterFilterCondition>
+      sealedPlaintextContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'sealedPlaintext',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterFilterCondition>
+      sealedPlaintextMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'sealedPlaintext',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterFilterCondition>
+      sealedPlaintextIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'sealedPlaintext',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterFilterCondition>
+      sealedPlaintextIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'sealedPlaintext',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterFilterCondition>
       sentAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -871,6 +1040,20 @@ extension StoredMessageDataQuerySortBy
   }
 
   QueryBuilder<StoredMessageData, StoredMessageData, QAfterSortBy>
+      sortBySealedPlaintext() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sealedPlaintext', Sort.asc);
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterSortBy>
+      sortBySealedPlaintextDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sealedPlaintext', Sort.desc);
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterSortBy>
       sortBySentAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'sentAt', Sort.asc);
@@ -957,6 +1140,20 @@ extension StoredMessageDataQuerySortThenBy
   }
 
   QueryBuilder<StoredMessageData, StoredMessageData, QAfterSortBy>
+      thenBySealedPlaintext() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sealedPlaintext', Sort.asc);
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterSortBy>
+      thenBySealedPlaintextDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sealedPlaintext', Sort.desc);
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QAfterSortBy>
       thenBySentAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'sentAt', Sort.asc);
@@ -1003,6 +1200,14 @@ extension StoredMessageDataQueryWhereDistinct
   }
 
   QueryBuilder<StoredMessageData, StoredMessageData, QDistinct>
+      distinctBySealedPlaintext({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'sealedPlaintext',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<StoredMessageData, StoredMessageData, QDistinct>
       distinctBySentAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'sentAt');
@@ -1041,6 +1246,13 @@ extension StoredMessageDataQueryProperty
       messageTypeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'messageType');
+    });
+  }
+
+  QueryBuilder<StoredMessageData, String?, QQueryOperations>
+      sealedPlaintextProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'sealedPlaintext');
     });
   }
 

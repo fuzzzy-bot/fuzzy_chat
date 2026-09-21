@@ -13,7 +13,7 @@ class ChatCreationPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider<ChatCreationCubit>(
       create: (context) => ChatCreationCubit(
-        keyStorageRepository: sl.get<KeyStorageRepository>(),
+        cryptoCoreService: sl.get<CryptoCoreService>(),
         chatGeneralDataListRepository: sl.get<ChatGeneralDataListRepository>(),
       ),
       child: const ProvidedChatCreationPage(),

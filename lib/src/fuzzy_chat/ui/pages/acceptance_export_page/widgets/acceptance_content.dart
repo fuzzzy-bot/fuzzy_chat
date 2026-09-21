@@ -100,6 +100,16 @@ class AcceptanceContent extends StatelessWidget {
                 icon: const Icon(Icons.link),
                 onPressed: () => _copyAsLink(context),
               ),
+              const SizedBox(height: 12),
+              FuzzzyButton(
+                label: localizations.verifySafetyNumberCta,
+                variant: FuzzzyButtonVariant.secondary,
+                icon: const Icon(Icons.shield_outlined),
+                onPressed: () => context.push(
+                  AppRouter.chatVerify,
+                  extra: chatGeneralData,
+                ),
+              ),
               const Spacer(),
               if (hasBackButton)
                 FuzzzyIconButton(

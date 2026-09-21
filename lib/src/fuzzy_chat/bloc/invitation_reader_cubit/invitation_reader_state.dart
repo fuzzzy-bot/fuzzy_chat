@@ -2,7 +2,7 @@ part of 'invitation_reader_cubit.dart';
 
 class InvitationReaderState {
   final StateStatus status;
-  final ToBeSentInvitation? invitation;
+  final CryptoCoreInvitation? invitation;
   final DefaultFailure? failure;
 
   const InvitationReaderState({
@@ -13,7 +13,7 @@ class InvitationReaderState {
 
   InvitationReaderState copyWith({
     StateStatus? status,
-    ToBeSentInvitation? invitation,
+    CryptoCoreInvitation? invitation,
     DefaultFailure? failure,
   }) {
     return InvitationReaderState(

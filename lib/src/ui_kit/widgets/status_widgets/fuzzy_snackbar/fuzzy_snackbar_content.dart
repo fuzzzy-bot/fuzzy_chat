@@ -79,12 +79,14 @@ class _SnackBarContentState extends State<FuzzySnackBarContent> {
                     width: widget.snackbarData.width ?? 200,
                     decoration: BoxDecoration(
                       color: widget.snackbarData.backgroundColor ??
-                          fuzzzyColors.surface.withOpacity(0.7),
+                          fuzzzyColors.surface.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(_borderRadius),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 16,),
+                        horizontal: 8,
+                        vertical: 16,
+                      ),
                       child: Row(
                         children: [
                           if (widget.snackbarData.leading != null)

@@ -25,7 +25,7 @@ class _SettingsToolboxState extends State<SettingsToolbox> {
     required FuzzyChatLocalizations localizations,
   }) {
     final acceptanceReaderCubit = AcceptanceReaderCubit(
-      keyStorageRepository: sl.get<KeyStorageRepository>(),
+      cryptoCoreService: sl.get<CryptoCoreService>(),
     );
 
     acceptanceReaderCubit
@@ -34,7 +34,7 @@ class _SettingsToolboxState extends State<SettingsToolbox> {
       if (acceptanceReaderCubit.state.status.isSuccess) {
         _copyAcceptance(
           acceptanceContent:
-              acceptanceReaderCubit.state.acceptance?.acceptanceContent ?? '',
+              acceptanceReaderCubit.state.acceptance?.content ?? '',
           localizations: localizations,
         );
       } else {
@@ -84,6 +84,21 @@ class _SettingsToolboxState extends State<SettingsToolbox> {
                 chatId: widget.chatGeneralData.chatId,
                 chatName: widget.chatGeneralData.chatName,
                 onChatDeleted: widget.onChatDeleted,
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.archive),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+            title: Text(
+              localizations.exportChatArchive,
+            ),
+            onTap: () {
+              widget.onActionPressed();
+              showChatArchiveExportDialog(
+                context,
+                chatId: widget.chatGeneralData.chatId,
+                chatName: widget.chatGeneralData.chatName,
               );
             },
           ),

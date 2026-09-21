@@ -5,11 +5,11 @@ part 'handshake_state.dart';
 
 class HandshakeCubit extends Cubit<HandshakeState> {
   HandshakeCubit({
-    required this.keyStorageRepository,
+    required this.cryptoCoreService,
     required this.chatGeneralDataListRepository,
   }) : super(const HandshakeState(status: StateStatus.initial));
 
-  final KeyStorageRepository keyStorageRepository;
+  final CryptoCoreService cryptoCoreService;
   final ChatGeneralDataListRepository chatGeneralDataListRepository;
 
   Future<void> completeHandshake({
@@ -19,32 +19,21 @@ class HandshakeCubit extends Cubit<HandshakeState> {
     emit(state.copyWith(status: StateStatus.loading));
 
     try {
-      final receivedAcceptance =
-          await HandshakeService.parseAcceptance(acceptanceContent);
-      final otherPartyPublicKey = receivedAcceptance.publicKey;
-      final encryptedSymmetricKey = receivedAcceptance.encryptedSymmetricKey;
-
-      final privateKey = await keyStorageRepository.getPrivateKey(chatId);
-      if (privateKey == null) {
+      final handshakeRes = await cryptoCoreService.completeHandshake(
+        chatId: chatId,
+        acceptance: acceptanceContent,
+      );
+      if (handshakeRes is CryptoCoreFailure) {
         emit(
           state.copyWith(
             status: StateStatus.failed,
-            failure: DefaultFailure(
-              message: 'Inviter private key not found',
+            failure: ChatCreationFailure(
+              type: _failureTypeOf(handshakeRes.type),
             ),
           ),
         );
         return;
       }
-
-      final symmetricKey = await RSAService.decrypt(
-        encryptedSymmetricKey,
-        privateKey,
-      );
-
-      await keyStorageRepository.saveSymmetricKey(chatId, symmetricKey);
-      await keyStorageRepository.saveOtherPartyPublicKey(
-          chatId, otherPartyPublicKey,);
 
       final chatData = await chatGeneralDataListRepository.getChatById(chatId);
       if (chatData != null) {
@@ -65,9 +54,25 @@ class HandshakeCubit extends Cubit<HandshakeState> {
       emit(
         state.copyWith(
           status: StateStatus.failed,
-          failure: DefaultFailure(),
+          failure: ChatCreationFailure(
+            internalMessage: ex.toString(),
+            type: ChatCreationFailureType.unknown,
+          ),
         ),
       );
     }
+  }
+
+  static ChatCreationFailureType _failureTypeOf(CryptoCoreFailureType type) {
+    return switch (type) {
+      CryptoCoreFailureType.invitationAlreadyUsed =>
+        ChatCreationFailureType.invitationAlreadyUsed,
+      CryptoCoreFailureType.wrongChat => ChatCreationFailureType.wrongChat,
+      CryptoCoreFailureType.unsupportedFormat ||
+      CryptoCoreFailureType.invalidSignature ||
+      CryptoCoreFailureType.corrupt =>
+        ChatCreationFailureType.invalidAcceptance,
+      _ => ChatCreationFailureType.unknown,
+    };
   }
 }

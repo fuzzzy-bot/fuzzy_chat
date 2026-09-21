@@ -12,11 +12,11 @@ part 'file_processing_state.dart';
 
 class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
     extends Cubit<FileProcessingState> {
-  final KeyStorageRepository keyStorageRepository;
+  final CryptoCoreService cryptoCoreService;
   final ActualProcessingOption processingOption;
 
   FileProcessingCubit({
-    required this.keyStorageRepository,
+    required this.cryptoCoreService,
     required this.processingOption,
   }) : super(const FileProcessingState());
 
@@ -26,6 +26,12 @@ class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
   static const progressPostingThrottleDuration = Duration(milliseconds: 100);
   Timer? _throttleTimer;
   double? _pendingProgress;
+
+  /// Two size samples this far apart must agree before a container is
+  /// received: `decryptFileForChat` consumes the container's key message, so
+  /// a file that is still being written (a download, a cloud sync) would be
+  /// spent for good.
+  static const inputStabilityProbeDuration = Duration(milliseconds: 500);
 
   void markProcessedFilesAsReadAndClear({
     required List<FileProcessingData> readProcessedFiles,
@@ -107,48 +113,57 @@ class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
     required FileProcessingData fileData,
   }) async {
     try {
-      String generalOutputPath = sl.get<AppDocumentsDirectory>().directory.path;
+      final chatFolderPath = await _ensureChatFolder(
+        outputPath: sl.get<AppDocumentsDirectory>().directory.path,
+        chatName: fileData.chatName,
+      );
 
-      FileProcessingHandler handler;
-
-      final symmetricKey =
-          await keyStorageRepository.getSymmetricKey(fileData.chatId);
-
-      if (symmetricKey == null) {
-        throw Exception('Symmetric key not found');
-      }
+      final FileProcessingHandler handler;
+      final String outputPath;
 
       if (processingOption is FileEncryptionOption) {
-        generalOutputPath = await _buildOutputPathInChatFolder(
+        outputPath = _fuzzedOutputPath(
+          chatFolderPath: chatFolderPath,
           inputFilePath: fileData.inputFilePath,
-          outputPath: generalOutputPath,
-          chatName: fileData.chatName,
-          isEncryption: true,
           fuzzedFileIdentificator: fuzzedFileIdentificator,
         );
 
-        handler = await AESService.encryptFile(
+        final res = await cryptoCoreService.encryptFileForChat(
+          chatId: fileData.chatId,
           inputPath: fileData.inputFilePath,
-          outputPath: generalOutputPath,
-          key: symmetricKey,
+          outputPath: outputPath,
         );
+        if (res is CryptoCoreFailure<FileProcessingHandler>) {
+          _failFile(fileData: fileData, type: _failureTypeOf(res.type));
+          return;
+        }
+        handler = (res as CryptoCoreSuccess<FileProcessingHandler>).data;
       } else if (processingOption is FileDecryptionOption) {
-        generalOutputPath = await _buildOutputPathInChatFolder(
-          inputFilePath: fileData.inputFilePath,
-          outputPath: generalOutputPath,
-          chatName: fileData.chatName,
-          isEncryption: false,
-          fuzzedFileIdentificator: fuzzedFileIdentificator,
-        );
+        if (!await _isInputStable(fileData.inputFilePath)) {
+          _failFile(
+            fileData: fileData,
+            type: FileProcessingFailureType.stillArriving,
+          );
+          return;
+        }
 
-        handler = await AESService.decryptFile(
+        final res = await cryptoCoreService.decryptFileForChat(
+          chatId: fileData.chatId,
           inputPath: fileData.inputFilePath,
-          outputPath: generalOutputPath,
-          key: symmetricKey,
+          outputDirectoryPath: chatFolderPath,
         );
+        if (res is CryptoCoreFailure<CryptoCoreReceivedFile>) {
+          _failFile(fileData: fileData, type: _failureTypeOf(res.type));
+          return;
+        }
+        final received =
+            (res as CryptoCoreSuccess<CryptoCoreReceivedFile>).data;
+        handler = received.handler;
+        outputPath = received.outputPath;
       } else {
         throw UnimplementedError(
-            'Unsupported FileProcessingOption: ${processingOption.runtimeType}',);
+          'Unsupported FileProcessingOption: ${processingOption.runtimeType}',
+        );
       }
 
       _activeFileProcessingHandler = handler;
@@ -157,7 +172,7 @@ class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
         (event) => _onProgress(
           event: event,
           fileData: fileData,
-          outputPath: generalOutputPath,
+          outputPath: outputPath,
         ),
       );
 
@@ -165,13 +180,15 @@ class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
     } catch (error) {
       logger.i('FILE PROCESSING: file processing failed: $error');
 
-      _markFileAsFinished(
-        fileData: fileData,
-        status: FileProcessingStatus.failed,
-        outputFilePath: null,
-      );
-      _goToNextFileProcessing();
+      _failFile(fileData: fileData, type: FileProcessingFailureType.unknown);
     }
+  }
+
+  Future<bool> _isInputStable(String inputFilePath) async {
+    final inputFile = File(inputFilePath);
+    final lengthBefore = await inputFile.length();
+    await Future<void>.delayed(inputStabilityProbeDuration);
+    return await inputFile.length() == lengthBefore;
   }
 
   void _onProgress({
@@ -186,9 +203,22 @@ class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
         status: FileProcessingStatus.canceled,
         outputFilePath: null,
         progress: event.progress,
+        failure: _cancelFailure(),
       );
       _goToNextFileProcessing();
       logger.i('FILE PROCESSING: Marked as isCancelled $state');
+      return;
+    }
+
+    // A failure is terminal with isComplete set too — it must win.
+    if (event.errorMessage != null) {
+      _resetThrottle();
+      logger.i('FILE PROCESSING: run failed: ${event.errorMessage}');
+      _failFile(
+        fileData: fileData,
+        type: _runFailureType(),
+        progress: event.progress,
+      );
       return;
     }
 
@@ -209,6 +239,50 @@ class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
       fileData: fileData,
       progress: event.progress,
     );
+  }
+
+  /// A run that fails after `decryptFileForChat` succeeded has already spent
+  /// the container's key message: the file cannot be opened on this device
+  /// again, the sender has to send it again. A failed send spends nothing.
+  FileProcessingFailureType _runFailureType() {
+    return processingOption is FileDecryptionOption
+        ? FileProcessingFailureType.cannotOpenAskResend
+        : FileProcessingFailureType.unknown;
+  }
+
+  /// Same for a cancelled receive — the row keeps its `canceled` status and
+  /// carries the hint that the container is spent. A cancelled send has none.
+  FileProcessingFailure? _cancelFailure() {
+    return processingOption is FileDecryptionOption
+        ? FileProcessingFailure(type: FileProcessingFailureType.cancelled)
+        : null;
+  }
+
+  void _failFile({
+    required FileProcessingData fileData,
+    required FileProcessingFailureType type,
+    double? progress,
+  }) {
+    _markFileAsFinished(
+      fileData: fileData,
+      status: FileProcessingStatus.failed,
+      outputFilePath: null,
+      progress: progress,
+      failure: FileProcessingFailure(type: type),
+    );
+    _goToNextFileProcessing();
+  }
+
+  static FileProcessingFailureType _failureTypeOf(CryptoCoreFailureType type) {
+    return switch (type) {
+      CryptoCoreFailureType.replay => FileProcessingFailureType.alreadyUnfuzzed,
+      CryptoCoreFailureType.wrongChat => FileProcessingFailureType.wrongChat,
+      CryptoCoreFailureType.tooOld => FileProcessingFailureType.tooOld,
+      CryptoCoreFailureType.corrupt ||
+      CryptoCoreFailureType.unsupportedFormat =>
+        FileProcessingFailureType.corrupt,
+      _ => FileProcessingFailureType.unknown,
+    };
   }
 
   void _resetThrottle() {
@@ -251,12 +325,14 @@ class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
     required FileProcessingStatus status,
     required String? outputFilePath,
     double? progress,
+    FileProcessingFailure? failure,
   }) {
     final updatedFile = fileData.copyWith(
       status: status,
       outputFilePath: outputFilePath,
       progress: progress ?? fileData.progress,
       isProcessed: true,
+      failure: failure,
     );
 
     final updatedState =
@@ -338,12 +414,9 @@ class FileProcessingCubit<ActualProcessingOption extends FileProcessingOption>
   }
 }
 
-Future<String> _buildOutputPathInChatFolder({
-  required String inputFilePath,
+Future<String> _ensureChatFolder({
   required String outputPath,
   required String chatName,
-  required bool isEncryption,
-  required String fuzzedFileIdentificator,
 }) async {
   final chatIdFolder = Directory(path.join(outputPath, chatName));
 
@@ -351,14 +424,14 @@ Future<String> _buildOutputPathInChatFolder({
     await chatIdFolder.create(recursive: true);
   }
 
+  return chatIdFolder.path;
+}
+
+String _fuzzedOutputPath({
+  required String chatFolderPath,
+  required String inputFilePath,
+  required String fuzzedFileIdentificator,
+}) {
   final fileName = path.basename(inputFilePath);
-  if (isEncryption) {
-    return path.join(chatIdFolder.path, '$fileName.$fuzzedFileIdentificator');
-  } else {
-    final defuzzedFileName = fileName.endsWith('.$fuzzedFileIdentificator')
-        ? fileName.substring(
-            0, fileName.length - '.$fuzzedFileIdentificator'.length,)
-        : fileName;
-    return path.join(chatIdFolder.path, defuzzedFileName);
-  }
+  return path.join(chatFolderPath, '$fileName.$fuzzedFileIdentificator');
 }

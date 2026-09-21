@@ -21,14 +21,14 @@ class ChatInvitationPage extends StatelessWidget {
       providers: [
         BlocProvider<InvitationReaderCubit>(
           create: (context) => InvitationReaderCubit(
-            keyStorageRepository: sl.get<KeyStorageRepository>(),
+            cryptoCoreService: sl.get<CryptoCoreService>(),
           )..generateInvitation(
               chatId: payload.chatId,
             ),
         ),
         BlocProvider<HandshakeCubit>(
           create: (context) => HandshakeCubit(
-            keyStorageRepository: sl.get<KeyStorageRepository>(),
+            cryptoCoreService: sl.get<CryptoCoreService>(),
             chatGeneralDataListRepository:
                 sl.get<ChatGeneralDataListRepository>(),
           ),
@@ -111,12 +111,17 @@ class _ProvidedChatInvitationPageState
                 AppRouter.chatConnected,
                 extra: ConnectedChatPagePayload(
                   chatGeneralData: state.chatData!,
+                  openSafetyNumber: true,
                 ),
               );
             } else if (state.status.isFailed) {
               FuzzzyToast.show(
                 context,
-                message: state.failure?.message ??
+                message: state.failure?.type.toUiMessage(
+                      localizations,
+                      customUnknownMessage:
+                          localizations.failedToCompleteHandshake,
+                    ) ??
                     localizations.failedToCompleteHandshake,
               );
             }
@@ -131,7 +136,7 @@ class _ProvidedChatInvitationPageState
             onLoading: () => const FuzzyLoadingPagebuilder(),
             onSuccess: () => ChatInvitationContent(
               chatName: widget.payload.chatName,
-              invitationContent: invitationState.invitation!.invitationContent,
+              invitationContent: invitationState.invitation!.content,
               acceptanceTextController: acceptanceTextController,
               onAccept: _importAcceptanceFromText,
             ),
@@ -140,7 +145,8 @@ class _ProvidedChatInvitationPageState
                 child: FuzzzyEmptyState(
                   title: invitationState.failure?.message ??
                       localizations.failedToGenerateInvitation,
-                  message: localizations.unexpectedFailureOccuredPleaseContactUs,
+                  message:
+                      localizations.unexpectedFailureOccuredPleaseContactUs,
                 ),
               ),
             ),

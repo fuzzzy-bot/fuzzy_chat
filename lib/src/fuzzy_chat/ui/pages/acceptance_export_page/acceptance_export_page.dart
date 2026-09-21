@@ -15,7 +15,7 @@ class AcceptanceExportPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider<AcceptanceReaderCubit>(
       create: (context) => AcceptanceReaderCubit(
-        keyStorageRepository: sl.get<KeyStorageRepository>(),
+        cryptoCoreService: sl.get<CryptoCoreService>(),
       )..generateAcceptance(chatId: payload.chatGeneralData.chatId),
       child: ProvidedAcceptanceExportPage(payload: payload),
     );
@@ -44,13 +44,13 @@ class ProvidedAcceptanceExportPage extends StatelessWidget {
             body: Center(child: FuzzzyProgressRing(size: 32)),
           ),
           onSuccess: () => AcceptanceContent(
-            acceptanceContent: state.acceptance!.acceptanceContent,
+            acceptanceContent: state.acceptance!.content,
             hasBackButton: payload.hasBackButton,
             chatGeneralData: payload.chatGeneralData,
           ),
           onFailure: () => FuzzyErrorPageBuilder(
             message:
-            state.failure?.message ?? localizations.failedToReadAcceptance,
+                state.failure?.message ?? localizations.failedToReadAcceptance,
           ),
         );
       },

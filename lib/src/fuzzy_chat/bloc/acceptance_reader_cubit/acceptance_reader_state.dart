@@ -2,7 +2,7 @@ part of 'acceptance_reader_cubit.dart';
 
 class AcceptanceReaderState {
   final StateStatus status;
-  final ToBeSentAcceptance? acceptance;
+  final CryptoCoreAcceptance? acceptance;
   final DefaultFailure? failure;
 
   const AcceptanceReaderState({
@@ -13,7 +13,7 @@ class AcceptanceReaderState {
 
   AcceptanceReaderState copyWith({
     StateStatus? status,
-    ToBeSentAcceptance? acceptance,
+    CryptoCoreAcceptance? acceptance,
     DefaultFailure? failure,
   }) {
     return AcceptanceReaderState(

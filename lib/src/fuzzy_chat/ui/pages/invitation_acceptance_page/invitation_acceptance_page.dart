@@ -20,7 +20,7 @@ class InvitationAcceptancePage extends StatelessWidget {
     return BlocProvider<InvitationAcceptanceCubit>(
       create: (context) => InvitationAcceptanceCubit(
         chatGeneralDataListRepository: sl.get<ChatGeneralDataListRepository>(),
-        keyStorageRepository: sl.get<KeyStorageRepository>(),
+        cryptoCoreService: sl.get<CryptoCoreService>(),
       ),
       child: ProvidedInvitationAcceptancePage(
         prefillInvitationContent: prefillInvitationContent,

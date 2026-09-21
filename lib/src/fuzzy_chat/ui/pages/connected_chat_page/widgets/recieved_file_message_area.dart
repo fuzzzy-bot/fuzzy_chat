@@ -105,8 +105,10 @@ class _ReceivedFileMessageAreaState extends State<ReceivedFileMessageArea> {
                         onTap: () {
                           final filePath = widget.message.encryptedMessage
                               .replaceAll(fuzzIdentificator, '');
-                          DeviceFileInteractor.shareFile(filePath,
-                              context: context,);
+                          DeviceFileInteractor.shareFile(
+                            filePath,
+                            context: context,
+                          );
                           closeOverlay();
                         },
                       ),
@@ -139,8 +141,10 @@ class _ReceivedFileMessageAreaState extends State<ReceivedFileMessageArea> {
                             widget.message.encryptedMessage,
                           );
                           Clipboard.setData(ClipboardData(text: link));
-                          FuzzzyToast.show(context,
-                              message: localizations.linkCopiedToClipboard,);
+                          FuzzzyToast.show(
+                            context,
+                            message: localizations.linkCopiedToClipboard,
+                          );
                           closeOverlay();
                         },
                       ),
@@ -152,8 +156,10 @@ class _ReceivedFileMessageAreaState extends State<ReceivedFileMessageArea> {
                           final filePath = widget.message.encryptedMessage
                               .replaceAll(fuzzIdentificator, '');
                           Clipboard.setData(ClipboardData(text: filePath));
-                          FuzzzyToast.show(context,
-                              message: localizations.copiedToTheClipboard,);
+                          FuzzzyToast.show(
+                            context,
+                            message: localizations.copiedToTheClipboard,
+                          );
                           closeOverlay();
                         },
                       ),
