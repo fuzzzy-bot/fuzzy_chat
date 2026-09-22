@@ -1,6 +1,6 @@
 # Release procedure, attestations and reproducibility
 
-How a Fuzzy Chat release is cut from `.github/workflows/main.yaml`, what the pipeline proves about the
+How a Fuzzzy Seal release is cut from `.github/workflows/main.yaml`, what the pipeline proves about the
 artifacts, what it does **not** prove, and how anyone can check both.
 
 ## 1. Cutting a release
@@ -13,10 +13,10 @@ runs `attest`.
    candidates keep the previous version; only the final tag bumps it) and commit.
 2. Tag it — annotated, from that exact commit — and push the tag:
    ```sh
-   git tag -a v1.2.3 -m "fuzzy_chat v1.2.3"
+   git tag -a v1.2.3 -m "fuzzzy_seal v1.2.3"
    git push origin v1.2.3
    ```
-3. Wait for the tag run (`gh run list --workflow fuzzy_chat --event push --branch v1.2.3`, ≈ 11 min; the
+3. Wait for the tag run (`gh run list --workflow fuzzzy_seal --event push --branch v1.2.3`, ≈ 11 min; the
    Android job is the long pole). Every job must be green — `attest` needs all of them, so a red job means
    no attestation and no release.
 4. Download and check everything the run produced (§3), then attach the artifacts and `SHA256SUMS` to a
@@ -26,7 +26,7 @@ runs `attest`.
 ### 1.1 As run for `v1.1.0` (2026-09-13, from the branch worktree, `agent/chat-harden-rust-crypto-core`)
 
 The bump touches **two** files: `pubspec.yaml` and the Flutter SBOM, which embeds the pub version
-(`pkg:pub/fuzzy_chat@<version>`) — without regenerating it `./sbom.sh flutter --check` fails the `flutter-test` job.
+(`pkg:pub/fuzzzy_seal@<version>`) — without regenerating it `./sbom.sh flutter --check` fails the `flutter-test` job.
 
 ```sh
 # 1. bump + changelog + this section, on a green tip (d3b24e3)
@@ -47,14 +47,14 @@ fvm dart format --output=none --set-exit-if-changed lib test
 ./sbom.sh rust --check && ./sbom.sh flutter --check
 
 # 3. tag the release commit, annotated, and watch the tag run (ten jobs incl. attest)
-git tag -a v1.1.0 -m "Fuzzy Chat 1.1.0 — Rust crypto core; see documents/security/HARDENING_2026.md"
+git tag -a v1.1.0 -m "Fuzzzy Seal 1.1.0 — Rust crypto core; see documents/security/HARDENING_2026.md"
 git push origin v1.1.0 && git ls-remote --tags origin v1.1.0
 gh run list -R fuzzzy-bot/fuzzy_chat --event push --branch v1.1.0 ; gh run watch <tag-run-id> --exit-status
 
 # 4. verify the tag's artifacts once (§3), then delete the download
 gh run download <tag-run-id> -R fuzzzy-bot/fuzzy_chat -D rel && cd rel
 shasum -a 256 -c sha256sums/SHA256SUMS
-for f in android-apk/app-production-release.apk linux-bundle/lib/libfuzzy_crypto_core.so macos-app/fuzzy_chat-macos.zip; do
+for f in android-apk/app-production-release.apk linux-bundle/lib/libfuzzy_crypto_core.so macos-app/fuzzzy_seal-macos.zip; do
   gh attestation verify "$f" -R fuzzzy-bot/fuzzy_chat; done
 unzip -p android-apk/app-production-release.apk lib/arm64-v8a/libfuzzy_crypto_core.so | shasum -a 256   # == rust-repro-1/SHA256SUMS android line
 cd .. && rm -rf rel
@@ -67,9 +67,9 @@ Artifacts of a run (`gh run download <run-id> -D rel` puts each one in a directo
 | Artifact | Content | In `SHA256SUMS` / attested |
 |---|---|---|
 | `android-apk` | `app-production-release.apk` (production flavor, `--split-debug-info`) | the APK |
-| `linux-bundle` | `fuzzy_chat` + `lib/` + `data/` (the whole bundle directory) | `fuzzy_chat`, `lib/libfuzzy_crypto_core.so` |
-| `windows-bundle` | `fuzzy_chat.exe` + plugin DLLs + `data/` | `fuzzy_chat.exe`, `fuzzy_crypto_core.dll` |
-| `macos-app` | `fuzzy_chat-macos.zip` (`ditto` archive of `Fuzzy Chat.app`, symlinks and modes kept) | the zip |
+| `linux-bundle` | `fuzzzy_seal` + `lib/` + `data/` (the whole bundle directory) | `fuzzzy_seal`, `lib/libfuzzy_crypto_core.so` |
+| `windows-bundle` | `fuzzzy_seal.exe` + plugin DLLs + `data/` | `fuzzzy_seal.exe`, `fuzzy_crypto_core.dll` |
+| `macos-app` | `fuzzzy_seal-macos.zip` (`ditto` archive of `Fuzzzy Seal.app`, symlinks and modes kept) | the zip |
 | `sha256sums` | `SHA256SUMS` — `sha256sum` lines over the six files above, paths relative to the download directory | — |
 | `sbom-rust`, `sbom-flutter` | the CycloneDX SBOMs committed under `documents/security/sbom/` | — |
 | `rust-repro-1`, `rust-repro-2` | the Rust core built twice on separate runners + each run's `SHA256SUMS` (§4) | — |
@@ -90,7 +90,7 @@ which workflow produced these exact bytes* — nothing more.
   (hardening decision D-3); signed builds come from Codemagic, §6.
 - **iOS is not built.** There is no iOS job; nothing in a release is an iOS artifact (signed IPA: Codemagic, §6).
 - **The Android APK is signed with a throwaway key.** The `android` job generates a fresh keystore per run
-  (`keytool -genkeypair … -validity 1`, `CN=fuzzy_chat CI throwaway`) because the `release` build type
+  (`keytool -genkeypair … -validity 1`, `CN=fuzzzy_seal CI throwaway`) because the `release` build type
   refuses to build without one. The APK installs and runs, and is a faithful build of the commit, but it is
   **not a store build**: it cannot update an installation signed with the real key, and the real key is
   never in this repository or in CI until the owner provides it as the `ANDROID_KEYSTORE_*` secrets
@@ -107,7 +107,7 @@ gh run download <run-id> -R fuzzzy-bot/fuzzy_chat -D rel        # or download th
 cd rel
 sha256sum -c sha256sums/SHA256SUMS                               # every line must print OK
 gh attestation verify android-apk/app-production-release.apk -R fuzzzy-bot/fuzzy_chat
-gh attestation verify linux-bundle/fuzzy_chat -R fuzzzy-bot/fuzzy_chat
+gh attestation verify linux-bundle/fuzzzy_seal -R fuzzzy-bot/fuzzy_chat
 ```
 
 `gh attestation verify` fetches the attestation for the file's digest from GitHub, checks the Sigstore
@@ -185,9 +185,9 @@ passed on the APK, the Linux `libfuzzy_crypto_core.so` and the macOS zip; `rust-
 `SHA256SUMS`:
 ```
 71d26717c56ac1cb9d0f8c1218293b2d3f8f74c7405b39d49721bd05d9d19f70  android-apk/app-production-release.apk
-27c978a4a55c00af4dcc6426bcc9525a108888e63b51663fdd52139b674980fe  windows-bundle/fuzzy_chat.exe
-f2974a8419a0d8a522e9197f27f29ce27481ee0d758b1a8bfc8bdf15432dc2d4  linux-bundle/fuzzy_chat
-79a3f94819633ce84435f89f049c02bdda54c5d8c77f3f59cc76b83a31cfaec6  macos-app/fuzzy_chat-macos.zip
+27c978a4a55c00af4dcc6426bcc9525a108888e63b51663fdd52139b674980fe  windows-bundle/fuzzzy_seal.exe
+f2974a8419a0d8a522e9197f27f29ce27481ee0d758b1a8bfc8bdf15432dc2d4  linux-bundle/fuzzzy_seal
+79a3f94819633ce84435f89f049c02bdda54c5d8c77f3f59cc76b83a31cfaec6  macos-app/fuzzzy_seal-macos.zip
 ff7131a3dc277d6a4e201283d7b7d803d6b16d251e49deffd0fd45dd93d151ff  linux-bundle/lib/libfuzzy_crypto_core.so
 254940d3eac469cfb8ecb1fb93993e6ff442b60257d2454c09cfbdbb00bb8f61  windows-bundle/fuzzy_crypto_core.dll
 ```
@@ -202,7 +202,7 @@ Rust core, rebuilt on two runners (identical), and the shipped cores:
 | `aarch64-linux-android` (API 24) | `libfuzzy_crypto_core.a` | `5b5a7b284b620ac0a1cc83f3c5231bb02629f512c227d45a04bdfb6043c9400c` | — |
 
 The core hashes differ from rc.1's because the crate changed between the tags (per-chat history key, `hkdf` dropped),
-not because the build stopped being reproducible. The Linux `fuzzy_chat` executable hash is unchanged from rc.1
+not because the build stopped being reproducible. The Linux `fuzzzy_seal` executable hash is unchanged from rc.1
 (`f2974a84…`): the Flutter AOT snapshot lives in `data/`, not in the launcher binary.
 
 ### v1.0.0-rc.1
@@ -299,11 +299,12 @@ account for this app yet, so the first build is the owner's, after the steps bel
 
 | Platform | Flavor | Identifier (as committed) | Source |
 |---|---|---|---|
-| Android | production | `com.fuzzzytechnologies.fuzzy_chat` | `android/app/build.gradle` `applicationId` + `applicationIdSuffix ""` |
-| Android | staging / development | `….fuzzy_chat.stg` / `….fuzzy_chat.dev` | same file, suffixes |
-| macOS | production | `com.fuzzzytechnologies.secure-chat` | `macos/Runner.xcodeproj` (`Release-production`); `Configs/AppInfo.xcconfig` still holds the template `com.example.myApp` and is overridden per configuration |
-| macOS | staging / development | `com.fuzzzytechnologies.secure-chat.dev` (both) | same project |
-| iOS | production | **`com.fuzzzytechnologies.secure-chat.dev`** | `ios/Runner.xcodeproj` (`Release-production`) — the production configurations carry the `.dev` id; staging is `.stg`. **Owner decision before the first App Store upload:** keep it, or change the three `*-production` configurations to `com.fuzzzytechnologies.secure-chat` (then update `BUNDLE_ID` in `ios-release`). Not changed here. |
+| Android | production | `com.fuzzzycore.seal` | `android/app/build.gradle` `applicationId` + `applicationIdSuffix ""` |
+| Android | staging / development | `com.fuzzzycore.seal.stg` / `com.fuzzzycore.seal.dev` | same file, suffixes |
+| macOS | production | `com.fuzzzycore.seal` | `macos/Runner.xcodeproj` (`Release-production`); `Configs/AppInfo.xcconfig` carries the same id as the default |
+| macOS | staging / development | `com.fuzzzycore.seal.stg` / `com.fuzzzycore.seal.dev` | same project |
+| iOS | production | `com.fuzzzycore.seal` | `ios/Runner.xcodeproj` (`Release-production`) |
+| iOS | staging / development | `com.fuzzzycore.seal.stg` / `com.fuzzzycore.seal.dev` | same project |
 
 ### 6.2 What a signed macOS build needs
 
@@ -324,10 +325,10 @@ account for this app yet, so the first build is the owner's, after the steps bel
    `.pkg` steps, set `ENABLE_HARDENED_RUNTIME = YES` on the Runner target (hardened runtime is mandatory for
    notarization; the project does not set it today), then notarize and staple with the same API key:
    ```sh
-   ditto -c -k --keepParent "build/macos/Build/Products/Release-production/Fuzzy Chat.app" fuzzy_chat-macos.zip
-   xcrun notarytool submit fuzzy_chat-macos.zip --key "$APP_STORE_CONNECT_PRIVATE_KEY_PATH" \
+   ditto -c -k --keepParent "build/macos/Build/Products/Release-production/Fuzzzy Seal.app" fuzzzy_seal-macos.zip
+   xcrun notarytool submit fuzzzy_seal-macos.zip --key "$APP_STORE_CONNECT_PRIVATE_KEY_PATH" \
      --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" --issuer "$APP_STORE_CONNECT_ISSUER_ID" --wait
-   xcrun stapler staple "build/macos/Build/Products/Release-production/Fuzzy Chat.app"
+   xcrun stapler staple "build/macos/Build/Products/Release-production/Fuzzzy Seal.app"
    ```
    (`notarytool` wants the `.p8` as a file; write `$APP_STORE_CONNECT_PRIVATE_KEY` to one first.) Both paths
    need the sandbox entitlement above; only Developer ID needs the hardened runtime.

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fuzzy_chat/lib.dart';
+import 'package:fuzzzy_seal/lib.dart';
 import 'package:fuzzzy_ui_kit/fuzzzy_ui_kit.dart';
 import 'package:go_router/go_router.dart';
 
@@ -230,7 +230,7 @@ class _VaultItemCardState extends State<VaultItemCard> {
   void _showMoveToGroupSheet(BuildContext context) {
     final groups = context.read<VaultGroupsCubit>().state.groups;
     final currentGroupId = widget.itemMetadata.groupId;
-    final localizations = context.fuzzyChatLocalizations;
+    final localizations = context.fuzzzySealLocalizations;
     final fuzzzyColors = context.fuzzzyColors;
     final titleStyle = context.fuzzzyTextStyles.titleM.copyWith(
       color: fuzzzyColors.ink,

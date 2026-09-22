@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 
 /// The Android side of the user-visible file store (`UserFiles.kt`): files
-/// land in `Downloads/Fuzzy Chat/<chat name>/` through MediaStore and are
+/// land in `Downloads/Fuzzzy Seal/<chat name>/` through MediaStore and are
 /// opened, shown and shared from there by content URI (T-0366). Every call
 /// throws a [PlatformException] whose `code` is `permissionDenied`,
 /// `notFound`, `noHandler` or `failed`.
@@ -9,9 +9,9 @@ class UserFilesChannel {
   const UserFilesChannel();
 
   static const _channel =
-      MethodChannel('com.fuzzzytechnologies.fuzzy_chat/user_files');
+      MethodChannel('com.fuzzzycore.seal/user_files');
 
-  /// Moves [sourcePath] into `Downloads/Fuzzy Chat/[chatName]/` and answers
+  /// Moves [sourcePath] into `Downloads/Fuzzzy Seal/[chatName]/` and answers
   /// the public path the message row keeps.
   Future<String> saveToDownloads({
     required String sourcePath,

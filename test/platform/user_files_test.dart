@@ -37,15 +37,15 @@ void main() {
 
     test('MainActivity registers the user files channel', () {
       final activity = File(
-        'android/app/src/main/kotlin/com/fuzzzytechnologies/MainActivity.kt',
+        'android/app/src/main/kotlin/com/fuzzzycore/seal/MainActivity.kt',
       ).readAsStringSync();
       expect(activity, contains('UserFiles.CHANNEL'));
       final channel = File(
-        'android/app/src/main/kotlin/com/fuzzzytechnologies/UserFiles.kt',
+        'android/app/src/main/kotlin/com/fuzzzycore/seal/UserFiles.kt',
       ).readAsStringSync();
       expect(
         channel,
-        contains('"com.fuzzzytechnologies.fuzzy_chat/user_files"'),
+        contains('"com.fuzzzycore.seal/user_files"'),
       );
       expect(channel, contains('MediaStore.Downloads.EXTERNAL_CONTENT_URI'));
     });

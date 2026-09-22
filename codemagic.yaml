@@ -136,7 +136,7 @@ workflows:
       vars:
         # macos/Runner.xcodeproj Release-production; the app sandbox + the user-selected file entitlement
         # (macos/Runner/Release.entitlements) are what the Mac App Store profile must carry.
-        BUNDLE_ID: com.fuzzzytechnologies.secure-chat
+        BUNDLE_ID: com.fuzzzycore.seal
       flutter: 3.41.7
       xcode: 26.5
       cocoapods: default
@@ -178,11 +178,11 @@ workflows:
         script: |
           set -euo pipefail
           cd build/macos/Build/Products/Release-production
-          xcrun productbuild --component "Fuzzy Chat.app" /Applications/ unsigned.pkg
+          xcrun productbuild --component "Fuzzzy Seal.app" /Applications/ unsigned.pkg
           INSTALLER_CERT_NAME=$(keychain list-certificates \
             | jq -r '.[] | select(.common_name | contains("Mac Developer Installer")) | .common_name' \
             | head -n 1)
-          xcrun productsign --sign "$INSTALLER_CERT_NAME" unsigned.pkg "Fuzzy Chat.pkg"
+          xcrun productsign --sign "$INSTALLER_CERT_NAME" unsigned.pkg "Fuzzzy Seal.pkg"
           rm -f unsigned.pkg
     artifacts:
       - build/macos/Build/Products/Release-production/*.pkg
@@ -201,10 +201,9 @@ workflows:
         - fuzzy_chat_signing
         - fuzzy_chat_deps
       vars:
-        # ios/Runner.xcodeproj Release-production as committed today — see RELEASE.md §6, this is the
-        # ".dev" identifier, an owner decision before the first store upload. No iOS entitlements file
-        # exists and none is needed: file_picker / share_plus use the system document picker and share sheet.
-        BUNDLE_ID: com.fuzzzytechnologies.secure-chat.dev
+        # ios/Runner.xcodeproj Release-production. No iOS entitlements file exists and none is needed:
+        # file_picker / share_plus use the system document picker and share sheet.
+        BUNDLE_ID: com.fuzzzycore.seal
       flutter: 3.41.7
       xcode: 26.5
       cocoapods: default

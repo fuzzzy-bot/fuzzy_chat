@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:fuzzy_chat/lib.dart';
+import 'package:fuzzzy_seal/lib.dart';
 
 class FuzzyLinkHandler {
   FuzzyLinkHandler({
@@ -25,8 +25,8 @@ class FuzzyLinkHandler {
 
   bool get hasPendingPayload => _pendingPayload != null;
 
-  FuzzyChatLocalizations get _l10n =>
-      FuzzyChatLocalizations.of(navigatorKey.currentContext!)!;
+  FuzzzySealLocalizations get _l10n =>
+      FuzzzySealLocalizations.of(navigatorKey.currentContext!)!;
 
   /// Feedback from outside the widget tree goes through the app's
   /// `ScaffoldMessenger`, as `GlobalBlocListeners` does: `FuzzzyToast.show`

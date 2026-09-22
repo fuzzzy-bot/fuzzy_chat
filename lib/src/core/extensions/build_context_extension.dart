@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:fuzzy_chat/lib.dart';
+import 'package:fuzzzy_seal/lib.dart';
 
 extension BuildContextExtension on BuildContext {
-  FuzzyChatLocalizations get fuzzyChatLocalizations =>
-      FuzzyChatLocalizations.of(this)!;
+  FuzzzySealLocalizations get fuzzzySealLocalizations =>
+      FuzzzySealLocalizations.of(this)!;
 }

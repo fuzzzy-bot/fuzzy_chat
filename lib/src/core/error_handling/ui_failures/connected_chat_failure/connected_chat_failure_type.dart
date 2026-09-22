@@ -1,4 +1,4 @@
-import 'package:fuzzy_chat/lib.dart';
+import 'package:fuzzzy_seal/lib.dart';
 
 enum ConnectedChatFailureType {
   alreadyUnfuzzed,
@@ -8,7 +8,7 @@ enum ConnectedChatFailureType {
   unknown;
 
   String toUiMessage(
-    FuzzyChatLocalizations localizations, {
+    FuzzzySealLocalizations localizations, {
     String? customUnknownMessage,
   }) {
     return switch (this) {

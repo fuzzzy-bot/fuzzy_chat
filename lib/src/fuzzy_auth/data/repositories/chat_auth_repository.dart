@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:fuzzy_chat/lib.dart';
+import 'package:fuzzzy_seal/lib.dart';
 
 class ChatAuthRepository {
   ChatAuthRepository({

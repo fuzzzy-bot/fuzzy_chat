@@ -2,7 +2,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fuzzy_chat/lib.dart';
+import 'package:fuzzzy_seal/lib.dart';
 import 'package:mocktail/mocktail.dart';
 
 // ---------------------------------------------------------------------------
@@ -42,7 +42,7 @@ void main() {
   late MockMessageDataRepository mockRepo;
   late MockFuzzyAuthStore authStore;
   late ChatFileInjectorCubit injector;
-  late FuzzyChatLocalizations l10n;
+  late FuzzzySealLocalizations l10n;
 
   setUpAll(() {
     registerFallbackValue(
@@ -105,15 +105,15 @@ void main() {
         child: MaterialApp(
           navigatorKey: navigatorKey,
           scaffoldMessengerKey: scaffoldMessengerKey,
-          localizationsDelegates: FuzzyChatLocalizations.localizationsDelegates,
-          supportedLocales: FuzzyChatLocalizations.supportedLocales,
+          localizationsDelegates: FuzzzySealLocalizations.localizationsDelegates,
+          supportedLocales: FuzzzySealLocalizations.supportedLocales,
           home: const GlobalBlocListeners(
             child: Scaffold(body: Text('chat')),
           ),
         ),
       ),
     );
-    l10n = FuzzyChatLocalizations.of(navigatorKey.currentContext!)!;
+    l10n = FuzzzySealLocalizations.of(navigatorKey.currentContext!)!;
   }
 
   Future<void> inject(

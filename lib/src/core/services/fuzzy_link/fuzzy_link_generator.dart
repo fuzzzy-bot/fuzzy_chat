@@ -51,13 +51,13 @@ class FuzzyLinkGenerator {
       FuzzyLinkType.fuzz => 'Encrypted Message',
     };
 
-    return '🔐 Fuzzy Chat $typeLabel\n'
+    return '🔐 Fuzzzy Seal $typeLabel\n'
         '\n'
-        'Tap the link to open in Fuzzy Chat:\n'
+        'Tap the link to open in Fuzzzy Seal:\n'
         '$link\n'
         '\n'
         '────────────────────\n'
-        "Can't tap? Copy the text below and paste into Fuzzy Chat:\n"
+        "Can't tap? Copy the text below and paste into Fuzzzy Seal:\n"
         '$rawFuzz';
   }
 

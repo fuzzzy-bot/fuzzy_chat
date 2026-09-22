@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fuzzy_chat/lib.dart';
+import 'package:fuzzzy_seal/lib.dart';
 import 'package:fuzzzy_ui_kit/fuzzzy_ui_kit.dart';
 
 export 'components/components.dart';
@@ -77,14 +77,14 @@ class _ProvidedBasicEncryptionPageState
     if (key.isEmpty) {
       FuzzzyToast.show(
         context,
-        message: context.fuzzyChatLocalizations.pleaseEnterAKey,
+        message: context.fuzzzySealLocalizations.pleaseEnterAKey,
       );
       return;
     }
     if (_selectedFilePaths?.isNotEmpty != true) {
       FuzzzyToast.show(
         context,
-        message: context.fuzzyChatLocalizations.pleaseSelectFilesToProcess,
+        message: context.fuzzzySealLocalizations.pleaseSelectFilesToProcess,
       );
       return;
     }
@@ -121,22 +121,22 @@ class _ProvidedBasicEncryptionPageState
 
   String _localizeFailureMessage(BuildContext context, String? message) {
     if (message == null) {
-      return context.fuzzyChatLocalizations.anUnknownErrorOccurred;
+      return context.fuzzzySealLocalizations.anUnknownErrorOccurred;
     }
     switch (message) {
       case 'textAndKeyCannotBeEmpty':
-        return context.fuzzyChatLocalizations.textAndKeyCannotBeEmpty;
+        return context.fuzzzySealLocalizations.textAndKeyCannotBeEmpty;
       case 'encryptionFailed':
-        return context.fuzzyChatLocalizations.encryptionFailed;
+        return context.fuzzzySealLocalizations.encryptionFailed;
       case 'encryptedTextAndKeyCannotBeEmpty':
-        return context.fuzzyChatLocalizations.encryptedTextAndKeyCannotBeEmpty;
+        return context.fuzzzySealLocalizations.encryptedTextAndKeyCannotBeEmpty;
       case 'decryptionFailedCheckYourKeyOrEncryptedText':
         return context
-            .fuzzyChatLocalizations.decryptionFailedCheckYourKeyOrEncryptedText;
+            .fuzzzySealLocalizations.decryptionFailedCheckYourKeyOrEncryptedText;
       case 'basicsWrongPassword':
-        return context.fuzzyChatLocalizations.basicsWrongPassword;
+        return context.fuzzzySealLocalizations.basicsWrongPassword;
       case 'corruptBlob':
-        return context.fuzzyChatLocalizations.corruptBlob;
+        return context.fuzzzySealLocalizations.corruptBlob;
       default:
         return message;
     }

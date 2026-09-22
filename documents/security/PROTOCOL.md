@@ -1,4 +1,4 @@
-# Fuzzy Chat — Protocol Specification, format version 1
+# Fuzzzy Seal — Protocol Specification, format version 1
 
 **Status:** normative for the code in `rust/fuzzy_crypto_core` (crate `fuzzy_crypto_core` 0.1.0) on the
 `agent/chat-harden-rust-crypto-core` branch. Where this document and the code disagree, the code is the
@@ -44,7 +44,7 @@ design is `HARDENING_2026.md` (F5-5). This document only says *what the bytes ar
 
 **Non-goals.**
 
-- No transport. Fuzzy Chat is 100 % offline: every blob travels by copy and paste through whatever channel
+- No transport. Fuzzzy Seal is 100 % offline: every blob travels by copy and paste through whatever channel
   the users choose (SMS, e-mail, another messenger, a QR code). The protocol never sees that channel and
   makes no assumption about it beyond "an attacker may read, modify, replay and reorder anything on it".
 - No server, no directory, no key server, no push. There is nothing to be online for.
@@ -229,18 +229,18 @@ chat id ([`safety.rs#L31`](../../rust/fuzzy_crypto_core/src/safety.rs#L31)):
 
 ```
 low, high = sort_lexicographic(key_1, key_2)                     // byte-wise on the two [u8; 32]
-digest    = SHA-512( "FUZZYCHAT_SAFETY_NUMBER_V1" ‖ 0x00 ‖ chat_id_utf8 ‖ 0x00 ‖ low ‖ high )
+digest    = SHA-512( "FUZZZYSEAL_SAFETY_NUMBER_V1" ‖ 0x00 ‖ chat_id_utf8 ‖ 0x00 ‖ low ‖ high )
 group[i]  = ( u40 BE of digest[5i .. 5i+5] ) mod 100000            for i in 0..12
 text      = zero-padded 5-digit groups joined by single spaces      // 60 digits, 71 characters
 ```
 
-Constants: domain `FUZZYCHAT_SAFETY_NUMBER_V1` ([`safety.rs#L20`](../../rust/fuzzy_crypto_core/src/safety.rs#L20)),
+Constants: domain `FUZZZYSEAL_SAFETY_NUMBER_V1` ([`safety.rs#L20`](../../rust/fuzzy_crypto_core/src/safety.rs#L20)),
 12 groups ([`#L22`](../../rust/fuzzy_crypto_core/src/safety.rs#L22)) of 5 digest bytes each
 ([`#L24`](../../rust/fuzzy_crypto_core/src/safety.rs#L24)), modulus 100 000
 ([`#L25`](../../rust/fuzzy_crypto_core/src/safety.rs#L25)); the last 4 bytes of the digest are unused. This
 is libsignal's `DisplayableFingerprint` group encoding (5 bytes → `% 100000`), applied to one combined
 digest instead of two per-side ones. Vector: `safety_number` (chat id `6f1e9b2c-…`, keys `00 01 … 1f` and
-`ff fe … e0` → `90859 79201 46554 21953 58421 40734 65370 38782 54726 67657 18034 67421`).
+`ff fe … e0` → `24835 61545 97204 74992 49860 78334 62260 58331 41944 79659 59505 37321`).
 
 - **Symmetry.** The sort makes the argument order irrelevant, so A (who calls it with `(our, peer)`) and B (who
   calls it with the same two keys the other way round) get the same string.
@@ -694,7 +694,7 @@ then exactly one of `text` (the row's opened local seal, §10.4), `fileName` (th
 file — **never file bytes**; the file itself is a plain file on the device, §10.5) or `"unreadable": true`
 (a text row whose local seal did not open: absent, malformed, or `Corrupt` / `UnknownChat` / `StoreLocked`
 at the core). The crate sees nothing but a password-mode file job: the lines are produced by the app
-(`lib/src/fuzzy_chat/data/repositories/chat_archive_repository/`), so no vector covers them — the container
+(`lib/src/fuzzzy_seal/data/repositories/chat_archive_repository/`), so no vector covers them — the container
 is the `0x04` of §9.1 and the JSON is application data. The archive opens in Basics → file decryption under
 the same password. **No import path exists** and none is planned: it is a human-readable backup, not a
 state transfer, and a restored install cannot turn it back into a chat.
@@ -725,7 +725,7 @@ Isar (app database)     StoredVaultMetadata.verificationTokenBase64      the wra
 vault item files        one file per item (VaultFileDataSource)          a 0x20 blob, AAD "vault-item" (optionally wrapped again in a 0x05 under a per-item password)
 <application support directory>/chat_archive_<chat_id>.jsonl            transient: plaintext JSON lines during an archive export (§9.5), deleted in finally
 <application documents directory>/<chat name>/<name>                     unfuzzed FILES in the clear (§10.5) — plain files, not sealed; fuzzed containers <name>.fuzz sit beside them.
-                                                                        Android since T-0366: the finished file is moved to the public Downloads/Fuzzy Chat/<chat name>/ (MediaStore); iOS exposes Documents to the Files app
+                                                                        Android since T-0366: the finished file is moved to the public Downloads/Fuzzzy Seal/<chat name>/ (MediaStore); iOS exposes Documents to the Files app
 ```
 
 The store directory is created and canonicalised when the store opens; every path under it is formed only
@@ -831,8 +831,8 @@ secure storage (Keychain / Keystore / DPAPI / libsecret) as a `0x10` blob.
 
 **Unfuzzed files are written in the clear.** A received file's plaintext is delivered as an ordinary file at
 `<application documents directory>/<chat name>/<original name>` — on desktop that is the user's Documents
-folder; on iOS the app's Documents folder, which the Files app shows as "On My iPhone › Fuzzy Chat"; on
-Android the file is written there and then moved to the public `Downloads/Fuzzy Chat/<chat name>/` through
+folder; on iOS the app's Documents folder, which the Files app shows as "On My iPhone › Fuzzzy Seal"; on
+Android the file is written there and then moved to the public `Downloads/Fuzzzy Seal/<chat name>/` through
 MediaStore (T-0366, so the user finds it with any file manager) — and the fuzzed containers the user produced
 sit beside it as `<name>.fuzz` (ciphertext). The plaintext file is **not sealed, not gated by the app lock, and
 not removed when the chat is deleted**; anyone who can read the device's file system reads it, and only text
@@ -929,7 +929,7 @@ function; the KEK is a wiped 32-byte buffer; the AEAD object wipes its key on dr
 
 ## 13. Trust boundaries
 
-Fuzzy Chat is a Flutter app; the crate is reached through `flutter_rust_bridge` 2.13.0 (frb). The boundary
+Fuzzzy Seal is a Flutter app; the crate is reached through `flutter_rust_bridge` 2.13.0 (frb). The boundary
 is drawn so that **no key material ever crosses it**.
 
 **Crosses the FFI, Dart → Rust:** passwords (as strings; moved into wiped buffers immediately), the wrapped
@@ -1204,7 +1204,7 @@ a file job's terminal event carries.
 | state file extensions | `.state`, `.state.tmp` | [`store.rs#L44`](../../rust/fuzzy_crypto_core/src/store.rs#L44) |
 | state body version | 1 | [`state.rs#L16`](../../rust/fuzzy_crypto_core/src/state.rs#L16) |
 | counter window | 64 | [`counters.rs#L22`](../../rust/fuzzy_crypto_core/src/counters.rs#L22) |
-| safety-number domain / groups / bytes / modulus | `FUZZYCHAT_SAFETY_NUMBER_V1` / 12 / 5 / 100 000 | [`safety.rs#L20`](../../rust/fuzzy_crypto_core/src/safety.rs#L20) |
+| safety-number domain / groups / bytes / modulus | `FUZZZYSEAL_SAFETY_NUMBER_V1` / 12 / 5 / 100 000 | [`safety.rs#L20`](../../rust/fuzzy_crypto_core/src/safety.rs#L20) |
 | original name limit | 255 bytes | [`files.rs#L261`](../../rust/fuzzy_crypto_core/src/files.rs#L261) |
 | longest header read | 65 568 | [`files.rs#L53`](../../rust/fuzzy_crypto_core/src/files.rs#L53) |
 | pause poll | 50 ms | [`files.rs#L50`](../../rust/fuzzy_crypto_core/src/files.rs#L50) |

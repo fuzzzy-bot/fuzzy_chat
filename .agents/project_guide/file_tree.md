@@ -1,11 +1,11 @@
-# Fuzzy Chat — File Tree
+# Fuzzzy Seal — File Tree
 
 > Generated from `git ls-files` at the tip of `agent/chat-harden-rust-crypto-core` (v1.0.0-rc.1 line). Updated by the [DOCUMENTER] persona.
 > Host folders, vendored code, generated l10n and the test-vector set are collapsed (`… (N files)`); a `(+.g.dart)` marks an Isar model with its committed generated twin.
 > Two trees, one repo: `lib/` (Dart, Flutter) and `rust/fuzzy_crypto_core/` (the crypto core). `lib/rust_bridge/` is codegen output and lives outside `lib/src` on purpose so `./exp.sh` never touches it.
 
 ```
-fuzzy_chat/
+fuzzzy_seal/
 ├── .agents/
 │   ├── general_app_idea/
 │   │   ├── about_current_features.md
@@ -202,7 +202,7 @@ fuzzy_chat/
 │   │   │   │   ├── widgets/
 │   │   │   │   └── ui.dart
 │   │   │   └── fuzzy_basics.dart
-│   │   ├── fuzzy_chat/
+│   │   ├── fuzzzy_seal/
 │   │   │   ├── bloc/
 │   │   │   │   ├── acceptance_reader_cubit/
 │   │   │   │   ├── chat_creation_cubit/
@@ -272,7 +272,7 @@ fuzzy_chat/
 │   │   │   │   │   ├── chat_deletion_dialog.dart
 │   │   │   │   │   └── widgets.dart
 │   │   │   │   └── ui.dart
-│   │   │   └── fuzzy_chat.dart
+│   │   │   └── fuzzzy_seal.dart
 │   │   ├── fuzzy_vault/
 │   │   │   ├── bloc/
 │   │   │   │   ├── vault_auth_cubit/
@@ -426,7 +426,7 @@ fuzzy_chat/
 │       ├── core/
 │       ├── fuzzy_auth/
 │       ├── fuzzy_basics/
-│       ├── fuzzy_chat/
+│       ├── fuzzzy_seal/
 │       └── fuzzy_vault/
 ├── web/ … (6 files) # web host — unsupported at runtime (native core)
 ├── windows/ … (18 files) # Windows host (CMake)
