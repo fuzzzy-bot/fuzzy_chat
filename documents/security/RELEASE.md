@@ -314,7 +314,11 @@ account for this app yet, so the first build is the owner's, after the steps bel
    (`pickFiles`, vault / basics / chat files) or the archive save panel (`saveFile`, F2-10). `network.client` is
    deliberately absent — the app never fetches anything. `keychain-access-groups` (empty, pre-existing) is a
    *restricted* entitlement: it is fine under an Apple-issued certificate, but an ad-hoc-signed local build carrying
-   it is killed by AMFI, so local sandbox tests sign with a copy of the file minus that key.
+   it is killed by AMFI. It is therefore no longer in `DebugProfile.entitlements` (an empty array granted nothing
+   anyway); `Release.entitlements`, which the store build signs against, still carries it. The `Debug-*` and
+   `Profile-*` configurations sign ad-hoc (`CODE_SIGN_IDENTITY[sdk=macosx*] = "-"`, manual style, no profile), so
+   `flutter run -d macos` works on a machine with no certificate and no provisioning profile. The `Release-*`
+   configurations are untouched: automatic style, `Apple Development`, signed by the workflow below.
 2. **Provisioning + distribution certificate** — automatic in the workflow: `app-store-connect fetch-signing-files
    "$BUNDLE_ID" --platform MAC_OS --type MAC_APP_STORE --create` (Mac App Store profile + Mac App Distribution
    certificate), `keychain add-certificates`, `xcode-project use-profiles`. **Default: Mac App Store** — no
