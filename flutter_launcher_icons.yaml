@@ -1,7 +1,10 @@
-# App icon — production (blood red sun / speech bubble). ANDROID ONLY, on purpose.
+# App icon — production (the company mark: blood red sun crossed by a black ink branch).
+# ANDROID ONLY, on purpose.
 #
 # Artwork is owner-approved and lives in the brand kit:
-#   ~/FuzzyCore_HQ/company/brand/logo/chat/v1/prod/night/
+#   ~/FuzzyCore_HQ/company/brand/logo/fuzzycore/v1/prod/night/
+# This app uses the standard company mark, not an app-specific one (owner decision 2026-09-22:
+# the bespoke chat mark read as a plain red blob at icon size).
 # The copies under assets/launcher_icons/ are build inputs only — never edit them by hand and
 # never register them in `flutter: assets:`. To change the mark, re-export from the brand kit.
 #
