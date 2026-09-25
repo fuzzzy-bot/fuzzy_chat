@@ -178,11 +178,11 @@ workflows:
         script: |
           set -euo pipefail
           cd build/macos/Build/Products/Release-production
-          xcrun productbuild --component "Fuzzzy Seal.app" /Applications/ unsigned.pkg
+          xcrun productbuild --component "Fuzzzy Ink.app" /Applications/ unsigned.pkg
           INSTALLER_CERT_NAME=$(keychain list-certificates \
             | jq -r '.[] | select(.common_name | contains("Mac Developer Installer")) | .common_name' \
             | head -n 1)
-          xcrun productsign --sign "$INSTALLER_CERT_NAME" unsigned.pkg "Fuzzzy Seal.pkg"
+          xcrun productsign --sign "$INSTALLER_CERT_NAME" unsigned.pkg "Fuzzzy Ink.pkg"
           rm -f unsigned.pkg
     artifacts:
       - build/macos/Build/Products/Release-production/*.pkg

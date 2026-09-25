@@ -164,7 +164,7 @@ jobs:
           FLUTTER_XCODE_CODE_SIGN_IDENTITY: ""
       # upload-artifact drops symlinks and file modes, which a .app bundle needs (Frameworks/*/Versions/Current);
       # ditto keeps them, and the zip is the one file SHA256SUMS + the attestation can name.
-      - run: ditto -c -k --keepParent "build/macos/Build/Products/Release-production/Fuzzzy Seal.app" build/macos/fuzzzy_seal-macos.zip
+      - run: ditto -c -k --keepParent "build/macos/Build/Products/Release-production/Fuzzzy Ink.app" build/macos/fuzzzy_seal-macos.zip
       - uses: actions/upload-artifact@v7
         with: { name: macos-app, path: build/macos/fuzzzy_seal-macos.zip }
   # ios: optional, `flutter build ios --release --no-codesign` on macos-latest; allowed to be added in Phase 5.

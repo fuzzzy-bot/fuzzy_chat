@@ -69,7 +69,7 @@ Artifacts of a run (`gh run download <run-id> -D rel` puts each one in a directo
 | `android-apk` | `app-production-release.apk` (production flavor, `--split-debug-info`) | the APK |
 | `linux-bundle` | `fuzzzy_seal` + `lib/` + `data/` (the whole bundle directory) | `fuzzzy_seal`, `lib/libfuzzy_crypto_core.so` |
 | `windows-bundle` | `fuzzzy_seal.exe` + plugin DLLs + `data/` | `fuzzzy_seal.exe`, `fuzzy_crypto_core.dll` |
-| `macos-app` | `fuzzzy_seal-macos.zip` (`ditto` archive of `Fuzzzy Seal.app`, symlinks and modes kept) | the zip |
+| `macos-app` | `fuzzzy_seal-macos.zip` (`ditto` archive of `Fuzzzy Ink.app`, symlinks and modes kept) | the zip |
 | `sha256sums` | `SHA256SUMS` — `sha256sum` lines over the six files above, paths relative to the download directory | — |
 | `sbom-rust`, `sbom-flutter` | the CycloneDX SBOMs committed under `documents/security/sbom/` | — |
 | `rust-repro-1`, `rust-repro-2` | the Rust core built twice on separate runners + each run's `SHA256SUMS` (§4) | — |
@@ -329,10 +329,10 @@ account for this app yet, so the first build is the owner's, after the steps bel
    `.pkg` steps, set `ENABLE_HARDENED_RUNTIME = YES` on the Runner target (hardened runtime is mandatory for
    notarization; the project does not set it today), then notarize and staple with the same API key:
    ```sh
-   ditto -c -k --keepParent "build/macos/Build/Products/Release-production/Fuzzzy Seal.app" fuzzzy_seal-macos.zip
+   ditto -c -k --keepParent "build/macos/Build/Products/Release-production/Fuzzzy Ink.app" fuzzzy_seal-macos.zip
    xcrun notarytool submit fuzzzy_seal-macos.zip --key "$APP_STORE_CONNECT_PRIVATE_KEY_PATH" \
      --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" --issuer "$APP_STORE_CONNECT_ISSUER_ID" --wait
-   xcrun stapler staple "build/macos/Build/Products/Release-production/Fuzzzy Seal.app"
+   xcrun stapler staple "build/macos/Build/Products/Release-production/Fuzzzy Ink.app"
    ```
    (`notarytool` wants the `.p8` as a file; write `$APP_STORE_CONNECT_PRIVATE_KEY` to one first.) Both paths
    need the sandbox entitlement above; only Developer ID needs the hardened runtime.
