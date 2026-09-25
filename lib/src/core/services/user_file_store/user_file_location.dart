@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 
 /// What a file bubble prints instead of a path (T-0366): the file's name and
-/// where the user finds it, e.g. `Downloads › Fuzzzy Seal › Fz bot`.
+/// where the user finds it, e.g. `Downloads › Fuzzzy Ink › Fz bot`.
 class UserFileLocation {
   const UserFileLocation({
     required this.fileName,

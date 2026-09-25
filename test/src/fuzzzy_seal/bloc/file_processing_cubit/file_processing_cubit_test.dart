@@ -36,7 +36,7 @@ class _FakeUserFileStore extends Fake implements UserFileStore {
 const _chatId = '6f1e9b2c-3d4a-4f5b-8c6d-7e8f9a0b1c2d';
 const _chatName = 'Bob';
 const _publishedPath =
-    '/storage/emulated/0/Download/Fuzzzy Seal/Bob/report.pdf.fuzz';
+    '/storage/emulated/0/Download/Fuzzzy Ink/Bob/report.pdf.fuzz';
 
 /// A handler whose stream replays [events]; pause/resume/cancel are counted.
 class _FakeHandler {
@@ -202,7 +202,7 @@ void main() {
     );
 
     // T-0366: the finished file is handed to the user-visible store and the
-    // row keeps the path the store answers (Downloads/Fuzzzy Seal/<chat> on
+    // row keeps the path the store answers (Downloads/Fuzzzy Ink/<chat> on
     // Android); a store that cannot place it keeps the app's own copy.
     blocTest<FileProcessingCubit<FileEncryptionOption>, FileProcessingState>(
       'a completed file is published under the chat name and the row keeps '

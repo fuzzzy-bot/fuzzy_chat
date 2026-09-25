@@ -13,7 +13,7 @@ export 'user_files_channel.dart';
 /// (`AppDocumentsDirectory/<chat name>/`); [publish] then moves the finished
 /// file to its user-visible place and answers the path the message row keeps:
 ///
-/// * Android — `Downloads/Fuzzzy Seal/<chat name>/`, through MediaStore on
+/// * Android — `Downloads/Fuzzzy Ink/<chat name>/`, through MediaStore on
 ///   API 29+ and the public Downloads folder (with the storage permission)
 ///   on API 24–28.
 /// * iOS — the file stays in Documents, which `Info.plist` exposes to the

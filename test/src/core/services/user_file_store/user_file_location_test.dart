@@ -5,14 +5,14 @@ import 'package:fuzzzy_seal/lib.dart';
 /// find, never a path — least of all an app-private `/data/user/0/...` one.
 void main() {
   group('UserFileLocation.of', () {
-    test('Android public Downloads → "Downloads › Fuzzzy Seal › <chat>"', () {
+    test('Android public Downloads → "Downloads › Fuzzzy Ink › <chat>"', () {
       final location = UserFileLocation.of(
-        '/storage/emulated/0/Download/Fuzzzy Seal/Fz bot/20260920-WA0000.jpg.fuzz',
+        '/storage/emulated/0/Download/Fuzzzy Ink/Fz bot/20260920-WA0000.jpg.fuzz',
         isIOS: false,
       );
 
       expect(location.fileName, '20260920-WA0000.jpg.fuzz');
-      expect(location.folderLine, 'Downloads › Fuzzzy Seal › Fz bot');
+      expect(location.folderLine, 'Downloads › Fuzzzy Ink › Fz bot');
     });
 
     test('desktop Documents → "Documents › <chat>"', () {

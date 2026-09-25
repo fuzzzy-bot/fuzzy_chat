@@ -76,7 +76,7 @@ class DeviceFileInteractor {
       Platform.isWindows || Platform.isMacOS || Platform.isLinux;
 
   /// Shows where the file lives: desktop selects it in the file manager,
-  /// Android opens its `Downloads/Fuzzzy Seal/<chat>` folder in the system
+  /// Android opens its `Downloads/Fuzzzy Ink/<chat>` folder in the system
   /// file manager, iOS opens the Files app on the app's folder. When that
   /// place cannot be opened (a row from before T-0366, no file manager) the
   /// share sheet is the fallback; a missing file throws.

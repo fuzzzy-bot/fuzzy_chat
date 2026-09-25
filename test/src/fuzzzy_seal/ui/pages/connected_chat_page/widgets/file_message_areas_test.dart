@@ -7,7 +7,7 @@ import 'package:fuzzzy_ui_kit/fuzzzy_ui_kit.dart';
 
 const _chatId = '6f1e9b2c-3d4a-4f5b-8c6d-7e8f9a0b1c2d';
 const _missingPath =
-    '/storage/emulated/0/Download/Fuzzzy Seal/Fz bot/secret.jpg.fuzz';
+    '/storage/emulated/0/Download/Fuzzzy Ink/Fz bot/secret.jpg.fuzz';
 
 /// A 360dp-wide phone (T-0366: every action of the pill must stay on it).
 const _phoneSize = Size(360, 780);
@@ -19,7 +19,7 @@ class _MissingFile extends Fake implements File {
   Future<bool> exists() async => false;
 
   @override
-  Directory get parent => Directory('/storage/emulated/0/Download/Fuzzzy Seal');
+  Directory get parent => Directory('/storage/emulated/0/Download/Fuzzzy Ink');
 }
 
 MessageData _fileRow({required bool isSent}) => MessageData(
@@ -103,7 +103,7 @@ void main() {
         );
 
         expect(find.text('secret.jpg.fuzz'), findsOneWidget);
-        expect(find.text('Downloads › Fuzzzy Seal › Fz bot'), findsOneWidget);
+        expect(find.text('Downloads › Fuzzzy Ink › Fz bot'), findsOneWidget);
         expect(find.textContaining('/storage/'), findsNothing);
 
         await tester.tap(find.text('secret.jpg.fuzz'));
@@ -140,7 +140,7 @@ void main() {
         );
 
         expect(find.text('secret.jpg.fuzz'), findsOneWidget);
-        expect(find.text('Downloads › Fuzzzy Seal › Fz bot'), findsOneWidget);
+        expect(find.text('Downloads › Fuzzzy Ink › Fz bot'), findsOneWidget);
         expect(find.textContaining('/storage/'), findsNothing);
 
         await tester.tap(find.text('secret.jpg.fuzz'));

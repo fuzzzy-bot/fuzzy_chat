@@ -36,7 +36,7 @@ What an attacker wants, in the order the product cares about it.
 | A9 | **Metadata**: chat names, chat ids, timestamps, message counts and ordering, file names, sizes and the on-disk paths of unfuzzed files (A12), the ciphertext blobs themselves, vault item titles/tags/groups/types | plaintext columns of the Isar database | **not protected** — an explicit non-goal (§7.4, `PROTOCOL.md` §10.5) |
 | A10 | **Peer authenticity** — that the person at the other end of a chat is the person the user thinks | the safety number (`PROTOCOL.md` §5) | the users' out-of-band comparison |
 | A11 | **Availability of history**: that a blob a user already read stays readable | the local seal (A7) | the app lock; the ratchet makes the blob itself single-use by design (§7.6) |
-| A12 | **Unfuzzed file plaintext at rest** — every file a user has unfuzzed (chat or Basics) | an ordinary file at `<app documents directory>/<chat name>/<original name>` (desktop: the user's Documents folder; iOS: Documents, shown in the Files app; Android: moved to the public `Downloads/Fuzzzy Seal/<chat name>/`, T-0366), beside the `.fuzz` containers the user produced (`PROTOCOL.md` §10.5) | **nothing in the app** — not sealed, not gated by the app lock, not deleted with the chat; only the OS user account and device encryption (§2.5, §7.13, R36). The archive export (A7 as a file, `PROTOCOL.md` §9.5) is the same class: plaintext under a user-chosen password, outside forward secrecy (R35) |
+| A12 | **Unfuzzed file plaintext at rest** — every file a user has unfuzzed (chat or Basics) | an ordinary file at `<app documents directory>/<chat name>/<original name>` (desktop: the user's Documents folder; iOS: Documents, shown in the Files app; Android: moved to the public `Downloads/Fuzzzy Ink/<chat name>/`, T-0366), beside the `.fuzz` containers the user produced (`PROTOCOL.md` §10.5) | **nothing in the app** — not sealed, not gated by the app lock, not deleted with the chat; only the OS user account and device encryption (§2.5, §7.13, R36). The archive export (A7 as a file, `PROTOCOL.md` §9.5) is the same class: plaintext under a user-chosen password, outside forward secrecy (R35) |
 
 Not an asset of this model: the users' real-world identities (the protocol has no notion of them), the
 existence of the app on a device, or the fact that two people exchange blobs (§7.4).
@@ -148,7 +148,7 @@ ciphertext, every message's *sealed* plaintext (unreadable), and every piece of 
 - **Unfuzzed files are plain files (A12).** The plaintext of every received file — and of every file
   decrypted in Basics — is written where the user's app puts it: `<app documents directory>/<chat name>/<original
   name>`, which on macOS, Windows and Linux is the user's Documents folder, on iOS the app's Documents folder
-  (exposed to the Files app) and on Android the public `Downloads/Fuzzzy Seal/<chat name>/` folder, readable by any
+  (exposed to the Files app) and on Android the public `Downloads/Fuzzzy Ink/<chat name>/` folder, readable by any
   app the user grants file access to (T-0366). It is never sealed, the app lock does not gate it, deleting the chat does not remove it, and the
   database row that names it (`encryptedMessage` = its path) is plaintext (§2.4). The fuzzed containers the
   user produced sit beside it as `<name>.fuzz` (ciphertext). Only *text* rows get a local seal (A7). Whoever can

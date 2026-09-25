@@ -725,7 +725,7 @@ Isar (app database)     StoredVaultMetadata.verificationTokenBase64      the wra
 vault item files        one file per item (VaultFileDataSource)          a 0x20 blob, AAD "vault-item" (optionally wrapped again in a 0x05 under a per-item password)
 <application support directory>/chat_archive_<chat_id>.jsonl            transient: plaintext JSON lines during an archive export (§9.5), deleted in finally
 <application documents directory>/<chat name>/<name>                     unfuzzed FILES in the clear (§10.5) — plain files, not sealed; fuzzed containers <name>.fuzz sit beside them.
-                                                                        Android since T-0366: the finished file is moved to the public Downloads/Fuzzzy Seal/<chat name>/ (MediaStore); iOS exposes Documents to the Files app
+                                                                        Android since T-0366: the finished file is moved to the public Downloads/Fuzzzy Ink/<chat name>/ (MediaStore); iOS exposes Documents to the Files app
 ```
 
 The store directory is created and canonicalised when the store opens; every path under it is formed only
@@ -831,8 +831,8 @@ secure storage (Keychain / Keystore / DPAPI / libsecret) as a `0x10` blob.
 
 **Unfuzzed files are written in the clear.** A received file's plaintext is delivered as an ordinary file at
 `<application documents directory>/<chat name>/<original name>` — on desktop that is the user's Documents
-folder; on iOS the app's Documents folder, which the Files app shows as "On My iPhone › Fuzzzy Seal"; on
-Android the file is written there and then moved to the public `Downloads/Fuzzzy Seal/<chat name>/` through
+folder; on iOS the app's Documents folder, which the Files app shows as "On My iPhone › Fuzzzy Ink"; on
+Android the file is written there and then moved to the public `Downloads/Fuzzzy Ink/<chat name>/` through
 MediaStore (T-0366, so the user finds it with any file manager) — and the fuzzed containers the user produced
 sit beside it as `<name>.fuzz` (ciphertext). The plaintext file is **not sealed, not gated by the app lock, and
 not removed when the chat is deleted**; anyone who can read the device's file system reads it, and only text
