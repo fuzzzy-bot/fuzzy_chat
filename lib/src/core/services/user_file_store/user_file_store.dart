@@ -17,7 +17,7 @@ export 'user_files_channel.dart';
 ///   API 29+ and the public Downloads folder (with the storage permission)
 ///   on API 24–28.
 /// * iOS — the file stays in Documents, which `Info.plist` exposes to the
-///   Files app as "On My iPhone › Fuzzzy Seal".
+///   Files app as "On My iPhone › Fuzzzy Ink".
 /// * Desktop — the file stays in the user's Documents folder.
 class UserFileStore {
   UserFileStore({UserFilesChannel channel = const UserFilesChannel()})

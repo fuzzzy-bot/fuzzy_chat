@@ -143,7 +143,7 @@ void main() {
           type: FuzzyLinkType.invitation,
         );
 
-        expect(content, contains('Fuzzzy Seal Invitation'));
+        expect(content, contains('Fuzzzy Ink Invitation'));
         expect(content, contains(link));
         expect(content, contains(rawFuzz));
         expect(content, contains('────────────────────'));

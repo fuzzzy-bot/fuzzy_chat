@@ -108,7 +108,7 @@ abstract class FuzzzySealLocalizations {
   /// No description provided for @fuzzzySeal.
   ///
   /// In en, this message translates to:
-  /// **'Fuzzzy Seal'**
+  /// **'Fuzzzy Ink'**
   String get fuzzzySeal;
 
   /// No description provided for @failedToLoadChats.
@@ -571,7 +571,7 @@ abstract class FuzzzySealLocalizations {
   /// No description provided for @welcomeToFuzzzySeal.
   ///
   /// In en, this message translates to:
-  /// **'Welcome to Fuzzzy Seal'**
+  /// **'Welcome to Fuzzzy Ink'**
   String get welcomeToFuzzzySeal;
 
   /// No description provided for @offlineEncryptedClipboard.
@@ -801,7 +801,7 @@ abstract class FuzzzySealLocalizations {
   /// No description provided for @updateRequired.
   ///
   /// In en, this message translates to:
-  /// **'This link requires a newer version of Fuzzzy Seal.'**
+  /// **'This link requires a newer version of Fuzzzy Ink.'**
   String get updateRequired;
 
   /// No description provided for @cantAcceptOwnInvitation.
@@ -1209,7 +1209,7 @@ abstract class FuzzzySealLocalizations {
   /// No description provided for @chatUnlockTitle.
   ///
   /// In en, this message translates to:
-  /// **'Unlock Fuzzzy Seal'**
+  /// **'Unlock Fuzzzy Ink'**
   String get chatUnlockTitle;
 
   /// No description provided for @chatUnlockSubtitle.
@@ -1768,7 +1768,7 @@ abstract class FuzzzySealLocalizations {
   /// No description provided for @exportChatArchiveStoreLocked.
   ///
   /// In en, this message translates to:
-  /// **'Unlock Fuzzzy Seal first — your history cannot be read while it is locked.'**
+  /// **'Unlock Fuzzzy Ink first — your history cannot be read while it is locked.'**
   String get exportChatArchiveStoreLocked;
 
   /// No description provided for @export.

@@ -12,7 +12,7 @@ class FuzzzySealLocalizationsEn extends FuzzzySealLocalizations {
   String get chat => 'Chat';
 
   @override
-  String get fuzzzySeal => 'Fuzzzy Seal';
+  String get fuzzzySeal => 'Fuzzzy Ink';
 
   @override
   String get failedToLoadChats => 'Failed to load chats.';
@@ -255,7 +255,7 @@ class FuzzzySealLocalizationsEn extends FuzzzySealLocalizations {
       'Decryption failed check your key or encrypted text';
 
   @override
-  String get welcomeToFuzzzySeal => 'Welcome to Fuzzzy Seal';
+  String get welcomeToFuzzzySeal => 'Welcome to Fuzzzy Ink';
 
   @override
   String get offlineEncryptedClipboard => 'Offline Encrypted Clipboard';
@@ -382,7 +382,7 @@ class FuzzzySealLocalizationsEn extends FuzzzySealLocalizations {
 
   @override
   String get updateRequired =>
-      'This link requires a newer version of Fuzzzy Seal.';
+      'This link requires a newer version of Fuzzzy Ink.';
 
   @override
   String get cantAcceptOwnInvitation =>
@@ -601,7 +601,7 @@ class FuzzzySealLocalizationsEn extends FuzzzySealLocalizations {
   String get processingFailed => 'Processing Failed';
 
   @override
-  String get chatUnlockTitle => 'Unlock Fuzzzy Seal';
+  String get chatUnlockTitle => 'Unlock Fuzzzy Ink';
 
   @override
   String get chatUnlockSubtitle => 'Enter your password to access your chats.';
@@ -917,7 +917,7 @@ class FuzzzySealLocalizationsEn extends FuzzzySealLocalizations {
 
   @override
   String get exportChatArchiveStoreLocked =>
-      'Unlock Fuzzzy Seal first — your history cannot be read while it is locked.';
+      'Unlock Fuzzzy Ink first — your history cannot be read while it is locked.';
 
   @override
   String get export => 'Export';

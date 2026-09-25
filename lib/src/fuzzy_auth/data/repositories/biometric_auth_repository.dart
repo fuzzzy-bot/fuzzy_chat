@@ -22,7 +22,7 @@ extension on BiometricScope {
   String get _androidTitle {
     switch (this) {
       case BiometricScope.chat:
-        return 'Unlock Fuzzzy Seal';
+        return 'Unlock Fuzzzy Ink';
       case BiometricScope.vault:
         return 'Unlock Fuzzy Vault';
     }

@@ -46,7 +46,7 @@ class UserFileLocation {
   static const separator = ' › ';
 
   static const _documents = 'Documents';
-  static const _iosDocumentsLabel = 'On My iPhone › Fuzzzy Seal';
+  static const _iosDocumentsLabel = 'On My iPhone › Fuzzzy Ink';
 
   /// Checked in order; `Download` is Android's public folder, `app_flutter`
   /// the app's private documents directory on Android.

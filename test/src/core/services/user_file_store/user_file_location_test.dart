@@ -25,12 +25,12 @@ void main() {
       expect(location.folderLine, 'Documents › Fz bot');
     });
 
-    test('iOS Documents → the Files app\'s "On My iPhone › Fuzzzy Seal"', () {
+    test('iOS Documents → the Files app\'s "On My iPhone › Fuzzzy Ink"', () {
       const iosPath =
           '/var/mobile/Containers/Data/Application/ABC/Documents/Fz bot/a.pdf';
       final location = UserFileLocation.of(iosPath, isIOS: true);
 
-      expect(location.folderLine, 'On My iPhone › Fuzzzy Seal › Fz bot');
+      expect(location.folderLine, 'On My iPhone › Fuzzzy Ink › Fz bot');
     });
 
     test(

@@ -12,7 +12,7 @@ class FuzzzySealLocalizationsKa extends FuzzzySealLocalizations {
   String get chat => 'Chat';
 
   @override
-  String get fuzzzySeal => 'Fuzzzy Seal';
+  String get fuzzzySeal => 'Fuzzzy Ink';
 
   @override
   String get failedToLoadChats => 'Failed to load chats.';
@@ -256,7 +256,7 @@ class FuzzzySealLocalizationsKa extends FuzzzySealLocalizations {
       'გაშიფრვა ვერ მოხერხდა შეამოწმეთ გასაღები ან დაშიფრული ტექსტი';
 
   @override
-  String get welcomeToFuzzzySeal => 'მოგესალმებით Fuzzzy Seal-ში';
+  String get welcomeToFuzzzySeal => 'მოგესალმებით Fuzzzy Ink-ში';
 
   @override
   String get offlineEncryptedClipboard => 'ოფლაინ დაშიფრული ბუფერი';
@@ -383,7 +383,7 @@ class FuzzzySealLocalizationsKa extends FuzzzySealLocalizations {
   String get alreadyConnected => 'უკვე დაკავშირებულია!';
 
   @override
-  String get updateRequired => 'ამ ბმულს Fuzzzy Seal-ის ახალი ვერსია სჭირდება.';
+  String get updateRequired => 'ამ ბმულს Fuzzzy Ink-ის ახალი ვერსია სჭირდება.';
 
   @override
   String get cantAcceptOwnInvitation =>
@@ -608,7 +608,7 @@ class FuzzzySealLocalizationsKa extends FuzzzySealLocalizations {
   String get processingFailed => 'დამუშავება ვერ მოხერხდა';
 
   @override
-  String get chatUnlockTitle => 'Fuzzzy Seal-ის განბლოკვა';
+  String get chatUnlockTitle => 'Fuzzzy Ink-ის განბლოკვა';
 
   @override
   String get chatUnlockSubtitle => 'ჩატებზე წვდომისთვის შეიყვანეთ პაროლი.';
@@ -926,7 +926,7 @@ class FuzzzySealLocalizationsKa extends FuzzzySealLocalizations {
 
   @override
   String get exportChatArchiveStoreLocked =>
-      'ჯერ განბლოკეთ Fuzzzy Seal — დაბლოკილი ისტორიის წაკითხვა შეუძლებელია.';
+      'ჯერ განბლოკეთ Fuzzzy Ink — დაბლოკილი ისტორიის წაკითხვა შეუძლებელია.';
 
   @override
   String get export => 'ექსპორტი';
