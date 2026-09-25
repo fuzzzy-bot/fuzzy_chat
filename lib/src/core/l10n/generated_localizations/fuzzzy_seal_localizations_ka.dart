@@ -933,4 +933,45 @@ class FuzzzySealLocalizationsKa extends FuzzzySealLocalizations {
 
   @override
   String get couldNotOpenFile => 'ფაილის გახსნა ვერ მოხერხდა.';
+
+  @override
+  String get legalAndSupport => 'სამართლებრივი ინფორმაცია და მხარდაჭერა';
+
+  @override
+  String get legalAndSupportDescription =>
+      'ეს ბმულები fuzzzycore.com-ს ბრაუზერში გახსნის. თავად Fuzzzy Ink ინტერნეტს არასოდეს უკავშირდება.';
+
+  @override
+  String get privacyPolicy => 'კონფიდენციალურობის პოლიტიკა';
+
+  @override
+  String get privacyPolicyDescription => 'რას ინახავს აპლიკაცია და სად';
+
+  @override
+  String get termsOfUse => 'გამოყენების პირობები';
+
+  @override
+  String get termsOfUseDescription => 'Fuzzzy Ink-ის გამოყენების წესები';
+
+  @override
+  String get support => 'მხარდაჭერა';
+
+  @override
+  String get supportDescription =>
+      'დახმარება, კითხვები და პრობლემის შეტყობინება';
+
+  @override
+  String get dataDeletion => 'მონაცემების წაშლა';
+
+  @override
+  String get dataDeletionDescription =>
+      'როგორ წაშალოთ ყველაფერი, რასაც აპლიკაცია ინახავს';
+
+  @override
+  String get couldNotOpenLink => 'ბმულის გახსნა ვერ მოხერხდა.';
+
+  @override
+  String appVersion(Object version, Object build) {
+    return 'ვერსია $version (ანაწყობი $build)';
+  }
 }

@@ -587,5 +587,34 @@
   "export": "ექსპორტი",
   "@export": {},
   "couldNotOpenFile": "ფაილის გახსნა ვერ მოხერხდა.",
-  "@couldNotOpenFile": {}
+  "@couldNotOpenFile": {},
+  "legalAndSupport": "სამართლებრივი ინფორმაცია და მხარდაჭერა",
+  "@legalAndSupport": {},
+  "legalAndSupportDescription": "ეს ბმულები fuzzzycore.com-ს ბრაუზერში გახსნის. თავად Fuzzzy Ink ინტერნეტს არასოდეს უკავშირდება.",
+  "@legalAndSupportDescription": {},
+  "privacyPolicy": "კონფიდენციალურობის პოლიტიკა",
+  "@privacyPolicy": {},
+  "privacyPolicyDescription": "რას ინახავს აპლიკაცია და სად",
+  "@privacyPolicyDescription": {},
+  "termsOfUse": "გამოყენების პირობები",
+  "@termsOfUse": {},
+  "termsOfUseDescription": "Fuzzzy Ink-ის გამოყენების წესები",
+  "@termsOfUseDescription": {},
+  "support": "მხარდაჭერა",
+  "@support": {},
+  "supportDescription": "დახმარება, კითხვები და პრობლემის შეტყობინება",
+  "@supportDescription": {},
+  "dataDeletion": "მონაცემების წაშლა",
+  "@dataDeletion": {},
+  "dataDeletionDescription": "როგორ წაშალოთ ყველაფერი, რასაც აპლიკაცია ინახავს",
+  "@dataDeletionDescription": {},
+  "couldNotOpenLink": "ბმულის გახსნა ვერ მოხერხდა.",
+  "@couldNotOpenLink": {},
+  "appVersion": "ვერსია {version} (ანაწყობი {build})",
+  "@appVersion": {
+    "placeholders": {
+      "version": {},
+      "build": {}
+    }
+  }
 }
