@@ -616,5 +616,13 @@
       "version": {},
       "build": {}
     }
-  }
+  },
+  "biometricUnlockChats": "Authenticate to unlock chats",
+  "@biometricUnlockChats": {},
+  "biometricUnlockVault": "Authenticate to unlock vault",
+  "@biometricUnlockVault": {},
+  "biometricUnlockVaultTitle": "Unlock Fuzzy Vault",
+  "@biometricUnlockVaultTitle": {},
+  "biometricSavePassword": "Authenticate to save password",
+  "@biometricSavePassword": {}
 }

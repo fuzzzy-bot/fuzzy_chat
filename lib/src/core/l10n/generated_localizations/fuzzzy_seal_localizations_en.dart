@@ -964,4 +964,16 @@ class FuzzzySealLocalizationsEn extends FuzzzySealLocalizations {
   String appVersion(Object version, Object build) {
     return 'Version $version (build $build)';
   }
+
+  @override
+  String get biometricUnlockChats => 'Authenticate to unlock chats';
+
+  @override
+  String get biometricUnlockVault => 'Authenticate to unlock vault';
+
+  @override
+  String get biometricUnlockVaultTitle => 'Unlock Fuzzy Vault';
+
+  @override
+  String get biometricSavePassword => 'Authenticate to save password';
 }

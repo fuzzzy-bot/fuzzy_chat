@@ -1854,6 +1854,30 @@ abstract class FuzzzySealLocalizations {
   /// In en, this message translates to:
   /// **'Version {version} (build {build})'**
   String appVersion(Object version, Object build);
+
+  /// No description provided for @biometricUnlockChats.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to unlock chats'**
+  String get biometricUnlockChats;
+
+  /// No description provided for @biometricUnlockVault.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to unlock vault'**
+  String get biometricUnlockVault;
+
+  /// No description provided for @biometricUnlockVaultTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock Fuzzy Vault'**
+  String get biometricUnlockVaultTitle;
+
+  /// No description provided for @biometricSavePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to save password'**
+  String get biometricSavePassword;
 }
 
 class _FuzzzySealLocalizationsDelegate
