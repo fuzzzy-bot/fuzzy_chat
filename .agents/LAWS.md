@@ -330,20 +330,21 @@ Derives from **fuzzzy_handbook v1.2.0**. Repository law derives from this versio
 | `lib/src/core/l10n/l10n.dart`, `lib/src/core/l10n/generated_localizations/generated_localizations.dart` | `./exp.sh` writes `generated_localizations/generated_localizations.dart` and exports it from `l10n.dart`, so the handbook's plain barrel check is red at base | undo both after every `./exp.sh` (the `barrels` check does); never commit them |
 | `lib/src/core/services/user_file_store/`, `lib/src/fuzzy_basics/ui/pages/basic_encryption_page/`, `test/src/app/globals/`, `test/src/fuzzy_vault/ui/pages/vault_home_page/`, `test/src/fuzzzy_seal/ui/pages/connected_chat_page/widgets/` | 5 files not `dart format`-clean at base, so `format` is pending | a unit that edits one of these formats that file; never reformat files outside the unit |
 | `test/src/fuzzzy_seal/bloc/file_processing_cubit/` | waits on the wall clock (`inputStabilityProbeDuration` + 150 ms settle, FZ-TEST-CLOCK-01): under machine load the full suite failed once and hung once in three runs at base | new tests use `fake_async` or `Completer` ordering; run this file alone when a unit touches it |
+| `pubspec.yaml` | 27 caret ranges (22 dependencies, 5 dev dependencies: `go_router`, `isar`, `marionette_flutter`, …); the handbook pins exact versions | leave the existing ranges; a new dependency is an exact version |
 | `code_generators/bricks/` | `local_brick`, `local_single_entity_brick`, `remote_brick` predate the handbook module shape; `./buildrunner.sh`, `./loc.sh` and `./m.sh` are broken (see Generators) | do not generate new modules from these bricks; never fix a script as a side effect |
 
 ## Repo facts
 
 ### Checks
 
-<!-- Run from the repo root, on the committed tree, with `set -o pipefail`, in this order, after the setup.
-     Verified green 2026-10-01 at a7672bf in a fresh worktree, `git status` clean at the end.
-     Pending (red or unstable at base, never a must-pass check until fixed):
-     format — `fvm dart format --output=none --set-exit-if-changed lib test`: 5 files unformatted (Legacy zones).
-     barrel-complete — `git add -A lib && ./exp.sh && git diff --exit-code lib`: the exporter's l10n side effect (Legacy zones); the `barrels` form below undoes it.
-     test-suite — `fvm flutter test`: 280 tests; one run failed and one hung in file_processing_cubit_test, one passed (wall-clock waits, Legacy zones).
-     fuzzzy-ui-kit-guard — `fvm dart run fuzzzy_ui_kit:guard <folder>`: green for lib/src/core and lib/src/fuzzy_basics; red in lib/src/app (3 blocking), fuzzy_auth (7), fuzzy_vault (26), fuzzzy_seal (43), ui_kit (15).
-     law-drift in CI — needs the handbook checkout and a read key (Repo facts "CI"). -->
+Run from the repo root, on the committed tree, with `set -o pipefail`, setup first, then in the printed order; verified green 2026-10-01 at a7672bf in a fresh worktree, `git status` clean at the end (`test`: 3 of 3 runs at the branch tip).
+
+Pending — red or unstable at base, never a must-pass check until fixed:
+- format: `fvm dart format --output=none --set-exit-if-changed lib test` — 5 files unformatted (Legacy zones).
+- barrel-complete: `git add -A lib && ./exp.sh && git diff --exit-code lib` — the exporter's l10n side effect (Legacy zones); the `barrels` check below undoes it.
+- test, `test/src/fuzzzy_seal/bloc/file_processing_cubit/`: waits on the wall clock; under load the full suite failed once and hung once in three runs at base, always in this folder. The `test` check below leaves it out; a unit touching it runs `fvm flutter test test/src/fuzzzy_seal/bloc/file_processing_cubit` alone.
+- fuzzzy-ui-kit-guard: `fvm dart run fuzzzy_ui_kit:guard <folder>` — green for `lib/src/core` and `lib/src/fuzzy_basics` (checks below); red in `lib/src/app` (3 blocking), `lib/src/fuzzy_auth` (7), `lib/src/fuzzy_vault` (26), `lib/src/fuzzzy_seal` (43), `lib/src/ui_kit` (15).
+- law-drift in CI: needs the handbook checkout and a read key (Repo facts "CI").
 
 - Setup, once per fresh worktree, before any check: `fvm dart pub get && (cd rust/fuzzy_crypto_core && cargo build --release --locked)`.
 
@@ -352,6 +353,7 @@ Derives from **fuzzzy_handbook v1.2.0**. Repository law derives from this versio
 | analyze | `fvm flutter analyze --fatal-infos --fatal-warnings` |
 | barrels | `./exp.sh && git checkout -- lib/src/core/l10n/l10n.dart && rm -f lib/src/core/l10n/generated_localizations/generated_localizations.dart && git diff --exit-code -- lib` |
 | l10n | `fvm flutter gen-l10n && git diff --exit-code -- lib/src/core/l10n/generated_localizations` |
+| test | `fvm flutter test $(find test -name '*_test.dart' ! -path '*/file_processing_cubit/*')` |
 | bridge | `flutter_rust_bridge_codegen generate && git diff --exit-code -- lib/rust_bridge rust/fuzzy_crypto_core/src/frb_generated.rs` |
 | kit guard core | `fvm dart run fuzzzy_ui_kit:guard lib/src/core` |
 | kit guard basics | `fvm dart run fuzzzy_ui_kit:guard lib/src/fuzzy_basics` |
@@ -428,4 +430,5 @@ Derives from **fuzzzy_handbook v1.2.0**. Repository law derives from this versio
 ### CI
 - Applies to: `.github/**`, `codemagic.yaml`
 - `.github/workflows/main.yaml` on every push to `main` and `agent/**`, tags `v*` and pull requests: rust (fmt, clippy, test, audit, SBOM), flutter-test (format, analyze `--fatal-infos --fatal-warnings`, test, SBOM), android (16 KB page check), linux, windows, macos, reproducible core, attest (tags). `codemagic.yaml` builds signed releases on `v*` tags.
-- law-drift job: checks out `fuzzzy-bot/fuzzzy_handbook` (private) with the repository secret `FUZZZY_HANDBOOK_DEPLOY_KEY` and runs `python3 <handbook>/tools/check_law_drift.py --only fuzzy_chat --repo fuzzy_chat=.`; it is red until that secret exists and the handbook's registry carrying fuzzy_chat is on its default branch.
+- law-drift job: checks out `fuzzzy-bot/fuzzzy_handbook` (private) with the repository secret `FUZZZY_HANDBOOK_DEPLOY_KEY` and runs `python3 <handbook>/tools/check_law_drift.py --only fuzzy_chat --repo fuzzy_chat=.`; it checks out the handbook's `master` (`ref: master`; the GitHub default branch is not master) and is red until that secret exists and the handbook registry carrying fuzzy_chat is merged to `master`.
+- Known red: `flutter-test` already fails at base on its format step (5 unformatted files, Legacy zones). Pushes to the integration branch `production-preparation` do not trigger the workflow.
