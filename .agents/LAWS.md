@@ -27,7 +27,7 @@ Derives from **fuzzzy_handbook v1.2.0**. Repository law derives from this versio
 | FZ-FLT-UI-01 | Every screen specifies six states | none |
 | FZ-FLT-NAV-01 | GoRouter only | none |
 | FZ-FLT-KIT-01 | The kit's law | `fuzzzy-ui-kit-guard` · implemented, `no-fork` · pending |
-| FZ-FLT-ROLE-01 | The seven roles | `fuzzzy-ui-kit-guard` · implemented |
+| FZ-FLT-ROLE-01 | The role extensions | `fuzzzy-ui-kit-guard` · implemented |
 | FZ-FLT-ROLE-02 | Gaps from space, padding from density | none |
 | FZ-FLT-ROLE-03 | Colors.transparent is the one literal | `fuzzzy-ui-kit-guard` · implemented |
 | FZ-FLT-SKIN-01 | Both skins ship | none |
