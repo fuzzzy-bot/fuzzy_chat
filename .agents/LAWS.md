@@ -348,21 +348,21 @@ Pending — red or unstable at base, never a must-pass check until fixed:
 
 - Setup, once per fresh worktree, before any check: `fvm dart pub get && (cd rust/fuzzy_crypto_core && cargo build --release --locked)`.
 
-| Name | Command |
-|---|---|
-| analyze | `fvm flutter analyze --fatal-infos --fatal-warnings` |
-| barrels | `./exp.sh && git checkout -- lib/src/core/l10n/l10n.dart && rm -f lib/src/core/l10n/generated_localizations/generated_localizations.dart && git diff --exit-code -- lib` |
-| l10n | `fvm flutter gen-l10n && git diff --exit-code -- lib/src/core/l10n/generated_localizations` |
-| test | `fvm flutter test $(find test -name '*_test.dart' ! -path '*/file_processing_cubit/*')` |
-| bridge | `flutter_rust_bridge_codegen generate && git diff --exit-code -- lib/rust_bridge rust/fuzzy_crypto_core/src/frb_generated.rs` |
-| kit guard core | `fvm dart run fuzzzy_ui_kit:guard lib/src/core` |
-| kit guard basics | `fvm dart run fuzzzy_ui_kit:guard lib/src/fuzzy_basics` |
-| rust format | `cd rust/fuzzy_crypto_core && cargo fmt --all -- --check` |
-| rust clippy | `cd rust/fuzzy_crypto_core && cargo clippy --all-targets --locked -- -D warnings` |
-| rust test | `cd rust/fuzzy_crypto_core && cargo test --locked` |
-| rust audit | `cd rust/fuzzy_crypto_core && cargo audit --file Cargo.lock` |
-| sbom rust | `./sbom.sh rust --check` |
-| sbom flutter | `./sbom.sh flutter --check` |
+| Name | Command | Fails on drift |
+|---|---|---|
+| analyze | `fvm flutter analyze --fatal-infos --fatal-warnings` | — |
+| barrels | `./exp.sh && git checkout -- lib/src/core/l10n/l10n.dart && rm -f lib/src/core/l10n/generated_localizations/generated_localizations.dart && git diff --exit-code -- lib` | yes |
+| l10n | `fvm flutter gen-l10n && git diff --exit-code -- lib/src/core/l10n/generated_localizations` | yes |
+| test | `fvm flutter test $(find test -name '*_test.dart' ! -path '*/file_processing_cubit/*')` | — |
+| bridge | `flutter_rust_bridge_codegen generate && git diff --exit-code -- lib/rust_bridge rust/fuzzy_crypto_core/src/frb_generated.rs` | yes |
+| kit guard core | `fvm dart run fuzzzy_ui_kit:guard lib/src/core` | — |
+| kit guard basics | `fvm dart run fuzzzy_ui_kit:guard lib/src/fuzzy_basics` | — |
+| rust format | `cd rust/fuzzy_crypto_core && cargo fmt --all -- --check` | — |
+| rust clippy | `cd rust/fuzzy_crypto_core && cargo clippy --all-targets --locked -- -D warnings` | — |
+| rust test | `cd rust/fuzzy_crypto_core && cargo test --locked` | — |
+| rust audit | `cd rust/fuzzy_crypto_core && cargo audit --file Cargo.lock` | — |
+| sbom rust | `./sbom.sh rust --check` | yes |
+| sbom flutter | `./sbom.sh flutter --check` | yes |
 
 ### Dependency registration
 - Applies to: `lib/src/core/dependency_injection.dart`, `lib/src/*/data/**`, `lib/src/*/storage/**`, `lib/src/*/bloc/**`, `lib/src/*/ui/pages/**`
