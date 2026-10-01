@@ -1,12 +1,6 @@
-# Agentic Workspace Rules
+# fuzzy_chat — Fuzzzy Ink
 
-**Start by reading:** `.agents/orchestrator.md`
-
-This file boots any AI agent into the Fuzzzy Seal agentic development workflow. The orchestrator will load the full project context and manage the 4-persona SDLC lifecycle (Planner → Doer → Reviewer → Documenter).
-
-## Quick Context
-
-- **Project:** Fuzzzy Seal — offline-first encryption app (Flutter)
-- **AI Memory:** `.agents/` directory (project guide, architecture, personas, tasks)
-- **Key Constraint:** 100% offline. No servers, no HTTP, no remote APIs.
-- **FVM:** All Flutter/Dart commands must use `fvm flutter ...` / `fvm dart ...`
+Start at `.agents/README.md`, then `.agents/LAWS.md`. The code law is the fuzzzy_handbook (its
+generated block in `LAWS.md`); this repo's own rules are `LAWS.md` "Local law". Never read
+`.agents/orchestrator.md` or run the old four-persona lifecycle: the old agent folders are history
+in `.agents/workfiles/_legacy/`.
