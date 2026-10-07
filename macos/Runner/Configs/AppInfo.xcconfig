@@ -12,3 +12,7 @@ PRODUCT_BUNDLE_IDENTIFIER = com.fuzzzycore.ink
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 Fuzzzy Core. All rights reserved.
+
+// Export compliance code issued by App Store Connect for com.fuzzzycore.ink
+// (App Information > App Encryption Documentation). Same record as iOS production.
+EXPORT_COMPLIANCE_CODE =
