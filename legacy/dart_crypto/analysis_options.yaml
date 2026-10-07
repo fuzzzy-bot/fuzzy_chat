@@ -1,0 +1,12 @@
+# Archived code: analysed enough to catch a broken restore, not held to the
+# app's current lint standard. Nothing here should be "improved" — the point of
+# this package is that it is the code that was tested, unchanged.
+include: package:lints/recommended.yaml
+
+analyzer:
+  exclude:
+    # Reference only: the Dart-side key storage as it was. It needs Flutter and
+    # Isar, which this package deliberately does not depend on. See README.md.
+    - app_integration/**
+  errors:
+    deprecated_member_use: ignore

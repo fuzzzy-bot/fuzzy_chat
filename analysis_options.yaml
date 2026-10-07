@@ -7,6 +7,9 @@ analyzer:
     - "**/*.g.dart"
     - lib/rust_bridge/**
     - rust_builder/**
+    # Archived pure-Dart crypto: its own package, its own lint rules, not
+    # part of the app build. See legacy/dart_crypto/README.md.
+    - legacy/**
 
   errors:
     inference_failure_on_instance_creation: ignore

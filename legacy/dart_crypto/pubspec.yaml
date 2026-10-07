@@ -1,0 +1,21 @@
+name: fuzzy_dart_crypto_legacy
+description: >-
+  Archived copy of the pure-Dart encryption stack Fuzzy Chat shipped before the
+  Rust core. Kept because it was written, reviewed and tested; deliberately not
+  a dependency of the app. Read README.md first.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  meta: ^1.15.0
+  # The app used to vendor a copy of this at packages/pointycastle. That copy
+  # was added once and never edited, and it was version 4.0.0 — the same code
+  # that is published here. Pinned exactly so the archive cannot drift.
+  pointycastle: 4.0.0
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
