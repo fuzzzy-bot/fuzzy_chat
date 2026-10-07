@@ -44,15 +44,13 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
-	<!-- Export compliance: the app ships its own non-Apple cryptography (Rust core:
-	     Olm double ratchet, XChaCha20-Poly1305, Argon2id), so this MUST stay true.
-	     With the key true, App Store Connect rejects any upload (error 90592) unless
-	     ITSEncryptionExportComplianceCode matches the code on the app's App Encryption
-	     Documentation. The code is EXPORT_COMPLIANCE_CODE in Configs/AppInfo.xcconfig. -->
+	<!-- Export compliance: the app does use encryption (Rust core: Olm, XChaCha20-Poly1305,
+	     Argon2id), but only standard algorithms, and it is not distributed in France. App
+	     Store Connect's App Encryption Documentation, answered that way, classes it as
+	     exempt and issues no compliance code, so the key is false. Setting it true without
+	     an issued code fails every upload (error 90592). Record: documents/security/RELEASE.md §6.4. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
-	<true/>
-	<key>ITSEncryptionExportComplianceCode</key>
-	<string>$(EXPORT_COMPLIANCE_CODE)</string>
+	<false/>
 	<!-- Mac App Store requires a category (owner's choice: Productivity). -->
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>

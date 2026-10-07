@@ -436,30 +436,39 @@ the build itself to go green and the last step to go red until that has been don
   with the tag run's `rust-repro-1/SHA256SUMS` by hand.
 - `xcode: 26.5` is pinned to the Xcode this repo was last built with locally (F1-3); move it deliberately.
 
-### 6.4 Export compliance (iOS / macOS) — OPEN QUESTION, do not answer it in the plist
+### 6.4 Export compliance (iOS / macOS) — answered 2026-10-07
 
-`ios/Runner/Info.plist` contains **no `ITSAppUsesNonExemptEncryption` key at all** — the key appears nowhere
-under `ios/` or `macos/` (verified by grep). The consequence is concrete and it is not limited to App Store
-submissions: **every** upload to App Store Connect stops on Apple's export-compliance questionnaire and waits
-for a human answer before the build can be processed, **internal TestFlight builds included**. So
-`ios-production` cannot put a usable build in front of a tester until this is settled.
+Both `ios/Runner/Info.plist` and `macos/Runner/Info.plist` set **`ITSAppUsesNonExemptEncryption` to `false`**.
+That is not a claim that the app has no encryption. It is the value App Store Connect itself prescribes for the
+answers the owner gave in **App Information → App Encryption Documentation**, filed for each of the three App
+Store Connect apps (`com.fuzzzycore.ink.dev`, `.stg`, and `com.fuzzzycore.ink`, which the Mac app shares):
 
-**The correct value has not been determined, and nobody should set the key until it has been.** Fuzzzy Ink is
-not the ordinary case that self-declares in one line:
+1. **App purpose:** offline encryption tool; two users pair by exchanging invitation codes, then encrypt text and
+   files on-device and share them through any channel; no servers; local data protected by a user password.
+2. **Algorithms:** *standard encryption algorithms instead of, or in addition to, the encryption within Apple's
+   operating system* — only. Not the proprietary / non-standard option.
+3. **Available in France:** **No.** The production app must have France unticked in Pricing and Availability.
 
-- the app is end-to-end encrypted — encryption is its purpose, not an incidental transport detail;
-- it ships a **custom cryptographic implementation**, the Rust core `rust/fuzzy_crypto_core`, rather than using
-  only the platform's crypto. That combination is what takes it out of the self-declaration lane most apps sit
-  in, and it makes the answer a legal question rather than a build setting.
+With those answers Apple requires no documents, issues no compliance code, and tells the developer to mark the
+app as not using non-exempt encryption in `Info.plist`.
 
-FuzzyCore HQ has **escalated this for qualified export-control review**, to come back before the first
-TestFlight build. Until it does:
+**Why the algorithms answer is "standard".** Every primitive in `rust/fuzzy_crypto_core` is published and in
+wide use: X25519 (RFC 7748), Ed25519 (RFC 8032), AES-256, HMAC-SHA-256 (RFC 2104), HKDF (RFC 5869) inside
+vodozemac's Olm; ChaCha20-Poly1305 (RFC 8439); Argon2id (RFC 9106); SHA-2. Nothing is home-made. The one
+judgment call, for whoever reviews this: three constructions are built entirely from those primitives but were
+never adopted by IETF / IEEE / ITU themselves — the **XChaCha20** extended nonce (an IETF CFRG draft that never
+became an RFC), the **STREAM** chunked-AEAD construction used for files (academic), and the **Double Ratchet**
+protocol behind Olm (published by Signal). Read strictly, Apple's proprietary option could be argued to cover
+them; the owner chose the standard reading.
 
-- do **not** add `ITSAppUsesNonExemptEncryption` to any plist, in either value;
-- do **not** read the absence of the key as an exemption — it is an unanswered question, not a "no";
-- do **not** reason by analogy with Fuzzzy Music, which sets the key to `false` for a genuinely different app
-  that ships no cryptography of its own.
+**What would change the answer:**
 
-The review also has to cover the obligations that do not follow from the plist key at all — notably France's
-separate declaration, flagged in FuzzyCore HQ's `playbooks/codemagic.md` §8. Record the answer here and in that
-playbook when it arrives.
+- **Distributing in France.** Requires a declaration to ANSSI first. Then file new App Encryption Documentation
+  answering *Yes* to France, attach ANSSI's acknowledgment, and set the plist key and the code Apple issues.
+- **A reviewer deciding the constructions above are non-standard.** That answer leads to a CCATS from BIS and an
+  issued compliance code; the plist key then becomes `true` with `ITSEncryptionExportComplianceCode` beside it.
+- **Setting the key `true` without an issued code** fails every upload with error 90592 ("export compliance key
+  value [] … doesn't match"). That is what broke the first TestFlight upload of 1.1.3 (5).
+
+Obligations outside Apple's form are not settled by any of this — US export-control filings, if any apply, are
+the reviewer's call. Record that outcome here and in FuzzyCore HQ's `playbooks/codemagic.md` §8.

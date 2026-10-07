@@ -76,17 +76,13 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<!-- Export compliance: the app ships its own non-Apple cryptography (Rust core:
-	     Olm double ratchet, XChaCha20-Poly1305, Argon2id), so this MUST stay true.
-	     With the key true, App Store Connect rejects any upload (error 90592) unless
-	     ITSEncryptionExportComplianceCode matches the code on that app's App Encryption
-	     Documentation. Dev, staging and production are separate App Store Connect apps,
-	     each with its own code, so it comes from the per-flavor EXPORT_COMPLIANCE_CODE
-	     build setting in Runner.xcodeproj. -->
+	<!-- Export compliance: the app does use encryption (Rust core: Olm, XChaCha20-Poly1305,
+	     Argon2id), but only standard algorithms, and it is not distributed in France. App
+	     Store Connect's App Encryption Documentation, answered that way, classes it as
+	     exempt and issues no compliance code, so the key is false. Setting it true without
+	     an issued code fails every upload (error 90592). Record: documents/security/RELEASE.md §6.4. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
-	<true/>
-	<key>ITSEncryptionExportComplianceCode</key>
-	<string>$(EXPORT_COMPLIANCE_CODE)</string>
+	<false/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Authenticate to unlock your Fuzzzy Ink password.</string>
 </dict>
