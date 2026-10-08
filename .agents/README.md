@@ -10,7 +10,7 @@ Every feature here is a legacy zone; the shape to copy is `fuzzy_starter` `lib/s
 
 Read before any task: `.agents/LAWS.md` (shared law, local law, legacy zones, repo facts).
 Every command runs from the repo root; checks run on the committed tree, with `set -o pipefail`.
-Old agent folders live in `.agents/workfiles/_legacy/`; open work items in `.agents/workfiles/tasks/`.
+Open work items are in `.agents/workfiles/tasks/`.
 
 ## Task → what to read or do
 
