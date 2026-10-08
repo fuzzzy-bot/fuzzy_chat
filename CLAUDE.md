@@ -14,4 +14,4 @@ numbers, no session ids. Order is described in words — "first the contract, th
 because the backend needs the contract" — never as a wave or phase label. A code may follow
 once, in brackets, only if the owner will need to quote it. The owner reads remotely and has
 not read our internal documents: a message that needs them to make sense is wrong.
-Full standard: `~/FuzzyCore_HQ/company/OWNER_COMMS.md` §1.
+Full standard: `/Volumes/Fuzzzity 2/fuzzzy_company/company/OWNER_COMMS.md` §1.
